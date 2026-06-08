@@ -165,11 +165,7 @@
 
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                audio: {
-                    echoCancellation: true,
-                    noiseSuppression: true,
-                    autoGainControl: true
-                }
+                audio: true
             }).then(function(stream) {
                 localStream = stream;
                 localVideo.srcObject = stream;
@@ -187,7 +183,7 @@
                 return vdo.connect().then(function() {
                     return vdo.joinRoom({ room: room });
                 }).then(function() {
-                    return vdo.publish(localStream, { streamID: streamID });
+                    return vdo.publish(localStream, { streamID: streamID, audio: true, video: true });
                 });
             }).then(function() {
                 connected = true;

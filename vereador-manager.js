@@ -136,7 +136,7 @@ export class VereadorManager {
     renderSlot(slot) {
         if (slot.connected) {
             return `<div class="vereador-slot connected" data-slot="${slot.id}">
-                <video class="vereador-slot-video" autoplay playsinline muted></video>
+                <video class="vereador-slot-video" autoplay playsinline></video>
                 <div class="vereador-slot-info">
                     <span class="status-dot status-online"></span>
                     <span class="vereador-slot-name">${slot.label}</span>
