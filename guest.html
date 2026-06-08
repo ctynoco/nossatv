@@ -11,7 +11,7 @@
         .card{background:#1a1a2e;border-radius:16px;padding:20px 16px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
         .sub{color:#888;font-size:0.82em;margin-bottom:12px;text-align:center}
         .video-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000;margin-bottom:8px}
-        .video-wrap video{width:100%;display:none;border-radius:10px;object-fit:cover}
+        .video-wrap video{width:100%;display:block;border-radius:10px;object-fit:cover}
         .mic-bar{position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,0.6);padding:4px 10px;border-radius:20px;font-size:0.75em;z-index:2}
         .mic-bar .bars{display:flex;align-items:center;gap:2px;height:16px}
         .mic-bar .bars span{display:block;width:3px;border-radius:2px;background:#4caf50;transition:height .08s;height:2px}
@@ -174,19 +174,10 @@
                     audio: true
                 });
                 clearTimeout(timeout);
-                localVideo.style.display = 'block';
-
-                // Aguarda o vídeo realmente começar a exibir antes de prosseguir
-                await new Promise(resolve => {
-                    localVideo.onloadedmetadata = () => {
-                        localVideo.play().then(resolve).catch(() => resolve());
-                    };
-                    localVideo.srcObject = localStream;
-                    // Se onloadedmetadata não disparar em 3s, continua mesmo assim
-                    setTimeout(resolve, 3000);
-                });
-                localVideo.onloadedmetadata = null;
-
+                // Cria stream só de vídeo para o preview local (evita bloqueio de autoplay em iOS)
+                const videoOnlyStream = new MediaStream([localStream.getVideoTracks()[0]]);
+                localVideo.srcObject = videoOnlyStream;
+                try { await localVideo.play(); } catch (_) {}
                 startMicMeter(localStream);
 
                 btnText.textContent = 'Conectando...';
