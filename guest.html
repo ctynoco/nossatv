@@ -7,41 +7,42 @@
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#fff;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:12px}
-        .card{background:#1a1a2e;border-radius:16px;padding:20px 16px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
-        .sub{color:#888;font-size:0.82em;margin-bottom:12px;text-align:center}
-        .video-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000;margin-bottom:8px}
-        .video-wrap video{width:100%;display:block;border-radius:10px;object-fit:cover}
-        .mic-bar{position:absolute;bottom:8px;left:8px;display:flex;align-items:center;gap:4px;background:rgba(0,0,0,0.6);padding:4px 10px;border-radius:20px;font-size:0.75em;z-index:2}
-        .mic-bar .bars{display:flex;align-items:center;gap:2px;height:16px}
-        .mic-bar .bars span{display:block;width:3px;border-radius:2px;background:#4caf50;transition:height .08s;height:2px}
-        .return-video{width:100%;border-radius:10px;background:#000;margin-bottom:8px;display:none}
-        .return-video.active{display:block}
-        .toggle-btn{width:100%;padding:16px;border:none;border-radius:50px;font-size:1.1em;font-weight:700;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px}
-        .toggle-btn.off{background:#2e7d32;color:#fff}
-        .toggle-btn.on{background:#1b5e20;color:#fff}
-        .toggle-btn:disabled{opacity:0.5;cursor:not-allowed}
-        .toggle-btn .indicator{width:14px;height:14px;border-radius:50%;display:inline-block;transition:all .25s}
-        .toggle-btn.off .indicator{background:#81c784;box-shadow:0 0 6px #81c784}
-        .toggle-btn.on .indicator{background:#a5d6a7;box-shadow:0 0 6px #a5d6a7}
-        .info{font-size:0.75em;color:#666;margin-top:10px;line-height:1.5;text-align:center}
+        body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#fff;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}
+        .card{background:#1a1a2e;border-radius:16px;padding:32px 24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+        .sub{color:#888;font-size:0.82em;margin-bottom:20px}
+        .status{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;margin-bottom:16px;font-size:0.9em;font-weight:600}
+        .status.idle{background:#222;color:#888}
+        .status.connecting{background:#1a3a5c;color:#4da6ff}
+        .status.connected{background:#1a3c1a;color:#4caf50}
+        .status.error{background:#3c1a1a;color:#f44336}
+        .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
+        .status.idle .status-dot{background:#555}
+        .status.connecting .status-dot{background:#4da6ff;animation:pulse 1s infinite}
+        .status.connected .status-dot{background:#4caf50}
+        .status.error .status-dot{background:#f44336}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
+        video{width:100%;border-radius:8px;background:#000;margin-bottom:16px;display:none}
+        video.active{display:block}
+        .btn{width:100%;padding:14px;border:none;border-radius:8px;font-size:1em;font-weight:700;cursor:pointer;transition:opacity .2s}
+        .btn:disabled{opacity:0.5;cursor:not-allowed}
+        .btn-primary{background:#0066cc;color:#fff}
+        .btn-primary:hover:not(:disabled){background:#0055aa}
+        .btn-danger{background:#c62828;color:#fff}
+        .btn-danger:hover:not(:disabled){background:#b71c1c}
+        .info{font-size:0.78em;color:#666;margin-top:12px;line-height:1.5}
+        .hidden{display:none !important}
     </style>
 </head>
 <body>
     <div class="card">
         <p class="sub" id="slot-label">Conectando...</p>
-        <div class="video-wrap">
-            <video id="local-video" autoplay playsinline muted></video>
-            <div class="mic-bar" id="mic-bar">
-                <span>🎤</span>
-                <div class="bars" id="mic-bars"></div>
-            </div>
+        <div id="status-bar" class="status idle">
+            <span class="status-dot"></span>
+            <span id="status-text">Aguardando...</span>
         </div>
-        <video id="return-video" class="return-video" autoplay playsinline></video>
-        <button id="btn-toggle" class="toggle-btn off" disabled>
-            <span class="indicator"></span>
-            <span id="btn-text">Iniciar</span>
-        </button>
+        <video id="local-video" autoplay playsinline muted></video>
+        <button id="btn-start" class="btn btn-primary">▶ Iniciar Câmera</button>
+        <button id="btn-disconnect" class="btn btn-danger hidden">✕ Desconectar</button>
         <p class="info" id="info-text">Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.</p>
     </div>
     <script src="https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js" integrity="sha384-/xDAcwjdhN3g8ilH5vtF0Agq4V9XxMqRwgxde0EVDrfjVJUk87pBL/SgjNUsBFEq" crossorigin="anonymous"></script>
@@ -51,9 +52,9 @@
         const room = params.get('room') || 'nossatv';
         const slot = params.get('slot');
         if (!slot) {
-            document.getElementById('slot-label').textContent = 'Link inválido';
-            document.getElementById('btn-toggle').disabled = true;
-            document.getElementById('btn-text').textContent = 'Link inválido';
+            document.getElementById('status-text').textContent = 'Link inválido';
+            document.getElementById('btn-start').disabled = true;
+            document.getElementById('slot-label').textContent = 'Link sem identificação';
             return;
         }
 
@@ -63,132 +64,44 @@
         let vdo = null;
         let localStream = null;
         let connected = false;
-        let micAnalyser = null;
-        let micAnimId = null;
 
+        const statusBar = document.getElementById('status-bar');
+        const statusText = document.getElementById('status-text');
         const localVideo = document.getElementById('local-video');
-        const returnVideo = document.getElementById('return-video');
-        const toggleBtn = document.getElementById('btn-toggle');
-        const btnText = document.getElementById('btn-text');
+        const btnStart = document.getElementById('btn-start');
+        const btnDisconnect = document.getElementById('btn-disconnect');
         const infoText = document.getElementById('info-text');
-        const micBar = document.getElementById('mic-bar');
-        const micBars = document.getElementById('mic-bars');
 
-        const barCount = 12;
-        for (let i = 0; i < barCount; i++) {
-            const s = document.createElement('span');
-            micBars.appendChild(s);
-        }
-
-        function startMicMeter(stream) {
-            try {
-                const ctx = new AudioContext();
-                const src = ctx.createMediaStreamSource(stream);
-                const analyser = ctx.createAnalyser();
-                analyser.fftSize = 64;
-                src.connect(analyser);
-                micAnalyser = analyser;
-                const data = new Uint8Array(analyser.frequencyBinCount);
-                const bars = micBars.querySelectorAll('span');
-                const draw = () => {
-                    analyser.getByteFrequencyData(data);
-                    const avg = data.reduce((a, b) => a + b, 0) / data.length;
-                    const norm = Math.min(1, avg / 128);
-                    const active = Math.round(norm * barCount);
-                    bars.forEach((b, j) => {
-                        b.style.height = (j < active ? 4 + (norm * 12) : 2) + 'px';
-                        b.style.background = j < active ? '#4caf50' : '#333';
-                    });
-                    micAnimId = requestAnimationFrame(draw);
-                };
-                draw();
-            } catch (e) {
-                console.warn('[Guest] Mic meter error:', e);
-            }
-        }
-
-        function stopMicMeter() {
-            if (micAnimId) cancelAnimationFrame(micAnimId);
-            micAnimId = null;
-            micAnalyser = null;
-            micBars.querySelectorAll('span').forEach(s => { s.style.height = '2px'; s.style.background = '#333'; });
-        }
-
-        function setToggle(on) {
-            toggleBtn.classList.remove('on', 'off');
-            toggleBtn.classList.add(on ? 'on' : 'off');
-            btnText.textContent = on ? 'Ligado' : 'Desligado';
+        function setStatus(type, text) {
+            statusBar.className = 'status ' + type;
+            statusText.textContent = text;
         }
 
         function cleanup() {
-            stopMicMeter();
             if (vdo) {
                 try { if (localStream) vdo.stopPublishing(); } catch(e) {}
-                try { vdo.stopViewing('program_' + slot); } catch(e) {}
             }
             if (localStream) {
                 localStream.getTracks().forEach(t => t.stop());
                 localStream = null;
             }
             localVideo.srcObject = null;
-            localVideo.style.display = 'none';
-            returnVideo.srcObject = null;
-            returnVideo.classList.remove('active');
+            localVideo.classList.remove('active');
             connected = false;
         }
 
-        function resetUI() {
-            toggleBtn.disabled = false;
-            setToggle(false);
-            infoText.textContent = 'Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.';
-        }
-
-        toggleBtn.addEventListener('click', async () => {
-            if (connected) {
-                if (vdo && localStream) {
-                    try { vdo.stopPublishing(); } catch(e) {}
-                    try { vdo.stopViewing('program_' + slot); } catch(e) {}
-                }
-                cleanup();
-                vdo = null;
-                resetUI();
-                return;
-            }
-
-            toggleBtn.disabled = true;
-            btnText.textContent = 'Conectando...';
-            infoText.textContent = 'Solicitando câmera e microfone...';
-
-            // Timeout de segurança — se demorar mais que 15s, libera o botão
-                const timeout = setTimeout(() => {
-                    if (!connected) {
-                        toggleBtn.disabled = false;
-                        resetUI();
-                        infoText.textContent = 'Tempo limite excedido. Verifique sua câmera e tente novamente.';
-                    }
-                }, 20000);
+        btnStart.addEventListener('click', async () => {
+            btnStart.disabled = true;
+            setStatus('connecting', 'Acessando câmera...');
 
             try {
-                // Tenta encontrar a câmera frontal
-                let videoConstraint = { facingMode: 'user' };
-                try {
-                    const devices = await navigator.mediaDevices.enumerateDevices();
-                    const cams = devices.filter(d => d.kind === 'videoinput');
-                    const front = cams.find(c => c.label.toLowerCase().includes('front'));
-                    if (front) videoConstraint = { deviceId: { exact: front.deviceId } };
-                } catch (_) {}
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    video: videoConstraint,
+                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
                     audio: true
                 });
-                clearTimeout(timeout);
                 localVideo.srcObject = localStream;
-                localVideo.muted = true;
-                try { await localVideo.play(); } catch (e) { console.warn('[Guest] play error:', e); }
-                startMicMeter(localStream);
-
-                btnText.textContent = 'Conectando...';
-                infoText.textContent = 'Conectando ao servidor...';
+                localVideo.classList.add('active');
+                setStatus('connecting', 'Conectando à sala...');
 
                 vdo = new VDONinjaSDK({
                     iceServers: [
@@ -196,37 +109,42 @@
                         { urls: 'stun:stun1.l.google.com:19302' },
                     ],
                 });
+                vdo.addEventListener('connected', () => {
+                    setStatus('connecting', 'Publicando vídeo...');
+                });
+
                 await vdo.connect();
                 await vdo.joinRoom({ room: room });
                 await vdo.publish(localStream, { streamID: streamID });
 
-                vdo.view('program_' + slot, { audio: true, video: true }).then(stream => {
-                    if (stream) {
-                        returnVideo.srcObject = stream;
-                        returnVideo.classList.add('active');
-                        returnVideo.play().catch(() => {});
-                    }
-                }).catch(() => {});
-
-                setToggle(true);
+                setStatus('connected', '✅ Conectado à transmissão!');
                 connected = true;
-                toggleBtn.disabled = false;
-                infoText.textContent = 'Conectado — sua câmera está sendo transmitida.';
+                btnStart.classList.add('hidden');
+                btnDisconnect.classList.remove('hidden');
+                infoText.textContent = 'Sua câmera está sendo transmitida ao vivo.';
 
             } catch (err) {
-                clearTimeout(timeout);
-                console.error('[Guest] Erro:', err);
-                try { if (vdo) { vdo.disconnect(); } } catch(e) {}
-                cleanup();
-                vdo = null;
-                resetUI();
-                infoText.textContent = 'Erro: ' + err.message;
+                setStatus('error', 'Erro: ' + err.message);
+                btnStart.disabled = false;
                 if (err.name === 'NotAllowedError') {
                     infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
                 } else if (err.name === 'NotFoundError') {
                     infoText.textContent = 'Nenhuma câmera encontrada neste dispositivo.';
                 }
             }
+        });
+
+        btnDisconnect.addEventListener('click', () => {
+            if (vdo && localStream) {
+                try { vdo.stopPublishing(); } catch(e) {}
+            }
+            cleanup();
+            vdo = null;
+            setStatus('idle', 'Desconectado');
+            btnStart.classList.remove('hidden');
+            btnStart.disabled = false;
+            btnDisconnect.classList.add('hidden');
+            infoText.textContent = 'Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.';
         });
     })();
     </script>
