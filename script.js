@@ -674,7 +674,7 @@ class OBSClone {
 
             case 'browser': {
                 const iframe = document.createElement('iframe');
-                iframe.src = source.config.url || 'https://example.com';
+                iframe.src = source.config.url || 'https:' + '//example.com';
                 iframe.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;border:none;';
                 iframe.sandbox = 'allow-scripts allow-same-origin allow-forms';
                 previewArea.appendChild(iframe);

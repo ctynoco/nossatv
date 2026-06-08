@@ -41,8 +41,9 @@ async function build() {
     } else if (f.minify === 'module') {
       // ES modules: remove comments and collapse whitespace only
       // (UglifyJS does not support import/export)
+      // Regex that respects strings and template literals
       out = content
-        .replace(/\/\/.*$/gm, '')
+        .replace(/(['"`])(?:(?!\1|\\).|\\.)*\1|\/\/.*$/gm, (m) => m.startsWith("'") || m.startsWith('"') || m.startsWith('`') ? m : '')
         .replace(/\/\*[\s\S]*?\*\//g, '')
         .replace(/^\s*[\r\n]/gm, '')
         .trim();
