@@ -494,8 +494,9 @@
 
     <button id="reopen-float" class="reopen-float-btn" style="display:none" title="Abrir monitor">📺</button>
 
-    <script src="https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@latest/vdoninja-sdk.min.js"></script>
-    <script src="script.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcode-generator/1.4.4/qrcode.min.js" integrity="sha384-lYAycZoErpUovXHUcXGU/VCnB+AdAqz536gbMuFXw9dW8Kh6/kZl1tMcGNmhUBXo" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js" integrity="sha384-/xDAcwjdhN3g8ilH5vtF0Agq4V9XxMqRwgxde0EVDrfjVJUk87pBL/SgjNUsBFEq" crossorigin="anonymous"></script>
+    <script type="module" src="script.js"></script>
     <script>
       if ('serviceWorker' in navigator) {
         navigator.serviceWorker.register('service-worker.js');

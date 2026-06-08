@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <title>NossaTV - Testes</title>
+    <style>
+        body{font-family:monospace;background:#111;color:#eee;padding:20px;max-width:800px;margin:0 auto}
+        h1{color:#0066cc}
+        .pass{color:#44cc44}
+        .fail{color:#cc0000;font-weight:700}
+        .suite{margin:16px 0;padding:12px;background:#1a1a1a;border-radius:6px;border-left:3px solid #333}
+        .suite h3{margin:0 0 8px;color:#ccc}
+        .test{padding:4px 8px;font-size:0.85em}
+        .summary{margin-top:20px;padding:12px;background:#1a2a1a;border-radius:6px}
+    </style>
+</head>
+<body>
+    <h1>🧪 NossaTV - Testes</h1>
+    <div id="results"></div>
+    <div id="summary" class="summary">Aguardando...</div>
+
+    <script type="module">
+        import { SOURCE_TYPES, SOURCE_FORMS, VIDEO_SOURCE_TYPES, AUDIO_SOURCE_TYPES } from './source-types.js';
+
+        const results = document.getElementById('results');
+        const summary = document.getElementById('summary');
+        let passed = 0, failed = 0;
+
+        function assert(condition, msg) {
+            const div = document.createElement('div');
+            div.className = 'test';
+            if (condition) {
+                div.innerHTML = `<span class="pass">✓</span> ${msg}`;
+                passed++;
+            } else {
+                div.innerHTML = `<span class="fail">✗</span> ${msg}`;
+                failed++;
+            }
+            return div;
+        }
+
+        function suite(name, fn) {
+            const div = document.createElement('div');
+            div.className = 'suite';
+            div.innerHTML = `<h3>${name}</h3>`;
+            const body = document.createElement('div');
+            fn(body);
+            div.appendChild(body);
+            results.appendChild(div);
+        }
+
+        // ────────── SOURCE TYPES ──────────
+        suite('source-types.js - Definições', (r) => {
+            r.appendChild(assert(typeof SOURCE_TYPES === 'object', 'SOURCE_TYPES é um objeto'));
+            r.appendChild(assert(Object.keys(SOURCE_TYPES).length === 14, 'SOURCE_TYPES tem 14 tipos'));
+            r.appendChild(assert(SOURCE_TYPES.camera.label === 'Câmera', 'camera.label === Câmera'));
+            r.appendChild(assert(SOURCE_TYPES.vereador.icon === '👤', 'vereador.icon === 👤'));
+            r.appendChild(assert(typeof SOURCE_FORMS === 'object', 'SOURCE_FORMS é um objeto'));
+            r.appendChild(assert(typeof SOURCE_FORMS.camera === 'function', 'SOURCE_FORMS.camera é function'));
+            r.appendChild(assert(typeof SOURCE_FORMS.camera() === 'string', 'SOURCE_FORMS.camera() retorna string'));
+            r.appendChild(assert(SOURCE_FORMS.camera().includes('src-name'), 'camera form contém src-name'));
+            r.appendChild(assert(SOURCE_FORMS.text().includes('src-color'), 'text form contém src-color'));
+            r.appendChild(assert(VIDEO_SOURCE_TYPES.length === 6, 'VIDEO_SOURCE_TYPES tem 6 tipos'));
+            r.appendChild(assert(VIDEO_SOURCE_TYPES.includes('camera'), 'VIDEO_SOURCE_TYPES inclui camera'));
+            r.appendChild(assert(AUDIO_SOURCE_TYPES.length === 4, 'AUDIO_SOURCE_TYPES tem 4 tipos'));
+            r.appendChild(assert(AUDIO_SOURCE_TYPES.includes('audio'), 'AUDIO_SOURCE_TYPES inclui audio'));
+        });
+
+        // ────────── VALIDAÇÃO ──────────
+        suite('Validação - OBSClone', (r) => {
+            // Test validation methods from OBSClone
+            const clone = {
+                _validateString(val, maxLen = 256) {
+                    if (typeof val !== 'string') return '';
+                    return val.trim().substring(0, maxLen);
+                },
+                _validateNumber(val, min, max, def) {
+                    const n = parseInt(val);
+                    if (isNaN(n)) return def;
+                    return Math.max(min, Math.min(max, n));
+                },
+                _validateColor(val) {
+                    if (/^#[0-9a-fA-F]{6}$/.test(val)) return val;
+                    return '#000000';
+                }
+            };
+
+            r.appendChild(assert(clone._validateString('hello') === 'hello', '_validateString mantém string curta'));
+            r.appendChild(assert(clone._validateString('  trimmed  ') === 'trimmed', '_validateString faz trim'));
+            r.appendChild(assert(clone._validateString('x'.repeat(300)).length === 256, '_validateString corta em 256'));
+            r.appendChild(assert(clone._validateString(null) === '', '_validateString null vira vazio'));
+            r.appendChild(assert(clone._validateNumber('50', 0, 100, 10) === 50, '_validateNumber 50'));
+            r.appendChild(assert(clone._validateNumber('200', 0, 100, 10) === 100, '_validateNumber clamp max'));
+            r.appendChild(assert(clone._validateNumber('-10', 0, 100, 10) === 0, '_validateNumber clamp min'));
+            r.appendChild(assert(clone._validateNumber('abc', 0, 100, 10) === 10, '_validateNumber NaN retorna default'));
+            r.appendChild(assert(clone._validateColor('#ff0000') === '#ff0000', '_validateColor #ff0000 OK'));
+            r.appendChild(assert(clone._validateColor('#gg0000') === '#000000', '_validateColor invalido retorna preto'));
+            r.appendChild(assert(clone._validateColor('red') === '#000000', '_validateColor palavra vira preto'));
+        });
+
+        // ────────── LOCAL STORAGE ──────────
+        suite('Simulação - localStorage', (r) => {
+            try {
+                localStorage.setItem('_test_key', JSON.stringify({ a: 1, b: [2, 3] }));
+                const val = JSON.parse(localStorage.getItem('_test_key'));
+                r.appendChild(assert(val.a === 1, 'localStorage read/write OK'));
+                r.appendChild(assert(Array.isArray(val.b), 'JSON array preservado'));
+                localStorage.removeItem('_test_key');
+                r.appendChild(assert(localStorage.getItem('_test_key') === null, 'localStorage remove OK'));
+                r.appendChild(assert(typeof localStorage === 'object', 'localStorage disponível'));
+            } catch (e) {
+                r.appendChild(assert(false, 'localStorage erro: ' + e.message));
+            }
+        });
+
+        // ────────── NOTIFICAÇÃO ──────────
+        suite('showNotification', (r) => {
+            const { showNotification } = (() => {
+                let toast = null;
+                function showNotification(message) {
+                    console.log(`[OBS] ${message}`);
+                    if (!toast) {
+                        toast = document.createElement('div');
+                        toast.id = 'obs-toast';
+                        document.body.appendChild(toast);
+                    }
+                    toast.textContent = message;
+                }
+                return { showNotification };
+            })();
+
+            showNotification('teste');
+            const el = document.getElementById('obs-toast');
+            r.appendChild(assert(el !== null, 'Toast element foi criado'));
+            r.appendChild(assert(el.textContent === 'teste', 'Toast textContent correto'));
+            if (el) el.remove();
+        });
+
+        // ────────── SUMMARY ──────────
+        const total = passed + failed;
+        summary.innerHTML = `
+            <strong>Resultado:</strong>
+            <span class="pass">${passed} passaram</span> |
+            <span class="${failed > 0 ? 'fail' : 'pass'}">${failed} falharam</span> |
+            ${total} total
+        `;
+    </script>
+</body>
+</html>

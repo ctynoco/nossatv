@@ -1,5 +1,17 @@
 image: node:20-alpine
 
+stages:
+  - test
+  - deploy
+
+test:
+  stage: test
+  script:
+    - npm ci
+    - echo "No automated test runner configured. Manual: open tests.html in browser."
+  only:
+    - main
+
 pages:
   stage: deploy
   script:

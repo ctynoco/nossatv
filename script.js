@@ -1,250 +1,5 @@
-// OBS Studio Clone - JavaScript
-
-// ─────────────────────────────────────────
-//  DEFINIÇÃO DOS TIPOS DE FONTE
-// ─────────────────────────────────────────
-const SOURCE_TYPES = {
-    camera:             { label: 'Câmera',                  icon: '📷' },
-    screen:             { label: 'Captura de Monitor',       icon: '🖥️' },
-    window:             { label: 'Captura de Janela',        icon: '🪟' },
-    image:              { label: 'Captura de Imagem',        icon: '🖼️' },
-    text:               { label: 'Texto',                   icon: '📝' },
-    audio:              { label: 'Captura de Entrada Áudio', icon: '🎤' },
-    browser:            { label: 'Navegador',               icon: '🌐' },
-    color:              { label: 'Cor',                     icon: '🎨' },
-    slideshow:          { label: 'Apresentação de Slides',   icon: '📽️' },
-    gameCapture:        { label: 'Captura de Jogo',         icon: '🎮' },
-    audioOutputCapture: { label: 'Captura de Saída Áudio',  icon: '🔊' },
-    videoCaptureDevice: { label: 'Dispositivo Captura Vídeo', icon: '📹' },
-    media:              { label: 'Mídia',                   icon: '🎬' },
-    vereador:           { label: 'Vereador',                icon: '👤' },
-};
-
-// ─────────────────────────────────────────
-//  FORMULÁRIOS DE CONFIGURAÇÃO POR TIPO
-// ─────────────────────────────────────────
-const SOURCE_FORMS = {
-    camera: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Câmera" />
-        </div>
-        <div class="form-group">
-            <label>Dispositivo</label>
-            <select id="src-device"><option value="user">Câmera padrão (frontal)</option><option value="environment">Câmera traseira</option></select>
-        </div>`,
-
-    screen: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Captura de Tela" />
-        </div>
-        <p style="color:#aaa;font-size:0.82em">O navegador solicitará permissão para capturar a tela.</p>`,
-
-    window: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Captura de Janela" />
-        </div>
-        <p style="color:#aaa;font-size:0.82em">Selecione uma janela específica na próxima etapa.</p>`,
-
-    image: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Imagem" />
-        </div>
-        <div class="form-group">
-            <label>Arquivo de imagem</label>
-            <input type="file" id="src-file" accept="image/*" />
-        </div>`,
-
-    text: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Texto" />
-        </div>
-        <div class="form-group">
-            <label>Conteúdo do texto</label>
-            <textarea id="src-text">Meu texto aqui</textarea>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Cor do texto</label>
-                <input type="color" id="src-color" value="#ffffff" />
-            </div>
-            <div class="form-group">
-                <label>Tamanho (px)</label>
-                <input type="number" id="src-fontsize" value="48" min="10" max="200" />
-            </div>
-        </div>
-        <div class="form-group">
-            <label>Fundo</label>
-            <input type="color" id="src-bg" value="#000000" />
-        </div>`,
-
-    audio: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Microfone" />
-        </div>
-        <div class="form-group">
-            <label>Dispositivo de áudio</label>
-            <select id="src-device"><option value="default">Microfone padrão</option></select>
-        </div>`,
-
-    browser: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Navegador" />
-        </div>
-        <div class="form-group">
-            <label>URL</label>
-            <input type="url" id="src-url" value="https://example.com" placeholder="https://" />
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Largura</label>
-                <input type="number" id="src-width" value="1280" />
-            </div>
-            <div class="form-group">
-                <label>Altura</label>
-                <input type="number" id="src-height" value="720" />
-            </div>
-        </div>`,
-
-    color: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Cor Sólida" />
-        </div>
-        <div class="form-group">
-            <label>Cor</label>
-            <input type="color" id="src-color" value="#1a1a2e" />
-        </div>`,
-
-    slideshow: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Apresentação" />
-        </div>
-        <div class="form-group">
-            <label>Imagens para o slideshow</label>
-            <input type="file" id="src-slideshow-files" accept="image/*" multiple />
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Intervalo (ms)</label>
-                <input type="number" id="src-slideshow-interval" value="3000" min="500" max="30000" step="500" />
-            </div>
-            <div class="form-group">
-                <label>Modo de transição</label>
-                <select id="src-slideshow-transition">
-                    <option value="fade">Fade</option>
-                    <option value="cut">Cut</option>
-                </select>
-            </div>
-        </div>`,
-
-    gameCapture: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Captura de Jogo" />
-        </div>
-        <p style="color:#aaa;font-size:0.82em">O navegador solicitará permissão para capturar a tela do jogo.</p>
-        <div class="form-group">
-            <label>Modo de captura</label>
-            <select id="src-game-mode">
-                <option value="any">Qualquer tela</option>
-                <option value="borderless">Janela sem borda</option>
-            </select>
-        </div>`,
-
-    audioOutputCapture: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Áudio do Sistema" />
-        </div>
-        <p style="color:#aaa;font-size:0.82em">Captura o áudio que está sendo reproduzido no sistema.</p>
-        <div class="form-group">
-            <label>Dispositivo de saída</label>
-            <select id="src-audio-output">
-                <option value="default">Áudio do Sistema (Padrão)</option>
-            </select>
-        </div>`,
-
-    videoCaptureDevice: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Dispositivo de Vídeo" />
-        </div>
-        <div class="form-group">
-            <label>Dispositivo</label>
-            <select id="src-video-device">
-                <option value="user">Câmera padrão (frontal)</option>
-                <option value="environment">Câmera traseira</option>
-            </select>
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Largura</label>
-                <input type="number" id="src-video-width" value="1920" min="320" max="7680" step="10" />
-            </div>
-            <div class="form-group">
-                <label>Altura</label>
-                <input type="number" id="src-video-height" value="1080" min="240" max="4320" step="10" />
-            </div>
-        </div>`,
-
-    media: () => `
-        <div class="form-group">
-            <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Mídia" />
-        </div>
-        <div class="form-group">
-            <label>Arquivo de mídia</label>
-            <input type="file" id="src-media-file" accept="video/*,audio/*" />
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Loop</label>
-                <select id="src-media-loop">
-                    <option value="true">Sim</option>
-                    <option value="false">Não</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Reproduzir automaticamente</label>
-                <select id="src-media-autoplay">
-                    <option value="true">Sim</option>
-                    <option value="false" selected>Não</option>
-                </select>
-            </div>
-        </div>`,
-
-    vereador: () => `
-        <div class="form-group">
-            <label>Nome do Vereador</label>
-            <input type="text" id="src-vereador-name" value="Vereador" />
-        </div>
-        <div class="form-group">
-            <label>Partido</label>
-            <input type="text" id="src-vereador-partido" value="PARTIDO" />
-        </div>
-        <div class="form-group">
-            <label>Foto do Vereador</label>
-            <input type="file" id="src-vereador-photo" accept="image/*" />
-        </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Cor do nome</label>
-                <input type="color" id="src-vereador-color" value="#ffffff" />
-            </div>
-            <div class="form-group">
-                <label>Cor do fundo</label>
-                <input type="color" id="src-vereador-bg" value="#1a1a2e" />
-            </div>
-        </div>`,
-};
+import { SOURCE_TYPES, SOURCE_FORMS, VIDEO_SOURCE_TYPES, AUDIO_SOURCE_TYPES } from './source-types.js';
+import { VereadorManager } from './vereador-manager.js';
 
 // ─────────────────────────────────────────
 //  CLASSE PRINCIPAL
@@ -272,7 +27,7 @@ class OBSClone {
             this.init();
         } catch (e) {
             console.error('[OBS] Erro na inicializacao:', e);
-            this.showNotification('⚠️ Erro ao carregar — criando estado padrao');
+            this.showNotification(`⚠️ Erro ao carregar: ${e.message || 'desconhecido'} — criando estado padrao`);
             this.scenes = [{ id: Date.now(), name: 'Cena 1', sources: [], activeSourceId: null }];
             this.activeSceneId = this.scenes[0].id;
             this.renderScenes();
@@ -293,7 +48,11 @@ class OBSClone {
         this._setupSettingsUI();
         this._setupPreviewLogoDrag();
         this._applyPreviewStyles();
-        window.addEventListener('beforeunload', () => {
+        window.addEventListener('beforeunload', (e) => {
+            try {
+                const data = this._captureSyncSnapshot();
+                if (data) localStorage.setItem('obsScenes', JSON.stringify(data));
+            } catch (_) {}
             this.saveData();
             if (this._pipSyncInterval) clearInterval(this._pipSyncInterval);
             Object.keys(this.audioChains).forEach(id => this.cleanupAudioChain(id));
@@ -492,7 +251,9 @@ class OBSClone {
         });
         try {
             localStorage.setItem('obsSectionLayout', JSON.stringify(layout));
-        } catch (e) { /* quota */ }
+        } catch (e) {
+            if (e.name === 'QuotaExceededError') console.warn('[OBS] Quota excedida ao salvar layout');
+        }
     }
 
     _restoreSectionLayout() {
@@ -514,7 +275,7 @@ class OBSClone {
                     }
                 });
             });
-        } catch (e) { /* ignora */ }
+        } catch (e) { console.warn('[OBS] Erro ao restaurar layout:', e); }
     }
 
     // ─────────────────────────────────────────
@@ -755,30 +516,73 @@ class OBSClone {
         scene.sources.push(source);
         scene.activeSourceId = source.id;
         this.activeSource = source.id;
-        this.saveData();
+        await this.saveData();
         this.renderSources();
         this.renderAudioMixer();
         this.showNotification(`${source.icon} Fonte "${source.name}" adicionada!`);
+    }
+
+    _validateString(val, maxLen = 256) {
+        if (typeof val !== 'string') return '';
+        return val.trim().substring(0, maxLen);
+    }
+
+    _validateNumber(val, min, max, def) {
+        const n = parseInt(val);
+        if (isNaN(n)) return def;
+        return Math.max(min, Math.min(max, n));
+    }
+
+    _validateColor(val) {
+        if (/^#[0-9a-fA-F]{6}$/.test(val)) return val;
+        return '#000000';
     }
 
     collectConfig(type) {
         const g = (id) => { const el = document.getElementById(id); return el ? el.value : null; };
         const fileInput = (id) => { const el = document.getElementById(id); return el && el.files ? el.files : null; };
         switch (type) {
-            case 'camera':  return { device: g('src-device') };
+            case 'camera':  return { device: g('src-device') === 'environment' ? 'environment' : 'user' };
             case 'screen':  return {};
             case 'window':  return {};
             case 'image':   return { file: this.getImageDataUrl() };
-            case 'text':    return { text: g('src-text'), color: g('src-color'), fontSize: g('src-fontsize'), bg: g('src-bg') };
-            case 'audio':   return { device: g('src-device') };
-            case 'browser': return { url: g('src-url'), width: g('src-width'), height: g('src-height') };
-            case 'color':   return { color: g('src-color') };
-            case 'slideshow': return { files: fileInput('src-slideshow-files'), interval: parseInt(g('src-slideshow-interval')) || 3000, transition: g('src-slideshow-transition') || 'fade' };
-            case 'gameCapture': return { mode: g('src-game-mode') };
-            case 'audioOutputCapture': return { device: g('src-audio-output') };
-            case 'videoCaptureDevice': return { device: g('src-video-device'), width: parseInt(g('src-video-width')) || 1920, height: parseInt(g('src-video-height')) || 1080 };
-            case 'media':   return { file: this.getMediaFile(), loop: g('src-media-loop') === 'true', autoplay: g('src-media-autoplay') === 'true' };
-            case 'vereador': return { nome: g('src-vereador-name'), partido: g('src-vereador-partido'), photo: this.getVereadorPhoto(), color: g('src-vereador-color'), bg: g('src-vereador-bg') };
+            case 'text':    return {
+                text: this._validateString(g('src-text'), 2000),
+                color: this._validateColor(g('src-color')),
+                fontSize: this._validateNumber(g('src-fontsize'), 10, 200, 48),
+                bg: this._validateColor(g('src-bg')),
+            };
+            case 'audio':   return { device: g('src-device') || 'default' };
+            case 'browser': return {
+                url: this._validateString(g('src-url'), 2048),
+                width: this._validateNumber(g('src-width'), 320, 7680, 1280),
+                height: this._validateNumber(g('src-height'), 240, 4320, 720),
+            };
+            case 'color':   return { color: this._validateColor(g('src-color')) };
+            case 'slideshow': return {
+                files: fileInput('src-slideshow-files'),
+                interval: this._validateNumber(g('src-slideshow-interval'), 500, 30000, 3000),
+                transition: ['fade', 'cut'].includes(g('src-slideshow-transition')) ? g('src-slideshow-transition') : 'fade',
+            };
+            case 'gameCapture': return { mode: g('src-game-mode') || 'any' };
+            case 'audioOutputCapture': return { device: g('src-audio-output') || 'default' };
+            case 'videoCaptureDevice': return {
+                device: g('src-video-device') === 'environment' ? 'environment' : 'user',
+                width: this._validateNumber(g('src-video-width'), 320, 7680, 1920),
+                height: this._validateNumber(g('src-video-height'), 240, 4320, 1080),
+            };
+            case 'media':   return {
+                file: this.getMediaFile(),
+                loop: g('src-media-loop') === 'true',
+                autoplay: g('src-media-autoplay') === 'true',
+            };
+            case 'vereador': return {
+                nome: this._validateString(g('src-vereador-name'), 100),
+                partido: this._validateString(g('src-vereador-partido'), 50),
+                photo: this.getVereadorPhoto(),
+                color: this._validateColor(g('src-vereador-color')),
+                bg: this._validateColor(g('src-vereador-bg')),
+            };
             default:        return {};
         }
     }
@@ -883,7 +687,7 @@ class OBSClone {
             }
 
             case 'slideshow': {
-                const files = source.config.files;
+                let files = source.config.files;
                 if (!files || files.length === 0) {
                     this.showNotification('⚠️ Nenhuma imagem selecionada para o slideshow');
                     break;
@@ -895,16 +699,22 @@ class OBSClone {
                 imgEl.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
                 slideshowContainer.appendChild(imgEl);
                 let currentSlide = 0;
-                const slideUrls = [];
+                let slideUrls = [];
                 const loadNextSlide = async () => {
                     if (slideUrls.length === 0) return;
                     currentSlide = (currentSlide + 1) % slideUrls.length;
                     imgEl.src = slideUrls[currentSlide];
                 };
                 const loadSlides = async () => {
-                    for (const file of files) {
-                        const url = await this.readFileAsDataURL(file);
-                        slideUrls.push(url);
+                    if (typeof files === 'string') {
+                        slideUrls = JSON.parse(files);
+                    } else {
+                        for (const file of files) {
+                            const url = file instanceof File ? await this.readFileAsDataURL(file) : file;
+                            slideUrls.push(url);
+                        }
+                        source.config.files = JSON.stringify(slideUrls);
+                        await this.saveData();
                     }
                     if (slideUrls.length > 0) {
                         imgEl.src = slideUrls[0];
@@ -986,9 +796,12 @@ class OBSClone {
                     font-family: 'Segoe UI', sans-serif;
                     padding: 20px;
                 `;
-                const photoUrl = source.config.photo instanceof File
-                    ? await this.readFileAsDataURL(source.config.photo)
-                    : source.config.photo;
+                const photoFile = source.config.photo;
+                let photoUrl = source.config.photo;
+                if (photoFile instanceof File) {
+                    photoUrl = await this.readFileAsDataURL(photoFile);
+                    source.config.photo = photoUrl;
+                }
                 if (photoUrl) {
                     const img = document.createElement('img');
                     img.src = photoUrl;
@@ -1371,7 +1184,7 @@ class OBSClone {
             if (chain.context && chain.context.state !== 'closed') {
                 chain.context.close();
             }
-        } catch (e) { /* ignora */ }
+        } catch (e) { console.warn('[OBS] Erro ao limpar cadeia de audio:', e); }
         delete this.audioChains[sourceId];
         this.renderAudioMixer();
     }
@@ -1397,7 +1210,7 @@ class OBSClone {
         }
 
         const audioSources = scene.sources.filter(s =>
-            ['camera', 'screen', 'window', 'audio'].includes(s.type)
+            AUDIO_SOURCE_TYPES.includes(s.type)
         );
 
         if (audioSources.length === 0) {
@@ -1756,7 +1569,7 @@ class OBSClone {
                 chain.compressor.threshold.value = threshold;
                 chain.compressor.attack.value = attack;
                 chain.compressor.release.value = release;
-            } catch (e) { /* range err */ }
+            } catch (e) { console.warn('[OBS] Erro ao aplicar compressor:', e); }
         }
 
         // Apply gain offset
@@ -1855,9 +1668,8 @@ class OBSClone {
             return;
         }
 
-        const videoTypes = ['camera','screen','window','videoCaptureDevice','media','gameCapture'];
         list.innerHTML = sources.map(s => {
-            const hasChroma = videoTypes.includes(s.type);
+            const hasChroma = VIDEO_SOURCE_TYPES.includes(s.type);
             return `<div class="source-item ${this.activeSource === s.id ? 'active' : ''}" data-id="${s.id}" draggable="true">
                 <span class="drag-handle">⠿</span>
                 <span class="source-icon">${s.icon}</span>
@@ -1990,6 +1802,7 @@ class OBSClone {
                 const td = document.getElementById('transition-duration');
                 if (td) td.value = this.transitionDuration;
             } catch(e) {
+                console.error('[OBS] Erro ao carregar dados salvos:', e);
                 this.scenes = [];
             }
         }
@@ -2007,7 +1820,7 @@ class OBSClone {
                         activeSourceId: old.length > 0 ? old[0].id : null,
                     };
                     this.scenes.push(defaultScene);
-                } catch(e) {}
+                } catch(e) { console.warn('[OBS] Erro ao migrar dados antigos:', e); }
             }
         }
 
@@ -2036,20 +1849,102 @@ class OBSClone {
         if (td) td.value = this.transitionDuration;
     }
 
-    saveData() {
+    async _sanitizeSourceForSave(source) {
+        const s = { ...source, config: { ...source.config } };
+        const tasks = [];
+        if (s.config.file instanceof File) {
+            tasks.push(
+                this.readFileAsDataURL(s.config.file).then(url => { s.config.file = url; })
+            );
+        }
+        if (s.config.photo instanceof File) {
+            tasks.push(
+                this.readFileAsDataURL(s.config.photo).then(url => { s.config.photo = url; })
+            );
+        }
+        if (s.config.files && typeof s.config.files !== 'string') {
+            try {
+                const files = Array.from(s.config.files);
+                tasks.push(
+                    Promise.all(files.map(f => this.readFileAsDataURL(f))).then(urls => {
+                        s.config.files = urls;
+                    })
+                );
+            } catch (e) {
+                s.config.files = [];
+            }
+        }
+        await Promise.all(tasks);
+        if (s.config.files && Array.isArray(s.config.files)) {
+            s.config.files = s.config.files.filter(f => typeof f === 'string');
+        }
+        return s;
+    }
+
+    async saveData() {
+        const scenesWithSources = await Promise.all(this.scenes.map(async scene => ({
+            ...scene,
+            sources: await Promise.all(scene.sources.map(s => this._sanitizeSourceForSave(s))),
+        })));
         const data = {
-            scenes: this.scenes.map(scene => ({
-                ...scene,
-                sources: scene.sources.filter(s =>
-                    ['image','text','browser','color','slideshow','media','vereador'].includes(s.type)
-                ),
-            })),
+            scenes: scenesWithSources,
             activeSceneId: this.activeSceneId,
             transitionType: this.transitionType,
             transitionDuration: this.transitionDuration,
         };
-        localStorage.setItem('obsScenes', JSON.stringify(data));
-        this.saveSnapshot(data);
+        try {
+            localStorage.setItem('obsScenes', JSON.stringify(data));
+            this.saveSnapshot(data);
+        } catch (e) {
+            if (e.name === 'QuotaExceededError' || e.code === 22) {
+                this.showNotification('⚠️ Espaço de armazenamento insuficiente. Limpe backups antigos.');
+                this._trimOldData();
+            } else {
+                console.error('[OBS] Erro ao salvar dados:', e);
+            }
+        }
+    }
+
+    _trimOldData() {
+        try {
+            localStorage.removeItem(this._snapshotKey);
+            const data = {
+                scenes: this.scenes.map(scene => ({
+                    ...scene,
+                    sources: scene.sources.map(s => {
+                        const clean = { ...s, config: { ...s.config } };
+                        if (clean.config.file && typeof clean.config.file === 'string' && clean.config.file.length > 50000) {
+                            clean.config.file = clean.config.file.substring(0, 50000);
+                        }
+                        return clean;
+                    }),
+                })),
+                activeSceneId: this.activeSceneId,
+            };
+            localStorage.setItem('obsScenes', JSON.stringify(data));
+        } catch (e2) {
+            console.error('[OBS] Falha ao salvar mesmo após limpeza:', e2);
+        }
+    }
+
+    _captureSyncSnapshot() {
+        try {
+            return {
+                scenes: this.scenes.map(scene => ({
+                    ...scene,
+                    sources: scene.sources.map(s => ({
+                        ...s,
+                        config: { ...s.config, file: undefined, photo: undefined, files: undefined },
+                    })),
+                })),
+                activeSceneId: this.activeSceneId,
+                transitionType: this.transitionType,
+                transitionDuration: this.transitionDuration,
+            };
+        } catch (e) {
+            console.warn('[OBS] Erro ao capturar snapshot síncrono:', e);
+            return null;
+        }
     }
 
     startAutoSave() {
@@ -2060,50 +1955,52 @@ class OBSClone {
     }
 
     _syncProgramPip() {
-        const previewArea = document.getElementById('preview-area');
-        const programArea = document.getElementById('program-area');
-        if (!previewArea || !programArea) return;
-        const pipPreview = previewArea.querySelector('.vereador-pip');
-        const pipProgram = programArea.querySelector('.vereador-pip');
-        // Se tem PiP no preview mas nao no programa, ou slot diferente: sincroniza
-        if (pipPreview && (!pipProgram || pipPreview.dataset.slot !== pipProgram.dataset.slot)) {
-            if (pipProgram) {
+        try {
+            const previewArea = document.getElementById('preview-area');
+            const programArea = document.getElementById('program-area');
+            if (!previewArea || !programArea) return;
+            const pipPreview = previewArea.querySelector('.vereador-pip');
+            const pipProgram = programArea.querySelector('.vereador-pip');
+            if (pipPreview && (!pipProgram || pipPreview.dataset.slot !== pipProgram.dataset.slot)) {
+                if (pipProgram) {
+                    const v = pipProgram.querySelector('.vereador-pip-video');
+                    if (v) { v.pause(); v.srcObject = null; }
+                    pipProgram.remove();
+                }
+                const slotId = parseInt(pipPreview.dataset.slot);
+                const stream = this.vereadorManager.connections[slotId];
+                const slot = this.vereadorManager.slots.find(s => s.id === slotId);
+                const pip = document.createElement('div');
+                pip.className = 'vereador-pip';
+                pip.dataset.slot = slotId;
+                pip.innerHTML = `
+                    <div class="vereador-pip-video-wrapper">
+                        <video class="vereador-pip-video" autoplay playsinline muted></video>
+                        <div class="vereador-pip-resize-handle"></div>
+                    </div>
+                    <div class="vereador-pip-info">
+                        <span class="status-dot status-online"></span>
+                        <span class="vereador-pip-name">${slot ? slot.label : 'VER' + slotId}</span>
+                        <button class="vereador-pip-close" title="Remover">✕</button>
+                    </div>
+                `;
+                pip.style.width = pipPreview.style.width || '';
+                pip.style.height = pipPreview.style.height || '';
+                pip.style.maxHeight = pipPreview.style.maxHeight || '';
+                programArea.appendChild(pip);
+                const video = pip.querySelector('.vereador-pip-video');
+                if (video && stream) {
+                    video.srcObject = stream;
+                    video.play().catch(() => {});
+                }
+            }
+            if (!pipPreview && pipProgram) {
                 const v = pipProgram.querySelector('.vereador-pip-video');
                 if (v) { v.pause(); v.srcObject = null; }
                 pipProgram.remove();
             }
-            const slotId = parseInt(pipPreview.dataset.slot);
-            const stream = this.vereadorManager.connections[slotId];
-            const slot = this.vereadorManager.slots.find(s => s.id === slotId);
-            const pip = document.createElement('div');
-            pip.className = 'vereador-pip';
-            pip.dataset.slot = slotId;
-            pip.innerHTML = `
-                <div class="vereador-pip-video-wrapper">
-                    <video class="vereador-pip-video" autoplay playsinline muted></video>
-                    <div class="vereador-pip-resize-handle"></div>
-                </div>
-                <div class="vereador-pip-info">
-                    <span class="status-dot status-online"></span>
-                    <span class="vereador-pip-name">${slot ? slot.label : 'VER' + slotId}</span>
-                    <button class="vereador-pip-close" title="Remover">✕</button>
-                </div>
-            `;
-            pip.style.width = pipPreview.style.width || '';
-            pip.style.height = pipPreview.style.height || '';
-            pip.style.maxHeight = pipPreview.style.maxHeight || '';
-            programArea.appendChild(pip);
-            const video = pip.querySelector('.vereador-pip-video');
-            if (video && stream) {
-                video.srcObject = stream;
-                video.play().catch(() => {});
-            }
-        }
-        // Se sumiu do preview, remove do programa
-        if (!pipPreview && pipProgram) {
-            const v = pipProgram.querySelector('.vereador-pip-video');
-            if (v) { v.pause(); v.srcObject = null; }
-            pipProgram.remove();
+        } catch (e) {
+            console.warn('[OBS] Erro na sincronizacao PiP:', e);
         }
     }
 
@@ -2194,39 +2091,44 @@ class OBSClone {
     // ─────────────────────────────────────────
     startStreaming() {
         if (this.isStreaming) return;
-        this.isStreaming = true;
-        this.updateButtonStates();
+        try {
+            this.isStreaming = true;
+            this.updateButtonStates();
 
-        const previewArea = document.getElementById('preview-area');
-        const activeId = this.activeSource;
-        const stream   = activeId ? this.mediaStreams[activeId] : null;
-        const programVideo = document.getElementById('program-video');
-        const placeholder  = document.getElementById('program-placeholder');
+            const previewArea = document.getElementById('preview-area');
+            const activeId = this.activeSource;
+            const stream   = activeId ? this.mediaStreams[activeId] : null;
+            const programVideo = document.getElementById('program-video');
+            const placeholder  = document.getElementById('program-placeholder');
 
-        if (stream && programVideo) {
-            programVideo.srcObject = stream;
-            programVideo.style.display = 'block';
-            if (placeholder) placeholder.style.display = 'none';
-            // Copia background e logo para o programa
-            if (previewArea) {
-                if (previewArea.style.backgroundImage) {
-                    programVideo.parentElement.style.backgroundImage = previewArea.style.backgroundImage;
-                    programVideo.parentElement.style.backgroundSize = previewArea.style.backgroundSize || 'cover';
-                    programVideo.parentElement.style.backgroundPosition = previewArea.style.backgroundPosition || 'center';
+            if (stream && programVideo) {
+                programVideo.srcObject = stream;
+                programVideo.style.display = 'block';
+                if (placeholder) placeholder.style.display = 'none';
+                if (previewArea) {
+                    if (previewArea.style.backgroundImage) {
+                        programVideo.parentElement.style.backgroundImage = previewArea.style.backgroundImage;
+                        programVideo.parentElement.style.backgroundSize = previewArea.style.backgroundSize || 'cover';
+                        programVideo.parentElement.style.backgroundPosition = previewArea.style.backgroundPosition || 'center';
+                    }
+                    const logoEl = document.getElementById('preview-logo');
+                    if (logoEl) {
+                        const existing = programVideo.parentElement.querySelector('.preview-logo');
+                        if (!existing) programVideo.parentElement.appendChild(logoEl.cloneNode(true));
+                    }
                 }
-                const logoEl = document.getElementById('preview-logo');
-                if (logoEl) {
-                    const existing = programVideo.parentElement.querySelector('.preview-logo');
-                    if (!existing) programVideo.parentElement.appendChild(logoEl.cloneNode(true));
-                }
+            } else if (programVideo) {
+                this.mirrorPreviewToProgram();
             }
-        } else if (programVideo) {
-            this.mirrorPreviewToProgram();
+
+            this.startProgramMirror();
+            this.showNotification('🔴 Transmissão iniciada!');
+        } catch (e) {
+            console.error('[OBS] Erro ao iniciar transmissão:', e);
+            this.showNotification(`❌ Erro ao iniciar transmissão: ${e.message}`);
+            this.isStreaming = false;
+            this.updateButtonStates();
         }
-
-        this.startProgramMirror();
-
-        this.showNotification('🔴 Transmissão iniciada!');
     }
 
     doTransition() {
@@ -2234,7 +2136,7 @@ class OBSClone {
         const programArea = document.getElementById('program-area');
         const programVideo = document.getElementById('program-video');
         const placeholder = document.getElementById('program-placeholder');
-        if (!previewArea || !programArea) return;
+        if (!previewArea || !programArea) { this.showNotification('⚠️ Preview ou Programa não disponíveis'); return; }
 
         this._transitioning = true;
 
@@ -2835,18 +2737,102 @@ class OBSClone {
     //  GRAVAÇÃO
     // ─────────────────────────────────────────
     toggleRecording() {
-        this.isRecording = !this.isRecording;
         const recordBtn = document.getElementById('record-btn');
         if (!recordBtn) return;
-        if (this.isRecording) {
+
+        if (!this.isRecording) {
+            this._startRecording(recordBtn);
+        } else {
+            this._stopRecording(recordBtn);
+        }
+    }
+
+    _startRecording(recordBtn) {
+        if (typeof MediaRecorder === 'undefined') {
+            this.showNotification('⚠️ Gravação não suportada neste navegador');
+            return;
+        }
+        const stream = this._getRecordingStream();
+        if (!stream) {
+            this.showNotification('⚠️ Nenhuma fonte ativa para gravar');
+            return;
+        }
+
+        try {
+            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+                ? 'video/webm;codecs=vp9,opus'
+                : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
+                ? 'video/webm;codecs=vp8,opus'
+                : 'video/webm';
+
+            this._mediaRecorder = new MediaRecorder(stream, { mimeType });
+            this._recordedChunks = [];
+
+            this._mediaRecorder.ondataavailable = (e) => {
+                if (e.data.size > 0) this._recordedChunks.push(e.data);
+            };
+
+            this._mediaRecorder.onerror = (e) => {
+                console.error('[OBS] Erro no MediaRecorder:', e.error);
+                this.showNotification('❌ Erro na gravação');
+                this.isRecording = false;
+                recordBtn.classList.remove('recording');
+                recordBtn.textContent = '⏺ Gravar';
+            };
+
+            this._mediaRecorder.onstop = () => {
+                const blob = new Blob(this._recordedChunks, { type: mimeType });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                const ts = new Date().toISOString().replace(/[:.]/g, '-');
+                a.href = url;
+                a.download = `NossaTV_Gravacao_${ts}.webm`;
+                a.click();
+                URL.revokeObjectURL(url);
+                this._recordedChunks = [];
+                this._recordingStream = null;
+                this.showNotification(`✅ Gravação salva (${(blob.size / 1024 / 1024).toFixed(1)} MB)`);
+            };
+
+            this._mediaRecorder.start(1000);
+            this.isRecording = true;
+            this._recordingStream = stream;
             recordBtn.classList.add('recording');
             recordBtn.textContent = '⏹ Parar Gravação';
             this.showNotification('⏺ Gravação iniciada');
-        } else {
-            recordBtn.classList.remove('recording');
-            recordBtn.textContent = '⏺ Gravar';
-            this.showNotification('✅ Gravação salva');
+        } catch (e) {
+            console.error('[OBS] Erro ao iniciar MediaRecorder:', e);
+            this.showNotification(`❌ Erro ao iniciar gravação: ${e.message}`);
         }
+    }
+
+    _stopRecording(recordBtn) {
+        if (this._mediaRecorder && this._mediaRecorder.state !== 'inactive') {
+            try { this._mediaRecorder.stop(); } catch (e) { console.warn('[OBS] MediaRecorder já estava parado:', e); }
+        }
+        if (this._recordingStream) {
+            this._recordingStream.getTracks().forEach(t => t.stop());
+            this._recordingStream = null;
+        }
+        this.isRecording = false;
+        recordBtn.classList.remove('recording');
+        recordBtn.textContent = '⏺ Gravar';
+    }
+
+    _getRecordingStream() {
+        const activeId = this.activeSource;
+        if (activeId && this.mediaStreams[activeId]) {
+            const sourceStream = this.mediaStreams[activeId];
+            const tracks = [];
+            sourceStream.getVideoTracks().forEach(t => tracks.push(t.clone()));
+            sourceStream.getAudioTracks().forEach(t => tracks.push(t.clone()));
+            if (tracks.length > 0) return new MediaStream(tracks);
+        }
+        const programCanvas = document.getElementById('program-canvas');
+        if (programCanvas) {
+            try { return programCanvas.captureStream(30); } catch (e) { console.warn('[OBS] captureStream não suportado:', e); }
+        }
+        return null;
     }
 
     toggleVirtualCam() {
@@ -2961,14 +2947,14 @@ function upd(){
         cloneKids(pa,s);
         var h=s.querySelector(':scope > *:not(.screen-placeholder)'),ph=s.querySelector('.screen-placeholder');
         if(!h){if(!ph){var p=document.createElement('span');p.className='screen-placeholder';p.textContent='Programa não iniciado';s.appendChild(p);}}else if(ph){ph.remove();}
-    }catch(e){}
+    }catch(e){console.warn('[Proj] Erro ao sincronizar:',e);}
 }
 var t=setInterval(upd,200);upd();
 window.addEventListener('beforeunload',function(){clearInterval(t);});
 <\/script>
 </body></html>`);
         w.document.close();
-        setTimeout(() => { try { w.moveTo(0,0); w.resizeTo(screen.availWidth, screen.availHeight); } catch(e) {} }, 100);
+        setTimeout(() => { try { w.moveTo(0,0); w.resizeTo(screen.availWidth, screen.availHeight); } catch(e) { console.warn('[OBS] Erro ao redimensionar janela:', e); } }, 100);
         this.showNotification(`📺 Programa projetado — arraste para o monitor desejado`);
     }
 
@@ -3013,7 +2999,7 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
                 }
                 return def;
             }
-        } catch (e) { /* ignora */ }
+        } catch (e) { console.warn('[OBS] Erro ao carregar configuracoes:', e); }
         return this._defaultSettings();
     }
 
@@ -3157,7 +3143,10 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
                         </div>
                         <div class="form-group">
                             <label>${t.platform === 'rtmp' ? 'URL RTMP' : 'Chave de Stream'}</label>
-                            <input type="${t.platform === 'rtmp' ? 'url' : 'password'}" class="target-key" data-target-id="${t.id}" value="${t.platform === 'rtmp' ? (t.url || '') : (t.key || '')}" placeholder="${t.platform === 'rtmp' ? 'rtmp://...' : 'Chave...'}" />
+                            <div style="display:flex;gap:4px">
+                                <input type="${t.platform === 'rtmp' ? 'url' : 'password'}" class="target-key" data-target-id="${t.id}" value="${t.platform === 'rtmp' ? (t.url || '') : (t.key || '')}" placeholder="${t.platform === 'rtmp' ? 'rtmp://...' : 'Chave...'}" style="flex:1" />
+                                ${t.platform !== 'rtmp' ? '<button class="btn-key-toggle" data-target-id="' + t.id + '" title="Mostrar/ocultar chave" style="background:none;border:1px solid #444;color:#888;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:0.85em">👁</button>' : ''}
+                            </div>
                         </div>
                         <div class="form-group">
                             <label>Orientação</label>
@@ -3212,6 +3201,21 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
                 const id = parseInt(sel.dataset.targetId);
                 const t = this.settings.stream.targets.find(x => x.id === id);
                 if (t) t.orientation = sel.value;
+            });
+        });
+
+        list.querySelectorAll('.btn-key-toggle').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const id = parseInt(btn.dataset.targetId);
+                const inp = list.querySelector(`.target-key[data-target-id="${id}"]`);
+                if (!inp) return;
+                if (inp.type === 'password') {
+                    inp.type = 'text';
+                    btn.textContent = '🙈';
+                } else {
+                    inp.type = 'password';
+                    btn.textContent = '👁';
+                }
             });
         });
 
@@ -3320,25 +3324,47 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
     saveSettings() {
         const g = (id) => { const el = document.getElementById(id); return el ? el.value : null; };
 
-        // Targets already updated via live events
-
-        this.settings.output.videoBitrate = parseInt(g('set-video-bitrate')) || 3500;
-        this.settings.output.audioBitrate = parseInt(g('set-audio-bitrate')) || 192;
-        this.settings.output.recordQuality = g('set-record-quality') || 'medium';
-        this.settings.video.baseRes = g('set-base-res') || '1280x720';
-        this.settings.video.outputRes = g('set-output-res') || '1280x720';
-        this.settings.video.fps = parseInt(g('set-fps')) || 30;
-        this.settings.video.downscale = g('set-downscale') || 'bicubic';
-        this.settings.audio.sampleRate = parseInt(g('set-sample-rate')) || 48000;
+        this.settings.output.videoBitrate = this._validateNumber(g('set-video-bitrate'), 500, 10000, 3500);
+        this.settings.output.audioBitrate = [64, 128, 160, 192, 256, 320].includes(parseInt(g('set-audio-bitrate')))
+            ? parseInt(g('set-audio-bitrate')) : 192;
+        this.settings.output.recordQuality = ['high', 'medium', 'low', 'lossless'].includes(g('set-record-quality'))
+            ? g('set-record-quality') : 'medium';
+        this.settings.video.baseRes = ['1920x1080', '1280x720', '854x480'].includes(g('set-base-res'))
+            ? g('set-base-res') : '1280x720';
+        this.settings.video.outputRes = ['1920x1080', '1280x720', '854x480'].includes(g('set-output-res'))
+            ? g('set-output-res') : '1280x720';
+        this.settings.video.fps = [60, 30, 24].includes(parseInt(g('set-fps')))
+            ? parseInt(g('set-fps')) : 30;
+        this.settings.video.downscale = ['bilinear', 'bicubic', 'lanczos'].includes(g('set-downscale'))
+            ? g('set-downscale') : 'bicubic';
+        this.settings.audio.sampleRate = [44100, 48000].includes(parseInt(g('set-sample-rate')))
+            ? parseInt(g('set-sample-rate')) : 48000;
         this.settings.audio.globalDevice = g('set-global-audio') || 'default';
-        this.settings.general.theme = g('set-theme') || 'dark';
-        this.settings.general.language = g('set-language') || 'pt-BR';
+        this.settings.general.theme = ['dark', 'light', 'system'].includes(g('set-theme'))
+            ? g('set-theme') : 'dark';
+        this.settings.general.language = ['pt-BR', 'en'].includes(g('set-language'))
+            ? g('set-language') : 'pt-BR';
 
-        this.settings.vertical.logo.width = parseInt(g('set-vertical-logo-width')) || 60;
-        this.settings.vertical.logo.height = parseInt(g('set-vertical-logo-height')) || 60;
+        this.settings.vertical.logo.width = this._validateNumber(g('set-vertical-logo-width'), 16, 300, 60);
+        this.settings.vertical.logo.height = this._validateNumber(g('set-vertical-logo-height'), 16, 300, 60);
+        this.settings.horizontal.logo.width = this._validateNumber(g('set-horizontal-logo-width'), 16, 300, 60);
+        this.settings.horizontal.logo.height = this._validateNumber(g('set-horizontal-logo-height'), 16, 300, 60);
 
-        this.settings.horizontal.logo.width = parseInt(g('set-horizontal-logo-width')) || 60;
-        this.settings.horizontal.logo.height = parseInt(g('set-horizontal-logo-height')) || 60;
+        // Validate stream targets
+        this.settings.stream.targets = this.settings.stream.targets.filter(t => {
+            if (t.platform === 'rtmp') {
+                if (!t.url || !t.url.startsWith('rtmp://')) {
+                    return false;
+                }
+                t.key = '';
+            } else {
+                if (!t.key || t.key.length < 5) {
+                    return false;
+                }
+                t.url = '';
+            }
+            return true;
+        });
 
         this._saveSettings();
         this.closeSettings();
@@ -3463,424 +3489,7 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
 }
 
 // ─────────────────────────────────────────
-//  GERENCIADOR DE VEREADORES (12 SLOTS)
+//  BOOT — expõe global para onclick handlers inline
 // ─────────────────────────────────────────
-class VereadorManager {
-    constructor(obs) {
-        this.obs = obs;
-        this.slots = [];
-        this.activeSlot = null;
-        this.connections = {};
-        this.vdo = null;
-        this._vdoReady = false;
-        this._viewActive = {};
-        this._pendingStreams = {};
-        this._pendingTimeouts = {};
-        this.init();
-    }
-
-    init() {
-        for (let i = 1; i <= 12; i++) {
-            const label = `VER${String(i).padStart(2, '0')}`;
-            this.slots.push({
-                id: i,
-                streamID: `slot_${label}`,
-                label: label,
-                connected: false,
-                link: `${window.location.origin}/guest?room=nossatv&slot=${label}`,
-            });
-        }
-        this.renderGrid();
-        this.setupEvents();
-        this._initVDO();
-    }
-
-    _initVDO() {
-        if (typeof VDONinjaSDK === 'undefined') {
-            console.warn('[Vereador] VDO.Ninja SDK não disponível');
-            return;
-        }
-        try {
-            this.vdo = new VDONinjaSDK();
-
-            this.vdo.addEventListener('track', (event) => {
-                const { track, streamID } = event.detail;
-                if (!streamID) return;
-                const slot = this.slots.find(s => s.streamID === streamID);
-                if (!slot) return;
-
-                if (!this._pendingStreams[slot.id]) {
-                    this._pendingStreams[slot.id] = new MediaStream();
-                }
-                this._pendingStreams[slot.id].addTrack(track);
-
-                clearTimeout(this._pendingTimeouts[slot.id]);
-                this._pendingTimeouts[slot.id] = setTimeout(() => {
-                    const stream = this._pendingStreams[slot.id];
-                    delete this._pendingStreams[slot.id];
-                    delete this._pendingTimeouts[slot.id];
-                    this.connectSlot(slot.id, stream);
-                }, 600);
-            });
-
-            this.vdo.addEventListener('connected', () => {
-                this._vdoReady = true;
-                this._startViewing();
-            });
-
-            this.vdo.connect().then(() => {
-                return this.vdo.joinRoom({ room: 'nossatv' });
-            }).then(() => {
-                if (this.vdo._connected) this._startViewing();
-            }).catch((err) => {
-                console.warn('[Vereador] Erro VDO.Ninja:', err);
-            });
-        } catch (e) {
-            console.warn('[Vereador] Falha ao iniciar VDO.Ninja:', e);
-        }
-    }
-
-    _startViewing() {
-        this.slots.forEach(slot => {
-            if (!slot.connected && !this._viewActive[slot.id]) {
-                this._viewActive[slot.id] = true;
-                this.vdo.view(slot.streamID, { audio: true, video: true }).catch(() => {});
-            }
-        });
-    }
-
-    renderGrid() {
-        const grid = document.getElementById('vereador-grid');
-        if (!grid) return;
-        const connected = this.slots.filter(s => s.connected).length;
-        grid.className = 'vereador-grid';
-        if (connected === 0) grid.classList.add('cols-4');
-        else if (connected === 1) grid.classList.add('cols-1');
-        else if (connected === 2) grid.classList.add('cols-2');
-        else if (connected <= 4) grid.classList.add('cols-2');
-        else grid.classList.add('cols-4');
-        grid.innerHTML = this.slots.map(s => this.renderSlot(s)).join('');
-        const ce = document.getElementById('vereador-count');
-        if (ce) ce.textContent = `${connected}/12`;
-        grid.querySelectorAll('.vereador-slot-conectar').forEach(b => {
-            b.addEventListener('click', (e) => { e.stopPropagation(); this.openConnectionModal(parseInt(b.dataset.slot)); });
-        });
-        grid.querySelectorAll('.vereador-slot-desconectar').forEach(b => {
-            b.addEventListener('click', (e) => { e.stopPropagation(); this.disconnectSlot(parseInt(b.dataset.slot)); });
-        });
-        grid.querySelectorAll('.vereador-slot-rename').forEach(b => {
-            b.addEventListener('click', (e) => { e.stopPropagation(); this.renameSlot(parseInt(b.dataset.slot)); });
-        });
-        grid.querySelectorAll('.vereador-slot-excluir').forEach(b => {
-            b.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSlot(parseInt(b.dataset.slot)); });
-        });
-        grid.querySelectorAll('.vereador-slot.connected').forEach(el => {
-            el.addEventListener('dblclick', () => this.addToPreview(parseInt(el.dataset.slot)));
-        });
-        this.slots.filter(s => s.connected).forEach(slot => {
-            const videoEl = grid.querySelector(`.vereador-slot[data-slot="${slot.id}"] video`);
-            if (videoEl && this.connections[slot.id]) {
-                videoEl.srcObject = this.connections[slot.id];
-                videoEl.play().catch(() => {});
-            }
-        });
-    }
-
-    renderSlot(slot) {
-        if (slot.connected) {
-            return `<div class="vereador-slot connected" data-slot="${slot.id}">
-                <video class="vereador-slot-video" autoplay playsinline muted></video>
-                <div class="vereador-slot-info">
-                    <span class="status-dot status-online"></span>
-                    <span class="vereador-slot-name">${slot.label}</span>
-                    <button class="vereador-slot-rename" data-slot="${slot.id}" title="Renomear">✏️</button>
-                    <button class="vereador-slot-desconectar" data-slot="${slot.id}" title="Desconectar">✕</button>
-                    <button class="vereador-slot-excluir" data-slot="${slot.id}" title="Excluir">🗑️</button>
-                </div>
-            </div>`;
-        }
-        return `<div class="vereador-slot offline" data-slot="${slot.id}">
-            <div class="vereador-slot-empty">${slot.label}</div>
-            <div class="vereador-slot-actions">
-                <button class="vereador-slot-conectar" data-slot="${slot.id}">📱 Conectar</button>
-                <button class="vereador-slot-rename" data-slot="${slot.id}" title="Renomear">✏️</button>
-                <button class="vereador-slot-excluir" data-slot="${slot.id}" title="Excluir">🗑️</button>
-            </div>
-        </div>`;
-    }
-
-    openConnectionModal(slotId) {
-        const slot = this.slots.find(s => s.id === slotId);
-        if (!slot) return;
-        this.activeSlot = slotId;
-        document.getElementById('vereador-modal-title').textContent = `🔗 ${slot.label} — Conectar`;
-        const inp = document.getElementById('vereador-modal-link-input');
-        inp.value = slot.link;
-        const qr = document.getElementById('vereador-qr-img');
-        qr.src = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(slot.link)}`;
-        const pv = document.getElementById('vereador-modal-video');
-        pv.srcObject = null;
-        pv.style.display = 'none';
-        const ph = document.querySelector('.vereador-modal-video-placeholder');
-        if (ph) ph.style.display = 'flex';
-        this._setModalStatus('offline', 'Aguardando convidado entrar...');
-        document.getElementById('modal-vereador').style.display = 'flex';
-    }
-
-    _setModalStatus(state, text) {
-        const el = document.getElementById('vereador-modal-status');
-        if (!el) return;
-        const dot = el.querySelector('.status-dot');
-        if (dot) dot.className = `status-dot status-${state}`;
-        const txt = document.getElementById('vereador-modal-status-text');
-        if (txt) txt.textContent = text;
-    }
-
-    closeConnectionModal() {
-        const pv = document.getElementById('vereador-modal-video');
-        if (pv && pv.srcObject) {
-            const sid = this.activeSlot;
-            const slot = sid ? this.slots.find(s => s.id === sid) : null;
-            if (!slot || !slot.connected) {
-                pv.srcObject.getTracks().forEach(t => t.stop());
-            }
-            pv.srcObject = null;
-            pv.style.display = 'none';
-        }
-        const ph = document.querySelector('.vereador-modal-video-placeholder');
-        if (ph) ph.style.display = 'flex';
-        document.getElementById('modal-vereador').style.display = 'none';
-        this.activeSlot = null;
-    }
-
-    async testLocal() {
-        const sid = this.activeSlot;
-        if (!sid) return;
-        try {
-            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            const pv = document.getElementById('vereador-modal-video');
-            pv.srcObject = stream;
-            pv.style.display = 'block';
-            const ph = document.querySelector('.vereador-modal-video-placeholder');
-            if (ph) ph.style.display = 'none';
-            this._setModalStatus('online', '✅ Conectado (teste local)');
-            this.connectSlot(sid, stream);
-        } catch (err) {
-            this._setModalStatus('offline', `❌ Erro: ${err.message}`);
-        }
-    }
-
-    connectSlot(slotId, stream) {
-        const slot = this.slots.find(s => s.id === slotId);
-        if (!slot) return;
-        if (slot.connected && this.connections[slotId]) {
-            this.connections[slotId].getTracks().forEach(t => t.stop());
-        }
-        slot.connected = true;
-        this.connections[slotId] = stream;
-        this.renderGrid();
-        this._setModalStatus('online', `✅ ${slot.label} conectado`);
-        this.obs?.showNotification(`📹 ${slot.label} conectado`);
-    }
-
-    addToPreview(slotId) {
-        const slot = this.slots.find(s => s.id === slotId);
-        if (!slot || !slot.connected) return;
-        const stream = this.connections[slotId];
-        if (!stream) return;
-
-        const previewArea = document.getElementById('preview-area');
-        if (!previewArea) return;
-
-        const oldPip = previewArea.querySelector('.vereador-pip');
-        if (oldPip) {
-            const oldVideo = oldPip.querySelector('.vereador-pip-video');
-            if (oldVideo) oldVideo.srcObject = null;
-            oldPip.remove();
-        }
-        document.querySelectorAll(`.vereador-pip`).forEach(p => {
-            if (p.dataset.slot !== String(slotId)) {
-                const v = p.querySelector('.vereador-pip-video');
-                if (v) v.srcObject = null;
-                p.remove();
-            }
-        });
-
-        const pip = document.createElement('div');
-        pip.className = 'vereador-pip';
-        pip.dataset.slot = slotId;
-        pip.innerHTML = `
-            <div class="vereador-pip-video-wrapper">
-                <video class="vereador-pip-video" autoplay playsinline muted></video>
-                <div class="vereador-pip-resize-handle"></div>
-            </div>
-            <div class="vereador-pip-info">
-                <span class="status-dot status-online"></span>
-                <span class="vereador-pip-name">${slot.label}</span>
-                <button class="vereador-pip-close" title="Remover">✕</button>
-            </div>
-        `;
-        previewArea.appendChild(pip);
-
-        const video = pip.querySelector('.vereador-pip-video');
-        video.srcObject = stream;
-        video.play().catch(() => {});
-
-        pip.querySelector('.vereador-pip-close').addEventListener('click', (e) => {
-            e.stopPropagation();
-            this._removePipCompletely(slotId);
-        });
-
-        this._initPipResize(pip);
-        this.obs?.showNotification(`📹 ${slot.label} no preview`);
-    }
-
-    _removePipCompletely(slotId) {
-        document.querySelectorAll(`.vereador-pip[data-slot="${slotId}"]`).forEach(p => {
-            const v = p.querySelector('.vereador-pip-video');
-            if (v) v.srcObject = null;
-            p.remove();
-        });
-    }
-
-    _initPipResize(pip) {
-        const handle = pip.querySelector('.vereador-pip-resize-handle');
-        if (!handle) return;
-        let isResizing = false, startX, startY, origW, origH;
-
-        const onStart = (e) => {
-            isResizing = true;
-            const cx = e.clientX ?? e.touches[0].clientX;
-            const cy = e.clientY ?? e.touches[0].clientY;
-            startX = cx; startY = cy;
-            origW = pip.offsetWidth;
-            origH = pip.offsetHeight;
-            pip.style.maxHeight = 'none';
-            e.stopPropagation();
-            e.preventDefault();
-        };
-        const onMove = (cx, cy) => {
-            if (!isResizing) return;
-            const dx = cx - startX;
-            const dy = cy - startY;
-            const newW = Math.max(80, origW + dx);
-            const newH = Math.max(45, origH + dy);
-            pip.style.width = newW + 'px';
-            pip.style.height = newH + 'px';
-        };
-        const onUp = () => { isResizing = false; };
-
-        handle.addEventListener('mousedown', onStart);
-        document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
-        document.addEventListener('mouseup', onUp);
-        handle.addEventListener('touchstart', onStart, { passive: false });
-        document.addEventListener('touchmove', (e) => {
-            if (isResizing) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }
-        }, { passive: false });
-        document.addEventListener('touchend', onUp);
-    }
-
-    renameSlot(slotId) {
-        const slot = this.slots.find(s => s.id === slotId);
-        if (!slot) return;
-        const novo = prompt(`Novo nome para ${slot.label}:`, slot.label);
-        if (novo && novo.trim()) {
-            slot.label = novo.trim();
-            this.renderGrid();
-            this.obs?.showNotification(`✏️ Slot renomeado para "${slot.label}"`);
-        }
-    }
-
-    deleteSlot(slotId) {
-        const slot = this.slots.find(s => s.id === slotId);
-        if (!slot) return;
-        if (!confirm(`Excluir ${slot.label} permanentemente?`)) return;
-        this._removePipCompletely(slotId);
-        if (this.vdo) {
-            try { this.vdo.stopViewing(slot.streamID); } catch(e) {}
-            delete this._viewActive[slot.id];
-        }
-        if (this.connections[slotId]) {
-            this.connections[slotId].getTracks().forEach(t => t.stop());
-            delete this.connections[slotId];
-        }
-        const idx = this.slots.indexOf(slot);
-        if (idx !== -1) this.slots.splice(idx, 1);
-        this.slots.forEach((s, i) => {
-            s.id = i + 1;
-            const newLabel = `VER${String(i + 1).padStart(2, '0')}`;
-            s.label = newLabel;
-            s.streamID = `slot_${newLabel}`;
-            s.link = `${window.location.origin}/guest?room=nossatv&slot=${newLabel}`;
-        });
-        this.renderGrid();
-        this.obs?.showNotification(`🗑️ Slot removido`);
-    }
-
-    disconnectSlot(slotId) {
-        const slot = this.slots.find(s => s.id === slotId);
-        if (!slot) return;
-        this._removePipCompletely(slotId);
-        if (this.vdo) {
-            try { this.vdo.stopViewing(slot.streamID); } catch(e) {}
-            delete this._viewActive[slot.id];
-        }
-        if (this.connections[slotId]) {
-            this.connections[slotId].getTracks().forEach(t => t.stop());
-            delete this.connections[slotId];
-        }
-        slot.connected = false;
-        this.renderGrid();
-    }
-
-    setupEvents() {
-        const close = () => this.closeConnectionModal();
-        document.getElementById('close-vereador-modal')?.addEventListener('click', close);
-        document.getElementById('close-vereador-modal-btn')?.addEventListener('click', close);
-        document.getElementById('modal-vereador')?.addEventListener('click', (e) => {
-            if (e.target.id === 'modal-vereador') close();
-        });
-        document.getElementById('vereador-test-local-btn')?.addEventListener('click', () => this.testLocal());
-        document.getElementById('vereador-copy-link-btn')?.addEventListener('click', () => {
-            const inp = document.getElementById('vereador-modal-link-input');
-            if (!inp) return;
-            inp.select();
-            document.execCommand('copy');
-            this.obs?.showNotification('🔗 Link copiado!');
-        });
-        document.getElementById('vereador-links-btn')?.addEventListener('click', () => this.copyAllLinks());
-        document.addEventListener('keydown', (e) => {
-            if (e.key === 'Escape') {
-                const m = document.getElementById('modal-vereador');
-                if (m && m.style.display === 'flex') close();
-            }
-        });
-        document.getElementById('vereador-whatsapp-btn')?.addEventListener('click', () => {
-            const inp = document.getElementById('vereador-modal-link-input');
-            if (!inp || !inp.value) return;
-            const msg = encodeURIComponent(`📹 Convidei você para participar da transmissão ao vivo! Acesse: ${inp.value}`);
-            window.open(`https://wa.me/?text=${msg}`, '_blank');
-        });
-    }
-
-    copyAllLinks() {
-        const txt = this.slots.map(s => `${s.label}: ${s.link}`).join('\n');
-        navigator.clipboard.writeText(txt).then(() => {
-            this.obs?.showNotification('🔗 Links copiados!');
-        }).catch(() => {
-            const ta = document.createElement('textarea');
-            ta.value = txt;
-            document.body.appendChild(ta);
-            ta.select();
-            document.execCommand('copy');
-            ta.remove();
-            this.obs?.showNotification('🔗 Links copiados!');
-        });
-    }
-}
-
-// ─────────────────────────────────────────
-//  BOOT
-// ─────────────────────────────────────────
-let obsClone;
-document.addEventListener('DOMContentLoaded', () => { obsClone = new OBSClone(); });
+window.obsClone = null;
+document.addEventListener('DOMContentLoaded', () => { window.obsClone = new OBSClone(); });

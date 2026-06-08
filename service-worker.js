@@ -1,5 +1,5 @@
-const CACHE = 'nossatv-v1';
-const URLS = ['index.html', 'styles.css', 'script.js', 'manifest.json', 'favicon.svg'];
+const CACHE = 'nossatv-v2';
+const URLS = ['index.html', 'styles.css', 'script.js', 'source-types.js', 'vereador-manager.js', 'manifest.json', 'favicon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -14,13 +14,19 @@ self.addEventListener('activate', (e) => {
 });
 
 self.addEventListener('fetch', (e) => {
+  if (e.request.method !== 'GET') return;
+
   e.respondWith(
-    caches.match(e.request).then((cached) => cached || fetch(e.request).then((res) => {
-      if (e.request.method === 'GET') {
-        const clone = res.clone();
-        caches.open(CACHE).then((c) => c.put(e.request, clone));
-      }
-      return res;
-    }))
+    caches.match(e.request).then((cached) => {
+      const fetchPromise = fetch(e.request).then((res) => {
+        if (res.ok) {
+          const clone = res.clone();
+          caches.open(CACHE).then((c) => c.put(e.request, clone));
+        }
+        return res;
+      }).catch(() => cached);
+
+      return cached || fetchPromise;
+    })
   );
 });
