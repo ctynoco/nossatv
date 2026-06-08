@@ -2,221 +2,146 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <title>Convidado</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        html,body{height:100%;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
-        body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#fff;display:flex;align-items:center;justify-content:center;padding:12px}
-        .card{background:#1a1a2e;border-radius:16px;padding:20px 16px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
-        .sub{color:#888;font-size:0.82em;margin-bottom:12px;text-align:center}
-        .video-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000;margin-bottom:8px}
-        .video-wrap video{width:100%;display:block;border-radius:10px}
-        .status-dot{position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:#555;transition:background .3s;z-index:2}
-        .status-dot.online{background:#4caf50;box-shadow:0 0 6px #4caf50}
-        .return-video{width:100%;border-radius:10px;background:#000;margin-bottom:8px;display:none}
+        body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#fff;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}
+        .card{background:#1a1a2e;border-radius:16px;padding:32px 24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+        .sub{color:#888;font-size:0.82em;margin-bottom:20px}
+        .video-wrap{position:relative;border-radius:8px;overflow:hidden;background:#000;margin-bottom:16px}
+        .video-wrap video{width:100%;display:block;border-radius:8px}
+        .video-wrap video.hidden{display:none}
+        .dot{position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:#555;transition:background .3s;z-index:2}
+        .dot.on{background:#4caf50;box-shadow:0 0 6px #4caf50}
+        .return-video{width:100%;border-radius:8px;background:#000;margin-bottom:16px;display:none}
         .return-video.active{display:block}
-        .btn-toggle{width:100%;padding:16px;border:none;border-radius:50px;font-size:1.1em;font-weight:700;cursor:pointer;transition:all .25s;background:#1976d2;color:#fff}
-        .btn-toggle:hover{background:#1565c0}
-        .btn-toggle:disabled{opacity:0.5;cursor:not-allowed}
-        .btn-toggle.active{background:#0d47a1}
-        .btn-toggle.active:hover{background:#0a3a8a}
-        .info{font-size:0.75em;color:#666;margin-top:10px;line-height:1.5;text-align:center}
+        .btn{width:100%;padding:14px;border:none;border-radius:50px;font-size:1em;font-weight:700;cursor:pointer;transition:opacity .2s}
+        .btn:disabled{opacity:0.5;cursor:not-allowed}
+        .btn-primary{background:#1976d2;color:#fff}
+        .btn-primary:hover:not(:disabled){background:#1565c0}
+        .info{font-size:0.78em;color:#666;margin-top:12px;line-height:1.5}
     </style>
 </head>
 <body>
     <div class="card">
         <p class="sub" id="slot-label">Conectando...</p>
         <div class="video-wrap">
-            <video id="local-video" autoplay playsinline muted></video>
-            <div class="status-dot" id="status-dot"></div>
+            <video id="local-video" autoplay playsinline muted class="hidden"></video>
+            <div class="dot" id="dot"></div>
         </div>
         <video id="return-video" class="return-video" autoplay playsinline></video>
-        <button id="btn-toggle" class="btn-toggle" disabled>Ativar Câmera</button>
-        <p class="info" id="info-text">Ao conectar, sua câmera e áudio serão enviados para a transmissão.</p>
+        <button id="btn-toggle" class="btn btn-primary" disabled>Ativar Câmera</button>
+        <p class="info" id="info-text">Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.</p>
     </div>
     <script src="https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js" integrity="sha384-/xDAcwjdhN3g8ilH5vtF0Agq4V9XxMqRwgxde0EVDrfjVJUk87pBL/SgjNUsBFEq" crossorigin="anonymous"></script>
     <script>
     (function() {
-        const params = new URLSearchParams(location.search);
-        const room = params.get('room') || 'nossatv';
-        const slot = params.get('slot');
+        var params = new URLSearchParams(location.search);
+        var room = params.get('room') || 'nossatv';
+        var slot = params.get('slot');
         if (!slot) {
             document.getElementById('slot-label').textContent = 'Link inválido';
             document.getElementById('btn-toggle').disabled = true;
             return;
         }
 
-        const streamID = 'slot_' + slot;
-        const programID = 'program_' + slot;
+        var streamID = 'slot_' + slot;
+        var programID = 'program_' + slot;
         document.getElementById('slot-label').textContent = 'Convidado: ' + slot;
 
-        let vdo = null;
-        let localStream = null;
-        let connected = false;
-        let cameraActive = false;
-        let wakeLockSentinel = null;
-        let returnAudioCtx = null;
-        let returnGainNode = null;
-        let viewRetryTimer = null;
+        var vdo = null;
+        var localStream = null;
+        var connected = false;
+        var viewRetry = null;
+        var wakeLock = null;
 
-        const localVideo = document.getElementById('local-video');
-        const returnVideo = document.getElementById('return-video');
-        const toggleBtn = document.getElementById('btn-toggle');
-        const infoText = document.getElementById('info-text');
-        const statusDot = document.getElementById('status-dot');
+        window.addEventListener('beforeunload', function(e) {
+            if (connected) { e.preventDefault(); e.returnValue = ''; }
+        });
+
+        var localVideo = document.getElementById('local-video');
+        var returnVideo = document.getElementById('return-video');
+        var toggleBtn = document.getElementById('btn-toggle');
+        var infoText = document.getElementById('info-text');
+        var dot = document.getElementById('dot');
+
+        function showVideo() {
+            localVideo.classList.remove('hidden');
+        }
+
+        function hideVideo() {
+            localVideo.classList.add('hidden');
+        }
 
         function setDot(on) {
-            statusDot.classList.toggle('online', on);
+            dot.classList.toggle('on', on);
         }
 
-        function setBtn(active) {
-            cameraActive = active;
-            toggleBtn.classList.toggle('active', active);
-            toggleBtn.textContent = active ? 'Desativar Câmera' : 'Ativar Câmera';
-        }
-
-        async function acquireWakeLock() {
-            try {
-                if ('wakeLock' in navigator) {
-                    wakeLockSentinel = await navigator.wakeLock.request('screen');
-                    wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
-                }
-            } catch (_) {}
-        }
-
-        function releaseWakeLock() {
-            if (wakeLockSentinel) {
-                try { wakeLockSentinel.release(); } catch(_) {}
-                wakeLockSentinel = null;
-            }
-        }
-
-        function stopReturnAudio() {
-            if (returnAudioCtx) {
-                try { returnAudioCtx.close(); } catch(_) {}
-                returnAudioCtx = null;
-                returnGainNode = null;
-            }
-        }
-
-        function startReturnAudio(stream) {
-            stopReturnAudio();
-            try {
-                const ACtor = window.AudioContext || window.webkitAudioContext;
-                returnAudioCtx = new ACtor();
-                if (returnAudioCtx.state === 'suspended') {
-                    returnAudioCtx.resume();
-                }
-                const src = returnAudioCtx.createMediaStreamSource(stream);
-                returnGainNode = returnAudioCtx.createGain();
-                returnGainNode.gain.value = 0.7;
-                src.connect(returnGainNode);
-                returnGainNode.connect(returnAudioCtx.destination);
-                console.log('[Guest] Return audio started');
-            } catch (e) {
-                console.warn('[Guest] Return audio error:', e);
-            }
+        function setBtnText(connecting) {
+            toggleBtn.textContent = connecting ? 'Conectando...' : (connected ? 'Desativar Câmera' : 'Ativar Câmera');
         }
 
         function startViewReturn() {
-            if (viewRetryTimer) {
-                clearTimeout(viewRetryTimer);
-                viewRetryTimer = null;
-            }
+            if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
             if (!vdo || !connected) return;
-            console.log('[Guest] Viewing program:', programID);
-
-            vdo.view(programID, { audio: true, video: true }).then(stream => {
+            vdo.view(programID, { audio: true, video: true }).then(function(stream) {
                 if (stream && stream.active) {
-                    console.log('[Guest] Return stream received');
                     returnVideo.srcObject = stream;
                     returnVideo.classList.add('active');
-                    returnVideo.play().catch(e => console.warn('[Guest] Return play:', e));
-                    startReturnAudio(stream);
+                    returnVideo.play().catch(function() {});
                 } else {
-                    console.warn('[Guest] Return stream inactive, retrying...');
-                    viewRetryTimer = setTimeout(startViewReturn, 2000);
+                    viewRetry = setTimeout(startViewReturn, 2000);
                 }
-            }).catch(err => {
-                console.warn('[Guest] View error, retrying in 2s:', err);
-                viewRetryTimer = setTimeout(startViewReturn, 2000);
+            }).catch(function() {
+                viewRetry = setTimeout(startViewReturn, 2000);
             });
         }
 
         function cleanup() {
-            if (viewRetryTimer) {
-                clearTimeout(viewRetryTimer);
-                viewRetryTimer = null;
-            }
-            releaseWakeLock();
-            stopReturnAudio();
+            if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
             if (vdo) {
-                try { if (localStream) vdo.stopPublishing(); } catch(_) {}
-                try { vdo.stopViewing(programID); } catch(_) {}
+                try { if (localStream) vdo.stopPublishing(); } catch(e) {}
+                try { vdo.stopViewing(programID); } catch(e) {}
             }
             if (localStream) {
-                localStream.getTracks().forEach(t => t.stop());
+                localStream.getTracks().forEach(function(t) { t.stop(); });
                 localStream = null;
             }
             localVideo.srcObject = null;
-            localVideo.style.display = 'none';
+            hideVideo();
             returnVideo.srcObject = null;
             returnVideo.classList.remove('active');
             connected = false;
             setDot(false);
-            setBtn(false);
-            toggleBtn.disabled = false;
         }
 
-        window.addEventListener('beforeunload', (e) => {
-            if (connected || cameraActive) {
-                e.preventDefault();
-                e.returnValue = '';
-            }
-        });
-
-        document.addEventListener('visibilitychange', () => {
-            if (document.visibilityState === 'visible' && connected) {
-                acquireWakeLock();
-            }
-        });
-
-        toggleBtn.addEventListener('click', async () => {
-            if (cameraActive) {
+        toggleBtn.addEventListener('click', function() {
+            if (connected) {
                 if (vdo && localStream) {
-                    try { vdo.stopPublishing(); } catch(_) {}
-                    try { vdo.stopViewing(programID); } catch(_) {}
+                    try { vdo.stopPublishing(); } catch(e) {}
+                    try { vdo.stopViewing(programID); } catch(e) {}
                 }
-                if (localStream) {
-                    localStream.getTracks().forEach(t => t.stop());
-                    localStream = null;
-                }
-                localVideo.srcObject = null;
-                localVideo.style.display = 'none';
-                returnVideo.srcObject = null;
-                returnVideo.classList.remove('active');
-                connected = false;
-                setDot(false);
-                setBtn(false);
-                infoText.textContent = 'Câmera desativada. Clique para reativar.';
+                cleanup();
+                vdo = null;
+                toggleBtn.disabled = false;
+                setBtnText(false);
+                infoText.textContent = 'Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.';
                 return;
             }
 
             toggleBtn.disabled = true;
-            toggleBtn.textContent = 'Conectando...';
+            setBtnText(true);
             infoText.textContent = 'Solicitando câmera e microfone...';
 
-            try {
-                localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: true
-                });
-                console.log('[Guest] Camera OK, tracks:', localStream.getTracks().length);
-
-                localVideo.srcObject = localStream;
-                localVideo.style.display = 'block';
+            navigator.mediaDevices.getUserMedia({
+                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                audio: true
+            }).then(function(stream) {
+                localStream = stream;
+                localVideo.srcObject = stream;
+                showVideo();
                 toggleBtn.textContent = 'Conectando...';
                 infoText.textContent = 'Conectando ao servidor...';
 
@@ -226,41 +151,38 @@
                         { urls: 'stun:stun1.l.google.com:19302' },
                     ],
                 });
-                await vdo.connect();
-                await vdo.joinRoom({ room: room });
-                await vdo.publish(localStream, { streamID: streamID });
-                console.log('[Guest] Published OK');
-
+                return vdo.connect().then(function() {
+                    return vdo.joinRoom({ room: room });
+                }).then(function() {
+                    return vdo.publish(localStream, { streamID: streamID });
+                });
+            }).then(function() {
                 connected = true;
                 setDot(true);
                 toggleBtn.disabled = false;
-                setBtn(true);
+                setBtnText(false);
                 infoText.textContent = 'Conectado à transmissão.';
-                acquireWakeLock();
-
                 startViewReturn();
-
-            } catch (err) {
-                console.error('[Guest] Erro:', err);
+            }).catch(function(err) {
                 if (localStream) {
-                    localStream.getTracks().forEach(t => t.stop());
+                    localStream.getTracks().forEach(function(t) { t.stop(); });
                     localStream = null;
                 }
                 localVideo.srcObject = null;
-                localVideo.style.display = 'none';
-                if (vdo) { try { vdo.disconnect(); } catch(_) {} }
+                hideVideo();
+                if (vdo) { try { vdo.disconnect(); } catch(e) {} }
                 vdo = null;
                 connected = false;
                 setDot(false);
                 toggleBtn.disabled = false;
-                setBtn(false);
+                setBtnText(false);
                 infoText.textContent = 'Erro: ' + err.message;
                 if (err.name === 'NotAllowedError') {
                     infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
                 } else if (err.name === 'NotFoundError') {
                     infoText.textContent = 'Nenhuma câmera encontrada neste dispositivo.';
                 }
-            }
+            });
         });
     })();
     </script>
