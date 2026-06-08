@@ -2759,11 +2759,14 @@ class OBSClone {
         }
 
         try {
-            const mimeType = MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
+            const mimeType = MediaRecorder.isTypeSupported('video/mp4;codecs=avc1.42E01E,mp4a.40.2')
+                ? 'video/mp4;codecs=avc1.42E01E,mp4a.40.2'
+                : MediaRecorder.isTypeSupported('video/webm;codecs=vp9,opus')
                 ? 'video/webm;codecs=vp9,opus'
                 : MediaRecorder.isTypeSupported('video/webm;codecs=vp8,opus')
                 ? 'video/webm;codecs=vp8,opus'
                 : 'video/webm';
+            const ext = mimeType.startsWith('video/mp4') ? 'mp4' : 'webm';
 
             this._mediaRecorder = new MediaRecorder(stream, { mimeType });
             this._recordedChunks = [];
@@ -2786,7 +2789,7 @@ class OBSClone {
                 const a = document.createElement('a');
                 const ts = new Date().toISOString().replace(/[:.]/g, '-');
                 a.href = url;
-                a.download = `NossaTV_Gravacao_${ts}.webm`;
+                a.download = `NossaTV_Gravacao_${ts}.${ext}`;
                 a.click();
                 URL.revokeObjectURL(url);
                 this._recordedChunks = [];
