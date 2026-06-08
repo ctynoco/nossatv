@@ -164,6 +164,10 @@ export class VereadorManager {
         const inp = document.getElementById('vereador-modal-link-input');
         inp.value = slot.link;
         const qr = document.getElementById('vereador-qr-img');
+        if (!qr) {
+            console.warn('[Vereador] Elemento QR não encontrado');
+            return;
+        }
         const canvas = document.createElement('canvas');
         canvas.id = 'vereador-qr-canvas';
         canvas.width = 200;

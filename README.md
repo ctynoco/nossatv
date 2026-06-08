@@ -61,7 +61,7 @@ nossaTV/
 ├── manifest.json           # Manifesto PWA
 ├── build.js                # Script de build
 ├── public/                 # Saída do build
-└── .gitlab-ci.yml          # CI/CD GitLab Pages
+└── .github/workflows/pages.yml  # CI/CD GitHub Pages
 ```
 
 ## Stack

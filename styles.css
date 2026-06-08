@@ -1781,7 +1781,7 @@ section h2 {
     left: 4px;
 }
 .vereador-pip-video-wrapper {
-    aspect-ratio: 16 / 9;
+    aspect-ratio: 1 / 1;
     position: relative;
     overflow: hidden;
     background: #000;

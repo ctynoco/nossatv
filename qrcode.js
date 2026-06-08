@@ -1,10 +1,10 @@
 export function generateQRCode(canvas, text) {
-    if (typeof QRCode === 'undefined') {
+    if (typeof qrcode === 'undefined') {
         console.warn('[QRCode] Biblioteca não disponível');
         return;
     }
     try {
-        const qr = QRCode(0, 'M');
+        const qr = qrcode(0, 'M');
         qr.addData(text);
         qr.make();
         const size = qr.getModuleCount() * 8;
