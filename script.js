@@ -612,6 +612,14 @@ class OBSClone {
         const previewArea = document.getElementById('preview-area');
         if (!previewArea) return;
 
+        // Se já é a fonte ativa e tem stream no preview, não reativa
+        if (source.id === this.activeSource && this.mediaStreams[source.id]) {
+            const existing = previewArea.querySelector('#preview-video');
+            if (existing && existing.srcObject === this.mediaStreams[source.id]) {
+                return;
+            }
+        }
+
         this.clearPreview();
 
         switch (source.type) {
@@ -764,6 +772,15 @@ class OBSClone {
                 this.mediaStreams[source.id] = stream;
                 const video = this.createVideoEl('preview-video', stream, false);
                 previewArea.appendChild(video);
+                // Re-captura automática se o dispositivo for desconectado e reconectado
+                stream.getVideoTracks()[0]?.addEventListener('ended', () => {
+                    setTimeout(() => {
+                        if (this.activeSource === source.id) {
+                            delete this.mediaStreams[source.id];
+                            this.activateSource(source).catch(() => {});
+                        }
+                    }, 2000);
+                });
                 break;
             }
 
