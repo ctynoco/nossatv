@@ -18,12 +18,12 @@
         .return-video{width:100%;border-radius:10px;background:#000;margin-bottom:8px;display:none}
         .return-video.active{display:block}
         .toggle-btn{width:100%;padding:16px;border:none;border-radius:50px;font-size:1.1em;font-weight:700;cursor:pointer;transition:all .25s;display:flex;align-items:center;justify-content:center;gap:8px}
-        .toggle-btn.off{background:#c62828;color:#fff}
-        .toggle-btn.on{background:#2e7d32;color:#fff}
+        .toggle-btn.off{background:#2e7d32;color:#fff}
+        .toggle-btn.on{background:#1b5e20;color:#fff}
         .toggle-btn:disabled{opacity:0.5;cursor:not-allowed}
         .toggle-btn .indicator{width:14px;height:14px;border-radius:50%;display:inline-block;transition:all .25s}
-        .toggle-btn.off .indicator{background:#ff8a65;box-shadow:0 0 6px #ff8a65}
-        .toggle-btn.on .indicator{background:#81c784;box-shadow:0 0 6px #81c784}
+        .toggle-btn.off .indicator{background:#81c784;box-shadow:0 0 6px #81c784}
+        .toggle-btn.on .indicator{background:#a5d6a7;box-shadow:0 0 6px #a5d6a7}
         .info{font-size:0.75em;color:#666;margin-top:10px;line-height:1.5;text-align:center}
     </style>
 </head>
@@ -137,6 +137,12 @@
             connected = false;
         }
 
+        function resetUI() {
+            toggleBtn.disabled = false;
+            setToggle(false);
+            infoText.textContent = 'Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.';
+        }
+
         toggleBtn.addEventListener('click', async () => {
             if (connected) {
                 if (vdo && localStream) {
@@ -145,27 +151,41 @@
                 }
                 cleanup();
                 vdo = null;
-                setToggle(false);
-                toggleBtn.disabled = false;
-                infoText.textContent = 'Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.';
+                resetUI();
                 return;
             }
 
             toggleBtn.disabled = true;
             btnText.textContent = 'Conectando...';
+            infoText.textContent = 'Solicitando câmera e microfone...';
+
+            // Timeout de segurança — se demorar mais que 15s, libera o botão
+            const timeout = setTimeout(() => {
+                if (!connected) {
+                    resetUI();
+                    infoText.textContent = 'Tempo limite excedido. Verifique sua câmera e tente novamente.';
+                }
+            }, 15000);
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
                     audio: true
                 });
+                clearTimeout(timeout);
                 localVideo.srcObject = localStream;
                 localVideo.style.display = 'block';
                 startMicMeter(localStream);
 
                 btnText.textContent = 'Conectando...';
+                infoText.textContent = 'Conectando ao servidor...';
 
-                vdo = new VDONinjaSDK();
+                vdo = new VDONinjaSDK({
+                    iceServers: [
+                        { urls: 'stun:stun.l.google.com:19302' },
+                        { urls: 'stun:stun1.l.google.com:19302' },
+                    ],
+                });
                 await vdo.connect();
                 await vdo.joinRoom({ room: room });
                 await vdo.publish(localStream, { streamID: streamID });
@@ -184,10 +204,12 @@
                 infoText.textContent = 'Conectado — sua câmera está sendo transmitida.';
 
             } catch (err) {
+                clearTimeout(timeout);
+                console.error('[Guest] Erro:', err);
+                try { if (vdo) { vdo.disconnect(); } } catch(e) {}
                 cleanup();
                 vdo = null;
-                setToggle(false);
-                toggleBtn.disabled = false;
+                resetUI();
                 infoText.textContent = 'Erro: ' + err.message;
                 if (err.name === 'NotAllowedError') {
                     infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
