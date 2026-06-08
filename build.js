@@ -29,7 +29,7 @@ async function build() {
       out = await minify(content, {
         collapseWhitespace: true,
         removeComments: true,
-        removeAttributeQuotes: true,
+        removeAttributeQuotes: false,
         minifyCSS: true,
         minifyJS: true,
       });
