@@ -169,15 +169,22 @@
                 }, 20000);
 
             try {
+                // Tenta encontrar a câmera frontal
+                let videoConstraint = { facingMode: 'user' };
+                try {
+                    const devices = await navigator.mediaDevices.enumerateDevices();
+                    const cams = devices.filter(d => d.kind === 'videoinput');
+                    const front = cams.find(c => c.label.toLowerCase().includes('front'));
+                    if (front) videoConstraint = { deviceId: { exact: front.deviceId } };
+                } catch (_) {}
                 localStream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
+                    video: videoConstraint,
                     audio: true
                 });
                 clearTimeout(timeout);
-                // Cria stream só de vídeo para o preview local (evita bloqueio de autoplay em iOS)
-                const videoOnlyStream = new MediaStream([localStream.getVideoTracks()[0]]);
-                localVideo.srcObject = videoOnlyStream;
-                try { await localVideo.play(); } catch (_) {}
+                localVideo.srcObject = localStream;
+                localVideo.muted = true;
+                try { await localVideo.play(); } catch (e) { console.warn('[Guest] play error:', e); }
                 startMicMeter(localStream);
 
                 btnText.textContent = 'Conectando...';
