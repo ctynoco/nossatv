@@ -55,7 +55,7 @@
         var localStream = null;
         var connected = false;
         var viewRetry = null;
-        var wakeLock = null;
+        var returnStream = null;
 
         window.addEventListener('beforeunload', function(e) {
             if (connected) { e.preventDefault(); e.returnValue = ''; }
@@ -83,19 +83,46 @@
             toggleBtn.textContent = connecting ? 'Conectando...' : (connected ? 'Desativar Câmera' : 'Ativar Câmera');
         }
 
+        function attachReturnStream() {
+            if (returnStream && returnStream.active) {
+                returnVideo.srcObject = returnStream;
+                returnVideo.classList.add('active');
+                returnVideo.play().catch(function() {});
+                try {
+                    var actx = new (window.AudioContext || window.webkitAudioContext)();
+                    if (actx.state === 'suspended') actx.resume();
+                    var src = actx.createMediaStreamSource(returnStream);
+                    var gain = actx.createGain();
+                    gain.gain.value = 0.7;
+                    src.connect(gain);
+                    gain.connect(actx.destination);
+                } catch(e) {}
+                if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
+            }
+        }
+
+        function onTrack(event) {
+            var detail = event.detail;
+            if (!detail || detail.streamID !== programID) return;
+            var track = detail.track;
+            if (!track) return;
+            if (!returnStream) returnStream = new MediaStream();
+            returnStream.addTrack(track);
+            attachReturnStream();
+        }
+
         function startViewReturn() {
             if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
             if (!vdo || !connected) return;
             vdo.view(programID, { audio: true, video: true }).then(function(stream) {
                 if (stream && stream.active) {
-                    returnVideo.srcObject = stream;
-                    returnVideo.classList.add('active');
-                    returnVideo.play().catch(function() {});
+                    returnStream = stream;
+                    attachReturnStream();
                 } else {
-                    viewRetry = setTimeout(startViewReturn, 2000);
+                    viewRetry = setTimeout(startViewReturn, 3000);
                 }
             }).catch(function() {
-                viewRetry = setTimeout(startViewReturn, 2000);
+                viewRetry = setTimeout(startViewReturn, 3000);
             });
         }
 
@@ -113,6 +140,7 @@
             hideVideo();
             returnVideo.srcObject = null;
             returnVideo.classList.remove('active');
+            returnStream = null;
             connected = false;
             setDot(false);
         }
@@ -137,7 +165,11 @@
 
             navigator.mediaDevices.getUserMedia({
                 video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                audio: true
+                audio: {
+                    echoCancellation: true,
+                    noiseSuppression: true,
+                    autoGainControl: true
+                }
             }).then(function(stream) {
                 localStream = stream;
                 localVideo.srcObject = stream;
@@ -151,6 +183,7 @@
                         { urls: 'stun:stun1.l.google.com:19302' },
                     ],
                 });
+                vdo.addEventListener('track', onTrack);
                 return vdo.connect().then(function() {
                     return vdo.joinRoom({ room: room });
                 }).then(function() {
