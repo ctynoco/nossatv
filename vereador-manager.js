@@ -17,12 +17,15 @@ export class VereadorManager {
     init() {
         for (let i = 1; i <= 12; i++) {
             const label = `VER${String(i).padStart(2, '0')}`;
+            const guestUrl = new URL('guest', window.location.href);
+            guestUrl.searchParams.set('room', 'nossatv');
+            guestUrl.searchParams.set('slot', label);
             this.slots.push({
                 id: i,
                 streamID: `slot_${label}`,
                 label: label,
                 connected: false,
-                link: `${window.location.origin}/guest?room=nossatv&slot=${label}`,
+                link: guestUrl.href,
             });
         }
         this.renderGrid();
@@ -362,7 +365,10 @@ export class VereadorManager {
             const newLabel = `VER${String(i + 1).padStart(2, '0')}`;
             s.label = newLabel;
             s.streamID = `slot_${newLabel}`;
-            s.link = `${window.location.origin}/guest?room=nossatv&slot=${newLabel}`;
+            const u = new URL('guest', window.location.href);
+            u.searchParams.set('room', 'nossatv');
+            u.searchParams.set('slot', newLabel);
+            s.link = u.href;
         });
         this.renderGrid();
         this.obs?.showNotification(`🗑️ Slot removido`);
