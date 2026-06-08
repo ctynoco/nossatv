@@ -2122,6 +2122,19 @@ class OBSClone {
             }
 
             this.startProgramMirror();
+
+            // Publica programa no VDO.Ninja para retorno dos convidados
+            if (this.vereadorManager?.vdo) {
+                setTimeout(() => {
+                    const progStream = this._getProgramStream();
+                    if (progStream) {
+                        for (const s of this.vereadorManager.slots || []) {
+                            this.vereadorManager.publishProgram(progStream, s.label);
+                        }
+                    }
+                }, 500);
+            }
+
             this.showNotification('🔴 Transmissão iniciada!');
         } catch (e) {
             console.error('[OBS] Erro ao iniciar transmissão:', e);
@@ -2730,7 +2743,27 @@ class OBSClone {
         }
         if (placeholder) placeholder.style.display = 'flex';
         this.stopProgramMirror();
+
+        // Para publicação do programa no VDO.Ninja
+        if (this.vereadorManager?.vdo) {
+            for (const s of this.vereadorManager.slots || []) {
+                this.vereadorManager.stopProgramPublish(s.label);
+            }
+        }
+
         this.showNotification('⬛ Transmissão parada.');
+    }
+
+    _getProgramStream() {
+        const programVideo = document.getElementById('program-video');
+        const programCanvas = document.getElementById('program-canvas');
+        if (programVideo?.srcObject instanceof MediaStream) {
+            return programVideo.srcObject;
+        }
+        if (programCanvas?.captureStream) {
+            return programCanvas.captureStream(30);
+        }
+        return null;
     }
 
     // ─────────────────────────────────────────

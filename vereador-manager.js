@@ -434,4 +434,23 @@ export class VereadorManager {
             this.obs?.showNotification('🔗 Links copiados!');
         });
     }
+
+    publishProgram(stream, slotLabel) {
+        if (!this.vdo || !stream) return;
+        try {
+            const streamId = 'program_' + slotLabel;
+            this.vdo.publish(stream, { streamID: streamId });
+        } catch (e) {
+            console.warn('[Vereador] Erro ao publicar programa:', e);
+        }
+    }
+
+    stopProgramPublish(slotLabel) {
+        if (!this.vdo) return;
+        try {
+            this.vdo.stopPublishing();
+        } catch (e) {
+            console.warn('[Vereador] Erro ao parar publicação:', e);
+        }
+    }
 }
