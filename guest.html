@@ -49,6 +49,7 @@
         }
 
         const streamID = 'slot_' + slot;
+        const programID = 'program_' + slot;
         document.getElementById('slot-label').textContent = 'Convidado: ' + slot;
 
         let vdo = null;
@@ -58,6 +59,7 @@
         let wakeLockSentinel = null;
         let returnAudioCtx = null;
         let returnGainNode = null;
+        let viewRetryTimer = null;
 
         const localVideo = document.getElementById('local-video');
         const returnVideo = document.getElementById('return-video');
@@ -91,16 +93,68 @@
             }
         }
 
-        function cleanup() {
-            releaseWakeLock();
+        function stopReturnAudio() {
             if (returnAudioCtx) {
                 try { returnAudioCtx.close(); } catch(_) {}
                 returnAudioCtx = null;
                 returnGainNode = null;
             }
+        }
+
+        function startReturnAudio(stream) {
+            stopReturnAudio();
+            try {
+                const ACtor = window.AudioContext || window.webkitAudioContext;
+                returnAudioCtx = new ACtor();
+                if (returnAudioCtx.state === 'suspended') {
+                    returnAudioCtx.resume();
+                }
+                const src = returnAudioCtx.createMediaStreamSource(stream);
+                returnGainNode = returnAudioCtx.createGain();
+                returnGainNode.gain.value = 0.7;
+                src.connect(returnGainNode);
+                returnGainNode.connect(returnAudioCtx.destination);
+                console.log('[Guest] Return audio started');
+            } catch (e) {
+                console.warn('[Guest] Return audio error:', e);
+            }
+        }
+
+        function startViewReturn() {
+            if (viewRetryTimer) {
+                clearTimeout(viewRetryTimer);
+                viewRetryTimer = null;
+            }
+            if (!vdo || !connected) return;
+            console.log('[Guest] Viewing program:', programID);
+
+            vdo.view(programID, { audio: true, video: true }).then(stream => {
+                if (stream && stream.active) {
+                    console.log('[Guest] Return stream received');
+                    returnVideo.srcObject = stream;
+                    returnVideo.classList.add('active');
+                    returnVideo.play().catch(e => console.warn('[Guest] Return play:', e));
+                    startReturnAudio(stream);
+                } else {
+                    console.warn('[Guest] Return stream inactive, retrying...');
+                    viewRetryTimer = setTimeout(startViewReturn, 2000);
+                }
+            }).catch(err => {
+                console.warn('[Guest] View error, retrying in 2s:', err);
+                viewRetryTimer = setTimeout(startViewReturn, 2000);
+            });
+        }
+
+        function cleanup() {
+            if (viewRetryTimer) {
+                clearTimeout(viewRetryTimer);
+                viewRetryTimer = null;
+            }
+            releaseWakeLock();
+            stopReturnAudio();
             if (vdo) {
                 try { if (localStream) vdo.stopPublishing(); } catch(_) {}
-                try { vdo.stopViewing('program_' + slot); } catch(_) {}
+                try { vdo.stopViewing(programID); } catch(_) {}
             }
             if (localStream) {
                 localStream.getTracks().forEach(t => t.stop());
@@ -114,19 +168,6 @@
             setDot(false);
             setBtn(false);
             toggleBtn.disabled = false;
-        }
-
-        function startReturnAudio(stream) {
-            try {
-                returnAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-                const src = returnAudioCtx.createMediaStreamSource(stream);
-                returnGainNode = returnAudioCtx.createGain();
-                returnGainNode.gain.value = 0.7;
-                src.connect(returnGainNode);
-                returnGainNode.connect(returnAudioCtx.destination);
-            } catch (e) {
-                console.warn('[Guest] Return audio error:', e);
-            }
         }
 
         window.addEventListener('beforeunload', (e) => {
@@ -146,7 +187,7 @@
             if (cameraActive) {
                 if (vdo && localStream) {
                     try { vdo.stopPublishing(); } catch(_) {}
-                    try { vdo.stopViewing('program_' + slot); } catch(_) {}
+                    try { vdo.stopViewing(programID); } catch(_) {}
                 }
                 if (localStream) {
                     localStream.getTracks().forEach(t => t.stop());
@@ -156,9 +197,9 @@
                 localVideo.style.display = 'none';
                 returnVideo.srcObject = null;
                 returnVideo.classList.remove('active');
-                setBtn(false);
                 connected = false;
                 setDot(false);
+                setBtn(false);
                 infoText.textContent = 'Câmera desativada. Clique para reativar.';
                 return;
             }
@@ -170,16 +211,14 @@
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: {
-                        echoCancellation: true,
-                        noiseSuppression: true,
-                        autoGainControl: true,
-                    }
+                    audio: true
                 });
+                console.log('[Guest] Camera OK, tracks:', localStream.getTracks().length);
+
                 localVideo.srcObject = localStream;
                 localVideo.style.display = 'block';
-                toggleBtn.textContent = 'Conectando ao servidor...';
-                infoText.textContent = 'Conectando...';
+                toggleBtn.textContent = 'Conectando...';
+                infoText.textContent = 'Conectando ao servidor...';
 
                 vdo = new VDONinjaSDK({
                     iceServers: [
@@ -190,6 +229,7 @@
                 await vdo.connect();
                 await vdo.joinRoom({ room: room });
                 await vdo.publish(localStream, { streamID: streamID });
+                console.log('[Guest] Published OK');
 
                 connected = true;
                 setDot(true);
@@ -198,14 +238,7 @@
                 infoText.textContent = 'Conectado à transmissão.';
                 acquireWakeLock();
 
-                vdo.view('program_' + slot, { audio: true, video: true }).then(stream => {
-                    if (stream) {
-                        returnVideo.srcObject = stream;
-                        returnVideo.classList.add('active');
-                        returnVideo.play().catch(() => {});
-                        startReturnAudio(stream);
-                    }
-                }).catch(() => {});
+                startViewReturn();
 
             } catch (err) {
                 console.error('[Guest] Erro:', err);
@@ -215,6 +248,7 @@
                 }
                 localVideo.srcObject = null;
                 localVideo.style.display = 'none';
+                if (vdo) { try { vdo.disconnect(); } catch(_) {} }
                 vdo = null;
                 connected = false;
                 setDot(false);
