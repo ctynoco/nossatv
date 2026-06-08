@@ -170,6 +170,7 @@
                 localStream = stream;
                 localVideo.srcObject = stream;
                 showVideo();
+                console.log('[Guest] Stream tracks:', stream.getTracks().map(function(t) { return t.kind + ' enabled=' + t.enabled + ' ready=' + t.readyState; }).join(', '));
                 toggleBtn.textContent = 'Conectando...';
                 infoText.textContent = 'Conectando ao servidor...';
 
@@ -183,35 +184,47 @@
                 return vdo.connect().then(function() {
                     return vdo.joinRoom({ room: room });
                 }).then(function() {
-                    return vdo.publish(localStream, { streamID: streamID, audio: true, video: true });
+                    return vdo.publish(localStream, { streamID: streamID });
+                }).then(function() {
+                    console.log('[Guest] Publish success');
+                    connected = true;
+                    setDot(true);
+                    toggleBtn.disabled = false;
+                    setBtnText(false);
+                    infoText.textContent = 'Conectado à transmissão.';
+                    startViewReturn();
+                }).catch(function(err) {
+                    console.error('[Guest] Connection error:', err);
+                    if (localStream) {
+                        localStream.getTracks().forEach(function(t) { t.stop(); });
+                        localStream = null;
+                    }
+                    localVideo.srcObject = null;
+                    hideVideo();
+                    if (vdo) { try { vdo.disconnect(); } catch(e) {} }
+                    vdo = null;
+                    connected = false;
+                    setDot(false);
+                    toggleBtn.disabled = false;
+                    setBtnText(false);
+                    infoText.textContent = 'Erro: ' + err.message;
+                    if (err.name === 'NotAllowedError') {
+                        infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
+                    } else if (err.name === 'NotFoundError') {
+                        infoText.textContent = 'Nenhuma câmera encontrada neste dispositivo.';
+                    }
+                }).catch(function(err) {
+                    console.error('[Guest] getUserMedia error:', err);
+                    hideVideo();
+                    toggleBtn.disabled = false;
+                    setBtnText(false);
+                    infoText.textContent = 'Erro: ' + err.message;
+                    if (err.name === 'NotAllowedError') {
+                        infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
+                    } else if (err.name === 'NotFoundError') {
+                        infoText.textContent = 'Nenhuma câmera encontrada neste dispositivo.';
+                    }
                 });
-            }).then(function() {
-                connected = true;
-                setDot(true);
-                toggleBtn.disabled = false;
-                setBtnText(false);
-                infoText.textContent = 'Conectado à transmissão.';
-                startViewReturn();
-            }).catch(function(err) {
-                if (localStream) {
-                    localStream.getTracks().forEach(function(t) { t.stop(); });
-                    localStream = null;
-                }
-                localVideo.srcObject = null;
-                hideVideo();
-                if (vdo) { try { vdo.disconnect(); } catch(e) {} }
-                vdo = null;
-                connected = false;
-                setDot(false);
-                toggleBtn.disabled = false;
-                setBtnText(false);
-                infoText.textContent = 'Erro: ' + err.message;
-                if (err.name === 'NotAllowedError') {
-                    infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
-                } else if (err.name === 'NotFoundError') {
-                    infoText.textContent = 'Nenhuma câmera encontrada neste dispositivo.';
-                }
-            });
         });
     })();
     </script>
