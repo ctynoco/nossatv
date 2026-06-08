@@ -265,7 +265,7 @@ export class VereadorManager {
         pip.dataset.slot = slotId;
         pip.innerHTML = `
             <div class="vereador-pip-video-wrapper">
-                <video class="vereador-pip-video" autoplay playsinline muted></video>
+                <video class="vereador-pip-video" autoplay playsinline></video>
                 <div class="vereador-pip-resize-handle"></div>
             </div>
             <div class="vereador-pip-info">
