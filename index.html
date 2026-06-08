@@ -1,0 +1,505 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>NossaTV</title>
+    <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="manifest" href="manifest.json">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>NossaTV</h1>
+            <p>Software de transmissão ao vivo e gravação</p>
+        </header>
+
+        <main class="three-col">
+            <!-- COLUNA ESQUERDA: Controles + Config + Backup -->
+            <aside class="col col-left" data-column="left">
+                <section class="controls draggable-section" data-section="controls" draggable="true">
+                    <div class="section-drag-handle" title="Arrastar">⠿</div>
+                    <div class="controls-header">
+                        <h2>Controles</h2>
+                        <button id="settings-btn" class="btn-settings" title="Configurações">⚙</button>
+                    </div>
+                    <div class="button-group">
+                        <button id="start-btn" class="btn btn-primary btn-stream">&#9654; Iniciar Transmissão</button>
+                        <button id="stop-btn" class="btn btn-danger btn-stream" disabled>&#9632; Parar Transmissão</button>
+                    </div>
+                    <div class="button-group">
+                        <button id="record-btn" class="btn btn-secondary btn-record">&#9679; Gravar</button>
+                    </div>
+                    <div class="controls-row">
+                        <button id="virtual-cam-btn" class="btn btn-ctrl">📷 Câmera Virtual</button>
+                        <button id="studio-mode-btn" class="btn btn-ctrl">🎬 Modo Estúdio</button>
+                    </div>
+                    <div class="controls-row" style="margin-top:4px">
+                        <button class="btn btn-ctrl project-btn" data-width="1920" data-height="1080" title="Projetar 1920×1080">📺 1920×1080</button>
+                        <button class="btn btn-ctrl project-btn" data-width="1080" data-height="720" title="Projetar 1080×720">📺 1080×720</button>
+                    </div>
+                </section>
+
+                <section class="settings-section draggable-section" data-section="settings" draggable="true">
+                    <div class="section-drag-handle" title="Arrastar">⠿</div>
+                    <h2>Configurações</h2>
+                    <button id="settings-alt-btn" class="btn btn-secondary btn-small" style="width:100%">⚙ Abrir Configurações</button>
+                </section>
+
+                <section class="backup-section draggable-section" data-section="backup" draggable="true">
+                    <div class="section-drag-handle" title="Arrastar">⠿</div>
+                    <h2>Recuperação</h2>
+                    <button id="backup-restore-btn" class="btn btn-secondary btn-small" style="width:100%">♻️ Restaurar Backup</button>
+                    <p class="backup-hint">Ctrl+Shift+B</p>
+                </section>
+            </aside>
+
+            <!-- COLUNA CENTRAL: Telas + Cenas + Fontes -->
+            <section class="col col-center" data-column="center">
+                <section class="dual-screens-section draggable-section" data-section="dual-screens" draggable="true">
+                    <div class="section-drag-handle" title="Arrastar">⠿</div>
+                    <div class="dual-screens">
+                        <div class="screen-wrapper">
+                            <div class="screen-label preview-label">&#9654; PREVIEW</div>
+                            <div id="preview-area" class="screen-canvas preview-screen">
+                                <span class="screen-placeholder">Sem fonte ativa</span>
+                                <div class="preview-logo" id="preview-logo">
+                                    <div class="preview-logo-resize-handle"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="transition-bar">
+                            <div class="transition-bar-inner">
+                                <button id="transition-cut-btn" class="trans-btn trans-cut">CUT</button>
+                                <div class="trans-divider"></div>
+                                <label class="trans-label">Transição</label>
+                                <select id="transition-type" class="trans-select">
+                                    <option value="cut">Cut</option>
+                                    <option value="fade">Fade</option>
+                                </select>
+                                <div class="trans-dur-group">
+                                    <label>ms</label>
+                                    <input type="number" id="transition-duration" value="300" min="50" max="2000" step="50" />
+                                </div>
+                                <div class="trans-divider"></div>
+                                <button id="transition-go-btn" class="trans-btn trans-go" title="Fazer Transição">&#9654;</button>
+                            </div>
+                        </div>
+
+                        <div class="screen-wrapper">
+                            <div class="screen-label program-label">&#11044; PROGRAMA (AO VIVO)</div>
+                            <div id="program-area" class="screen-canvas program-screen">
+                                <video id="program-video" autoplay playsinline muted></video>
+                                <canvas id="program-canvas"></canvas>
+                                <span class="screen-placeholder" id="program-placeholder">Transmissão não iniciada</span>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <section class="scenes-section draggable-section" data-section="scenes" draggable="true">
+                    <div class="section-drag-handle" title="Arrastar">⠿</div>
+                    <h2>Cenas</h2>
+                    <div id="scenes-list" class="scenes-list">
+                        <p>Nenhuma cena</p>
+                    </div>
+                    <div class="scene-buttons">
+                        <button id="add-scene-btn" class="btn btn-scene">+</button>
+                        <button id="remove-scene-btn" class="btn btn-scene btn-scene-remove" disabled>&#128465;</button>
+                    </div>
+                </section>
+
+                <section class="sources draggable-section" data-section="sources" draggable="true">
+                    <div class="section-drag-handle" title="Arrastar">⠿</div>
+                    <h2>Fontes</h2>
+                    <div id="sources-list" class="sources-list">
+                        <p>Nenhuma fonte adicionada</p>
+                    </div>
+                    <div class="add-source-row">
+                        <select id="source-type-select" class="source-type-select"></select>
+                        <button id="add-source-btn" class="btn btn-capture">+ Adicionar</button>
+                    </div>
+                </section>
+
+                <section class="vereador-section draggable-section" data-section="vereador" draggable="true">
+                    <div class="section-drag-handle" title="Arrastar">⠿</div>
+                    <div class="vereador-section-header">
+                        <h2>👥 Vereadores</h2>
+                        <div class="vereador-section-actions">
+                            <span class="vereador-count" id="vereador-count">0/12</span>
+                            <button id="vereador-links-btn" class="btn-vereador-action" title="Copiar todos os links">🔗</button>
+                        </div>
+                    </div>
+                    <div id="vereador-grid" class="vereador-grid"></div>
+                </section>
+            </section>
+
+            <!-- COLUNA DIREITA: Áudio Mixer -->
+            <aside class="col col-right" data-column="right">
+                <section class="audio-mixer draggable-section" data-section="audio-mixer" draggable="true">
+                    <div class="section-drag-handle" title="Arrastar">⠿</div>
+                    <div class="audio-mixer-header">
+                        <h2>🎵 Áudio</h2>
+                        <div class="audio-layout-buttons">
+                            <button class="btn-audio-layout active" data-layout="vertical" title="Layout Vertical">↕</button>
+                            <button class="btn-audio-layout" data-layout="horizontal" title="Layout Horizontal">↔</button>
+                        </div>
+                    </div>
+                    <div id="audio-mixer-list" class="audio-mixer-list">
+                        <p class="audio-empty">Nenhuma fonte de áudio</p>
+                    </div>
+                </section>
+            </aside>
+        </main>
+    </div>
+
+    <!-- MODAL: ESCOLHER TIPO DE FONTE -->
+    <div id="modal-source-type" class="modal-overlay" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <span>Adicionar Fonte</span>
+                <button class="modal-close" id="close-type-modal">&#10005;</button>
+            </div>
+            <div class="modal-body">
+                <p class="modal-subtitle">Escolha o tipo de fonte:</p>
+                <div class="source-type-grid">
+                    <button class="source-type-btn" data-type="camera">📷<span>Câmera</span></button>
+                    <button class="source-type-btn" data-type="videoCaptureDevice">📹<span>Captura de Vídeo</span></button>
+                    <button class="source-type-btn" data-type="screen">🖥️<span>Captura de Monitor</span></button>
+                    <button class="source-type-btn" data-type="window">🪟<span>Captura de Janela</span></button>
+                    <button class="source-type-btn" data-type="gameCapture">🎮<span>Captura de Jogo</span></button>
+                    <button class="source-type-btn" data-type="image">🖼️<span>Captura de Imagem</span></button>
+                    <button class="source-type-btn" data-type="slideshow">📽️<span>Apresentação de Slides</span></button>
+                    <button class="source-type-btn" data-type="media">🎬<span>Mídia</span></button>
+                    <button class="source-type-btn" data-type="text">📝<span>Texto</span></button>
+                    <button class="source-type-btn" data-type="audio">🎤<span>Captura de Entrada Áudio</span></button>
+                    <button class="source-type-btn" data-type="audioOutputCapture">🔊<span>Captura de Saída Áudio</span></button>
+                    <button class="source-type-btn" data-type="browser">🌐<span>Navegador</span></button>
+                    <button class="source-type-btn" data-type="color">🎨<span>Cor</span></button>
+                    <button class="source-type-btn" data-type="vereador">👤<span>Vereador</span></button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIGURAR FONTE -->
+    <div id="modal-source-config" class="modal-overlay" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <span id="config-modal-title">Configurar Fonte</span>
+                <button class="modal-close" id="close-config-modal">&#10005;</button>
+            </div>
+            <div class="modal-body" id="config-modal-body">
+                <!-- preenchido dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-config-btn">Cancelar</button>
+                <button class="btn btn-primary" id="confirm-config-btn">Adicionar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONFIGURAÇÕES -->
+    <div id="modal-settings" class="modal-overlay" style="display:none">
+        <div class="modal modal-wide">
+            <div class="modal-header">
+                <span>⚙ Configurações</span>
+                <button class="modal-close" id="close-settings-modal">&#10005;</button>
+            </div>
+            <div class="modal-body settings-body">
+                <div class="settings-tabs">
+                    <button class="settings-tab active" data-tab="stream">Stream</button>
+                    <button class="settings-tab" data-tab="output">Saída</button>
+                    <button class="settings-tab" data-tab="video">Vídeo</button>
+                    <button class="settings-tab" data-tab="audio">Áudio</button>
+                    <button class="settings-tab" data-tab="general">Geral</button>
+                    <button class="settings-tab" data-tab="vertical">Vertical</button>
+                    <button class="settings-tab" data-tab="horizontal">Horizontal</button>
+                </div>
+                <div class="settings-content">
+                    <!-- Stream -->
+                    <div class="settings-pane active" id="pane-stream">
+                        <p class="settings-subtitle">Multi-Stream — adicione quantos destinos quiser</p>
+                        <div id="stream-targets-list" class="stream-targets-list">
+                            <!-- preenchido dinamicamente -->
+                        </div>
+                        <button id="add-stream-target-btn" class="btn btn-capture btn-small-full">+ Adicionar Destino</button>
+                    </div>
+                    <!-- Saída -->
+                    <div class="settings-pane" id="pane-output">
+                        <div class="form-group">
+                            <label>Bitrate de Vídeo (kbps)</label>
+                            <input type="number" id="set-video-bitrate" value="3500" min="500" max="10000" step="100" />
+                        </div>
+                        <div class="form-group">
+                            <label>Bitrate de Áudio (kbps)</label>
+                            <select id="set-audio-bitrate">
+                                <option value="64">64</option>
+                                <option value="128">128</option>
+                                <option value="160">160</option>
+                                <option value="192" selected>192</option>
+                                <option value="256">256</option>
+                                <option value="320">320</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Qualidade da Gravação</label>
+                            <select id="set-record-quality">
+                                <option value="high">Alta (Alta bitrate)</option>
+                                <option value="medium" selected>Média</option>
+                                <option value="low">Baixa (Economia de espaço)</option>
+                                <option value="lossless">Indistinguível (Grande arquivo)</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Vídeo -->
+                    <div class="settings-pane" id="pane-video">
+                        <div class="form-group">
+                            <label>Resolução Base (Canvas)</label>
+                            <select id="set-base-res">
+                                <option value="1920x1080">1920x1080</option>
+                                <option value="1280x720" selected>1280x720</option>
+                                <option value="854x480">854x480</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Resolução de Saída (Escalada)</label>
+                            <select id="set-output-res">
+                                <option value="1920x1080">1920x1080</option>
+                                <option value="1280x720" selected>1280x720</option>
+                                <option value="854x480">854x480</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>FPS</label>
+                            <select id="set-fps">
+                                <option value="60">60</option>
+                                <option value="30" selected>30</option>
+                                <option value="24">24</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Filtro de Downscale</label>
+                            <select id="set-downscale">
+                                <option value="bilinear">Bilinear</option>
+                                <option value="bicubic" selected>Bicubic</option>
+                                <option value="lanczos">Lanczos</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Áudio -->
+                    <div class="settings-pane" id="pane-audio">
+                        <div class="form-group">
+                            <label>Taxa de Amostragem</label>
+                            <select id="set-sample-rate">
+                                <option value="44100">44.1 kHz</option>
+                                <option value="48000" selected>48 kHz</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Dispositivo de Áudio Global</label>
+                            <select id="set-global-audio">
+                                <option value="default">Padrão do Sistema</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Geral -->
+                    <div class="settings-pane" id="pane-general">
+                        <div class="form-group">
+                            <label>Tema</label>
+                            <select id="set-theme">
+                                <option value="dark" selected>Escuro (Padrão)</option>
+                                <option value="light">Claro</option>
+                                <option value="system">Sistema</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>Idioma</label>
+                            <select id="set-language">
+                                <option value="pt-BR" selected>Português (Brasil)</option>
+                                <option value="en">English</option>
+                            </select>
+                        </div>
+                    </div>
+                    <!-- Vertical -->
+                    <div class="settings-pane" id="pane-vertical">
+                        <div class="form-group">
+                            <label>Imagem de Fundo (Monitor Vertical)</label>
+                            <input type="file" id="set-vertical-bg-file" accept="image/*" />
+                            <button class="btn btn-small btn-secondary" id="clear-vertical-bg" style="margin-top:4px">Remover Fundo</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Logo / Marca d'água</label>
+                            <input type="file" id="set-vertical-logo-file" accept="image/*" />
+                            <button class="btn btn-small btn-secondary" id="clear-vertical-logo" style="margin-top:4px">Remover Logo</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Tamanho do Logo (px)</label>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <input type="number" id="set-vertical-logo-width" value="60" min="16" max="300" style="width:80px" />
+                                <span>×</span>
+                                <input type="number" id="set-vertical-logo-height" value="60" min="16" max="300" style="width:80px" />
+                            </div>
+                        </div>
+                    </div>
+                    <!-- Horizontal -->
+                    <div class="settings-pane" id="pane-horizontal">
+                        <div class="form-group">
+                            <label>Imagem de Fundo (Preview)</label>
+                            <input type="file" id="set-horizontal-bg-file" accept="image/*" />
+                            <button class="btn btn-small btn-secondary" id="clear-horizontal-bg" style="margin-top:4px">Remover Fundo</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Logo / Marca d'água</label>
+                            <input type="file" id="set-horizontal-logo-file" accept="image/*" />
+                            <button class="btn btn-small btn-secondary" id="clear-horizontal-logo" style="margin-top:4px">Remover Logo</button>
+                        </div>
+                        <div class="form-group">
+                            <label>Tamanho do Logo (px)</label>
+                            <div style="display:flex;gap:8px;align-items:center">
+                                <input type="number" id="set-horizontal-logo-width" value="60" min="16" max="300" style="width:80px" />
+                                <span>×</span>
+                                <input type="number" id="set-horizontal-logo-height" value="60" min="16" max="300" style="width:80px" />
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="cancel-settings-btn">Cancelar</button>
+                <button class="btn btn-primary" id="save-settings-btn">Salvar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: FILTROS DE ÁUDIO -->
+    <div id="modal-audio-filters" class="modal-overlay" style="display:none">
+        <div class="modal">
+            <div class="modal-header">
+                <span id="audio-filters-title">🎛️ Filtros</span>
+                <button class="modal-close" id="close-audio-filters">&#10005;</button>
+            </div>
+            <div class="modal-body" id="audio-filters-body">
+                <!-- preenchido dinamicamente -->
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="close-audio-filters-btn">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CONEXÃO VEREADOR -->
+    <div id="modal-vereador" class="modal-overlay" style="display:none">
+        <div class="modal modal-vereador">
+            <div class="modal-header">
+                <span id="vereador-modal-title">🔗 Conectar Vereador</span>
+                <button class="modal-close" id="close-vereador-modal">&#10005;</button>
+            </div>
+            <div class="modal-body" id="vereador-modal-body">
+                <div class="vereador-modal-status" id="vereador-modal-status">
+                    <span class="status-dot status-offline"></span>
+                    <span id="vereador-modal-status-text">Aguardando conexão...</span>
+                </div>
+                <div class="vereador-modal-link">
+                    <label>Link para o vereador acessar:</label>
+                    <div class="vereador-link-row">
+                        <input type="text" id="vereador-modal-link-input" readonly />
+                        <button id="vereador-copy-link-btn" class="btn btn-small btn-secondary">Copiar</button>
+                        <button id="vereador-whatsapp-btn" class="btn btn-small btn-success" title="Compartilhar no WhatsApp">💬 WhatsApp</button>
+                    </div>
+                </div>
+                <div class="vereador-modal-qr" id="vereador-modal-qr">
+                    <img id="vereador-qr-img" alt="QR Code" />
+                </div>
+                <div class="vereador-modal-preview">
+                    <label>Pré-visualização</label>
+                    <div class="vereador-modal-video-wrapper">
+                        <video id="vereador-modal-video" autoplay playsinline muted></video>
+                        <span class="vereador-modal-video-placeholder">Sem vídeo</span>
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="vereador-test-local-btn">📷 Testar Local</button>
+                <button class="btn btn-secondary" id="close-vereador-modal-btn">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: CHROMA KEY -->
+    <div id="modal-chroma" class="modal-overlay" style="display:none">
+        <div class="modal modal-chroma">
+            <div class="modal-header">
+                <span id="chroma-modal-title">🎨 Chroma Key</span>
+                <button class="modal-close" id="close-chroma-modal">&#10005;</button>
+            </div>
+            <div class="modal-body" id="chroma-modal-body">
+                <div class="form-group">
+                    <label>Cor do fundo</label>
+                    <div class="chroma-color-row">
+                        <input type="color" id="chroma-color" value="#00ff00" />
+                        <button class="btn btn-small btn-secondary" data-chroma-color="#00ff00">Verde</button>
+                        <button class="btn btn-small btn-secondary" data-chroma-color="#0000ff">Azul</button>
+                    </div>
+                </div>
+                <div class="form-group">
+                    <label>Similaridade <span id="chroma-similarity-val">80</span>%</label>
+                    <input type="range" id="chroma-similarity" min="0" max="100" value="80" />
+                </div>
+                <div class="form-group">
+                    <label>Suavidade <span id="chroma-smoothness-val">50</span>%</label>
+                    <input type="range" id="chroma-smoothness" min="0" max="100" value="50" />
+                </div>
+                <div class="form-group">
+                    <label>Opacidade (recorte) <span id="chroma-opacity-val">100</span>%</label>
+                    <input type="range" id="chroma-opacity" min="0" max="100" value="100" />
+                </div>
+                <div class="chroma-preview-wrap">
+                    <canvas id="chroma-preview-canvas"></canvas>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" id="chroma-reset-btn">Redefinir</button>
+                <button class="btn btn-primary" id="chroma-apply-btn">Aplicar</button>
+                <button class="btn btn-secondary" id="close-chroma-modal-btn">Fechar</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- JANELA FLUTUANTE - MONITOR DO PROGRAMA -->
+    <div id="floating-window" class="floating-window">
+        <div class="floating-header" id="floating-header">
+            <span class="floating-title">📺 Programa (Monitor)</span>
+            <div class="floating-actions">
+                <button id="float-minimize" class="float-btn" title="Minimizar">&#8722;</button>
+                <button id="float-close" class="float-btn float-close" title="Fechar">&#10005;</button>
+            </div>
+        </div>
+        <div class="floating-body" id="floating-body">
+            <div class="float-screen" id="float-screen">
+                <div class="screen-content" id="screen-content">
+                    <video id="floating-video" autoplay playsinline muted></video>
+                    <div class="floating-overlay">
+                        <span id="floating-status">Transmissão não iniciada</span>
+                    </div>
+                    <div class="float-logo" id="float-logo">
+                        <div class="float-logo-resize-handle"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button id="reopen-float" class="reopen-float-btn" style="display:none" title="Abrir monitor">📺</button>
+
+    <script src="https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@latest/vdoninja-sdk.min.js"></script>
+    <script src="script.js"></script>
+    <script>
+      if ('serviceWorker' in navigator) {
+        navigator.serviceWorker.register('service-worker.js');
+      }
+    </script>
+</body>
+</html>

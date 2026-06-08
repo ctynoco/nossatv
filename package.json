@@ -1,0 +1,16 @@
+{
+  "name": "nossatv",
+  "version": "1.0.0",
+  "description": "Software de transmissão ao vivo e gravação - OBS Studio Clone",
+  "private": true,
+  "scripts": {
+    "build": "node build.js",
+    "preview": "npx serve public"
+  },
+  "devDependencies": {
+    "html-minifier-terser": "^7.2.0",
+    "cssnano": "^7.0.0",
+    "postcss": "^8.4.0",
+    "uglify-js": "^3.19.0"
+  }
+}

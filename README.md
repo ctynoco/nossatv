@@ -1,4 +1,4 @@
-# nossatv
+# OBS-STUDIO-CLONE
 
 
 
@@ -15,14 +15,14 @@ Already a pro? Just edit this README.md and make it your own. Want to make it ea
 
 ```
 cd existing_repo
-git remote add origin https://gitlab.com/ctynococe/nossatv.git
+git remote add origin https://gitlab.com/ctynococe-group/obs-studio-clone.git
 git branch -M main
 git push -uf origin main
 ```
 
 ## Integrate with your tools
 
-* [Set up project integrations](https://gitlab.com/ctynococe/nossatv/-/settings/integrations)
+* [Set up project integrations](https://gitlab.com/ctynococe-group/obs-studio-clone/-/settings/integrations)
 
 ## Collaborate with your team
 

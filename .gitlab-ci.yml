@@ -1,0 +1,12 @@
+image: node:20-alpine
+
+pages:
+  stage: deploy
+  script:
+    - npm ci
+    - node build.js
+  artifacts:
+    paths:
+      - public
+  only:
+    - main
