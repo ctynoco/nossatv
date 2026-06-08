@@ -121,6 +121,18 @@ export class VereadorManager {
         grid.querySelectorAll('.vereador-slot-excluir').forEach(b => {
             b.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSlot(parseInt(b.dataset.slot)); });
         });
+        grid.querySelectorAll('.vereador-slot-mute').forEach(b => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const id = parseInt(b.dataset.slot);
+                const video = grid.querySelector(`.vereador-slot[data-slot="${id}"] video`);
+                if (video) {
+                    video.muted = !video.muted;
+                    b.textContent = video.muted ? '🔇' : '🔊';
+                    b.title = video.muted ? 'Ativar som' : 'Desativar som';
+                }
+            });
+        });
         grid.querySelectorAll('.vereador-slot.connected').forEach(el => {
             el.addEventListener('dblclick', () => this.addToPreview(parseInt(el.dataset.slot)));
         });
@@ -136,10 +148,11 @@ export class VereadorManager {
     renderSlot(slot) {
         if (slot.connected) {
             return `<div class="vereador-slot connected" data-slot="${slot.id}">
-                <video class="vereador-slot-video" autoplay playsinline></video>
+                <video class="vereador-slot-video" autoplay playsinline muted></video>
                 <div class="vereador-slot-info">
                     <span class="status-dot status-online"></span>
                     <span class="vereador-slot-name">${slot.label}</span>
+                    <button class="vereador-slot-mute" data-slot="${slot.id}" title="Ativar som">🔇</button>
                     <button class="vereador-slot-rename" data-slot="${slot.id}" title="Renomear">✏️</button>
                     <button class="vereador-slot-desconectar" data-slot="${slot.id}" title="Desconectar">✕</button>
                     <button class="vereador-slot-excluir" data-slot="${slot.id}" title="Excluir">🗑️</button>
