@@ -2,48 +2,39 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>NossaTV — Convidado</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <title>Convidado</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <style>
         *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#fff;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}
-        .card{background:#1a1a2e;border-radius:16px;padding:32px 24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
-        .sub{color:#888;font-size:0.82em;margin-bottom:20px}
-        .status{display:flex;align-items:center;justify-content:center;gap:8px;padding:10px;border-radius:8px;margin-bottom:16px;font-size:0.9em;font-weight:600}
-        .status.idle{background:#222;color:#888}
-        .status.connecting{background:#1a3a5c;color:#4da6ff}
-        .status.connected{background:#1a3c1a;color:#4caf50}
-        .status.error{background:#3c1a1a;color:#f44336}
-        .status-dot{width:10px;height:10px;border-radius:50%;display:inline-block}
-        .status.idle .status-dot{background:#555}
-        .status.connecting .status-dot{background:#4da6ff;animation:pulse 1s infinite}
-        .status.connected .status-dot{background:#4caf50}
-        .status.error .status-dot{background:#f44336}
-        @keyframes pulse{0%,100%{opacity:1}50%{opacity:0.4}}
-        video{width:100%;border-radius:8px;background:#000;margin-bottom:16px;display:none}
-        video.active{display:block}
-        .btn{width:100%;padding:14px;border:none;border-radius:8px;font-size:1em;font-weight:700;cursor:pointer;transition:opacity .2s}
-        .btn:disabled{opacity:0.5;cursor:not-allowed}
-        .btn-primary{background:#0066cc;color:#fff}
-        .btn-primary:hover:not(:disabled){background:#0055aa}
-        .btn-danger{background:#c62828;color:#fff}
-        .btn-danger:hover:not(:disabled){background:#b71c1c}
-        .info{font-size:0.78em;color:#666;margin-top:12px;line-height:1.5}
-        .hidden{display:none !important}
+        html,body{height:100%;overflow:hidden;touch-action:none;-webkit-user-select:none;user-select:none}
+        body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#fff;display:flex;align-items:center;justify-content:center;padding:12px}
+        .card{background:#1a1a2e;border-radius:16px;padding:20px 16px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
+        .sub{color:#888;font-size:0.82em;margin-bottom:12px;text-align:center}
+        .video-wrap{position:relative;border-radius:10px;overflow:hidden;background:#000;margin-bottom:8px}
+        .video-wrap video{width:100%;display:block;border-radius:10px}
+        .status-dot{position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:#555;transition:background .3s;z-index:2}
+        .status-dot.online{background:#4caf50;box-shadow:0 0 6px #4caf50}
+        .return-video{width:100%;border-radius:10px;background:#000;margin-bottom:8px;display:none}
+        .return-video.active{display:block}
+        .btn-toggle{width:100%;padding:16px;border:none;border-radius:50px;font-size:1.1em;font-weight:700;cursor:pointer;transition:all .25s;background:#1976d2;color:#fff}
+        .btn-toggle:hover{background:#1565c0}
+        .btn-toggle:disabled{opacity:0.5;cursor:not-allowed}
+        .btn-toggle.active{background:#0d47a1}
+        .btn-toggle.active:hover{background:#0a3a8a}
+        .info{font-size:0.75em;color:#666;margin-top:10px;line-height:1.5;text-align:center}
     </style>
 </head>
 <body>
     <div class="card">
         <p class="sub" id="slot-label">Conectando...</p>
-        <div id="status-bar" class="status idle">
-            <span class="status-dot"></span>
-            <span id="status-text">Aguardando...</span>
+        <div class="video-wrap">
+            <video id="local-video" autoplay playsinline muted></video>
+            <div class="status-dot" id="status-dot"></div>
         </div>
-        <video id="local-video" autoplay playsinline muted></video>
-        <button id="btn-start" class="btn btn-primary">▶ Iniciar Câmera</button>
-        <button id="btn-disconnect" class="btn btn-danger hidden">✕ Desconectar</button>
-        <p class="info" id="info-text">Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.</p>
+        <video id="return-video" class="return-video" autoplay playsinline></video>
+        <button id="btn-toggle" class="btn-toggle" disabled>Ativar Câmera</button>
+        <p class="info" id="info-text">Ao conectar, sua câmera e áudio serão enviados para a transmissão.</p>
     </div>
     <script src="https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js" integrity="sha384-/xDAcwjdhN3g8ilH5vtF0Agq4V9XxMqRwgxde0EVDrfjVJUk87pBL/SgjNUsBFEq" crossorigin="anonymous"></script>
     <script>
@@ -52,9 +43,8 @@
         const room = params.get('room') || 'nossatv';
         const slot = params.get('slot');
         if (!slot) {
-            document.getElementById('status-text').textContent = 'Link inválido';
-            document.getElementById('btn-start').disabled = true;
-            document.getElementById('slot-label').textContent = 'Link sem identificação';
+            document.getElementById('slot-label').textContent = 'Link inválido';
+            document.getElementById('btn-toggle').disabled = true;
             return;
         }
 
@@ -64,44 +54,132 @@
         let vdo = null;
         let localStream = null;
         let connected = false;
+        let cameraActive = false;
+        let wakeLockSentinel = null;
+        let returnAudioCtx = null;
+        let returnGainNode = null;
 
-        const statusBar = document.getElementById('status-bar');
-        const statusText = document.getElementById('status-text');
         const localVideo = document.getElementById('local-video');
-        const btnStart = document.getElementById('btn-start');
-        const btnDisconnect = document.getElementById('btn-disconnect');
+        const returnVideo = document.getElementById('return-video');
+        const toggleBtn = document.getElementById('btn-toggle');
         const infoText = document.getElementById('info-text');
+        const statusDot = document.getElementById('status-dot');
 
-        function setStatus(type, text) {
-            statusBar.className = 'status ' + type;
-            statusText.textContent = text;
+        function setDot(on) {
+            statusDot.classList.toggle('online', on);
+        }
+
+        function setBtn(active) {
+            cameraActive = active;
+            toggleBtn.classList.toggle('active', active);
+            toggleBtn.textContent = active ? 'Desativar Câmera' : 'Ativar Câmera';
+        }
+
+        async function acquireWakeLock() {
+            try {
+                if ('wakeLock' in navigator) {
+                    wakeLockSentinel = await navigator.wakeLock.request('screen');
+                    wakeLockSentinel.addEventListener('release', () => { wakeLockSentinel = null; });
+                }
+            } catch (_) {}
+        }
+
+        function releaseWakeLock() {
+            if (wakeLockSentinel) {
+                try { wakeLockSentinel.release(); } catch(_) {}
+                wakeLockSentinel = null;
+            }
         }
 
         function cleanup() {
+            releaseWakeLock();
+            if (returnAudioCtx) {
+                try { returnAudioCtx.close(); } catch(_) {}
+                returnAudioCtx = null;
+                returnGainNode = null;
+            }
             if (vdo) {
-                try { if (localStream) vdo.stopPublishing(); } catch(e) {}
+                try { if (localStream) vdo.stopPublishing(); } catch(_) {}
+                try { vdo.stopViewing('program_' + slot); } catch(_) {}
             }
             if (localStream) {
                 localStream.getTracks().forEach(t => t.stop());
                 localStream = null;
             }
             localVideo.srcObject = null;
-            localVideo.classList.remove('active');
+            localVideo.style.display = 'none';
+            returnVideo.srcObject = null;
+            returnVideo.classList.remove('active');
             connected = false;
+            setDot(false);
+            setBtn(false);
+            toggleBtn.disabled = false;
         }
 
-        btnStart.addEventListener('click', async () => {
-            btnStart.disabled = true;
-            setStatus('connecting', 'Acessando câmera...');
+        function startReturnAudio(stream) {
+            try {
+                returnAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const src = returnAudioCtx.createMediaStreamSource(stream);
+                returnGainNode = returnAudioCtx.createGain();
+                returnGainNode.gain.value = 0.7;
+                src.connect(returnGainNode);
+                returnGainNode.connect(returnAudioCtx.destination);
+            } catch (e) {
+                console.warn('[Guest] Return audio error:', e);
+            }
+        }
+
+        window.addEventListener('beforeunload', (e) => {
+            if (connected || cameraActive) {
+                e.preventDefault();
+                e.returnValue = '';
+            }
+        });
+
+        document.addEventListener('visibilitychange', () => {
+            if (document.visibilityState === 'visible' && connected) {
+                acquireWakeLock();
+            }
+        });
+
+        toggleBtn.addEventListener('click', async () => {
+            if (cameraActive) {
+                if (vdo && localStream) {
+                    try { vdo.stopPublishing(); } catch(_) {}
+                    try { vdo.stopViewing('program_' + slot); } catch(_) {}
+                }
+                if (localStream) {
+                    localStream.getTracks().forEach(t => t.stop());
+                    localStream = null;
+                }
+                localVideo.srcObject = null;
+                localVideo.style.display = 'none';
+                returnVideo.srcObject = null;
+                returnVideo.classList.remove('active');
+                setBtn(false);
+                connected = false;
+                setDot(false);
+                infoText.textContent = 'Câmera desativada. Clique para reativar.';
+                return;
+            }
+
+            toggleBtn.disabled = true;
+            toggleBtn.textContent = 'Conectando...';
+            infoText.textContent = 'Solicitando câmera e microfone...';
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
                     video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                    audio: true
+                    audio: {
+                        echoCancellation: true,
+                        noiseSuppression: true,
+                        autoGainControl: true,
+                    }
                 });
                 localVideo.srcObject = localStream;
-                localVideo.classList.add('active');
-                setStatus('connecting', 'Conectando à sala...');
+                localVideo.style.display = 'block';
+                toggleBtn.textContent = 'Conectando ao servidor...';
+                infoText.textContent = 'Conectando...';
 
                 vdo = new VDONinjaSDK({
                     iceServers: [
@@ -109,42 +187,46 @@
                         { urls: 'stun:stun1.l.google.com:19302' },
                     ],
                 });
-                vdo.addEventListener('connected', () => {
-                    setStatus('connecting', 'Publicando vídeo...');
-                });
-
                 await vdo.connect();
                 await vdo.joinRoom({ room: room });
                 await vdo.publish(localStream, { streamID: streamID });
 
-                setStatus('connected', '✅ Conectado à transmissão!');
                 connected = true;
-                btnStart.classList.add('hidden');
-                btnDisconnect.classList.remove('hidden');
-                infoText.textContent = 'Sua câmera está sendo transmitida ao vivo.';
+                setDot(true);
+                toggleBtn.disabled = false;
+                setBtn(true);
+                infoText.textContent = 'Conectado à transmissão.';
+                acquireWakeLock();
+
+                vdo.view('program_' + slot, { audio: true, video: true }).then(stream => {
+                    if (stream) {
+                        returnVideo.srcObject = stream;
+                        returnVideo.classList.add('active');
+                        returnVideo.play().catch(() => {});
+                        startReturnAudio(stream);
+                    }
+                }).catch(() => {});
 
             } catch (err) {
-                setStatus('error', 'Erro: ' + err.message);
-                btnStart.disabled = false;
+                console.error('[Guest] Erro:', err);
+                if (localStream) {
+                    localStream.getTracks().forEach(t => t.stop());
+                    localStream = null;
+                }
+                localVideo.srcObject = null;
+                localVideo.style.display = 'none';
+                vdo = null;
+                connected = false;
+                setDot(false);
+                toggleBtn.disabled = false;
+                setBtn(false);
+                infoText.textContent = 'Erro: ' + err.message;
                 if (err.name === 'NotAllowedError') {
                     infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
                 } else if (err.name === 'NotFoundError') {
                     infoText.textContent = 'Nenhuma câmera encontrada neste dispositivo.';
                 }
             }
-        });
-
-        btnDisconnect.addEventListener('click', () => {
-            if (vdo && localStream) {
-                try { vdo.stopPublishing(); } catch(e) {}
-            }
-            cleanup();
-            vdo = null;
-            setStatus('idle', 'Desconectado');
-            btnStart.classList.remove('hidden');
-            btnStart.disabled = false;
-            btnDisconnect.classList.add('hidden');
-            infoText.textContent = 'Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.';
         });
     })();
     </script>
