@@ -160,12 +160,13 @@
             infoText.textContent = 'Solicitando câmera e microfone...';
 
             // Timeout de segurança — se demorar mais que 15s, libera o botão
-            const timeout = setTimeout(() => {
-                if (!connected) {
-                    resetUI();
-                    infoText.textContent = 'Tempo limite excedido. Verifique sua câmera e tente novamente.';
-                }
-            }, 15000);
+                const timeout = setTimeout(() => {
+                    if (!connected) {
+                        toggleBtn.disabled = false;
+                        resetUI();
+                        infoText.textContent = 'Tempo limite excedido. Verifique sua câmera e tente novamente.';
+                    }
+                }, 20000);
 
             try {
                 localStream = await navigator.mediaDevices.getUserMedia({
@@ -175,6 +176,7 @@
                 clearTimeout(timeout);
                 localVideo.srcObject = localStream;
                 localVideo.style.display = 'block';
+                localVideo.play().catch(() => {});
                 startMicMeter(localStream);
 
                 btnText.textContent = 'Conectando...';
