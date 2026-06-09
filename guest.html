@@ -97,10 +97,6 @@
         var vuInterval = null;
         var audioContext = null;
         var analyserNode = null;
-        var reconnectAttempt = 0;
-        var reconnectTimer = null;
-        var maxReconnectDelay = 30;
-        var wasEverConnected = false;
         var localVideo = document.getElementById('local-video');
         var returnVideo = document.getElementById('return-video');
         var toggleBtn = document.getElementById('btn-toggle');
@@ -245,69 +241,6 @@
         // inicia o carregamento imediatamente
         loadSDK();
 
-        // ---- reconnect ----
-        function scheduleReconnect() {
-            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-            if (!wasEverConnected) return;
-            reconnectAttempt++;
-            var delay = Math.min(1 << reconnectAttempt, maxReconnectDelay);
-            infoText.textContent = 'Conexão perdida. Reconectando em ' + delay + 's...';
-            setDot('warning');
-            reconnectTimer = setTimeout(function() {
-                infoText.textContent = 'Reconectando...';
-                attemptReconnect();
-            }, delay * 1000);
-        }
-
-        function attemptReconnect() {
-            if (connected) return;
-            if (!localStream) { reconnectAttempt = 0; return; }
-            toggleBtn.disabled = true;
-            setBtnText(true);
-            showSpinner();
-            if (vdo) { try { vdo.disconnect(); } catch(e) {} }
-            vdo = new VDONinjaSDK({
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                    { urls: 'stun:stun2.l.google.com:19302' },
-                    { urls: 'stun:stun3.l.google.com:19302' },
-                    { urls: 'stun:stun4.l.google.com:19302' },
-                ],
-                iceTransportPolicy: 'all',
-            });
-            vdo.connect().then(function() {
-                return vdo.joinRoom({ room: room });
-            }).then(function() {
-                return vdo.publish(localStream, { streamID: streamID });
-            }).then(function() {
-                connected = true;
-                wasEverConnected = true;
-                reconnectAttempt = 0;
-                setDot('on');
-                toggleBtn.disabled = false;
-                setBtnText(false);
-                hideSpinner();
-                infoText.textContent = 'Reconectado com sucesso.';
-                startViewReturn().then(function() {
-                    setTimeout(startQualityMonitor, 8000);
-                }, function() {
-                    setTimeout(startQualityMonitor, 8000);
-                });
-            }).catch(function(err) {
-                console.warn('[Guest] Reconnect failed:', err);
-                if (reconnectAttempt < 5) {
-                    scheduleReconnect();
-                } else {
-                    hideSpinner();
-                    toggleBtn.disabled = false;
-                    setBtnText(false);
-                    infoText.textContent = 'Não foi possível reconectar. Clique em "Ativar Câmera" para tentar novamente.';
-                    setDot('off');
-                }
-            });
-        }
-
         // ---- fullscreen (compatível iOS + desktop) ----
         function toggleFullscreen() {
             var el = returnVideo;
@@ -388,9 +321,6 @@
 
         // ---- cleanup ----
         function cleanup() {
-            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
-            reconnectAttempt = 0;
-            wasEverConnected = false;
             if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
             viewRetryCount = 0;
             stopQualityMonitor();
@@ -472,7 +402,6 @@
             // --- Step 4: success ---
             p = p.then(function() {
                 connected = true;
-                wasEverConnected = true;
                 setDot('on');
                 toggleBtn.disabled = false;
                 setBtnText(false);
