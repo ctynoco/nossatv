@@ -68,13 +68,12 @@ export class VereadorManager {
 
             this.vdo.addEventListener('connected', () => {
                 this._vdoReady = true;
-                this._startViewing();
             });
 
             this.vdo.connect().then(() => {
                 return this.vdo.joinRoom({ room: 'nossatv' });
             }).then(() => {
-                if (this.vdo._connected) this._startViewing();
+                this._startViewing();
             }).catch((err) => {
                 console.warn('[Vereador] Erro VDO.Ninja:', err);
                 this.obs?.showNotification('⚠️ Erro ao conectar VDO.Ninja: ' + (err.message || 'desconhecido'));
