@@ -458,57 +458,59 @@ class OBSClone {
 
         var container = document.createElement('div');
         container.id = 'multiview-grid';
-        container.style.cssText = 'position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:3px;padding:3px;';
+        container.style.cssText = 'position:absolute;inset:0;display:grid;gap:3px;padding:3px;align-content:center;';
         previewArea.appendChild(container);
 
-        var pad = function(n){ return String(n).padStart(2,'0'); };
-        for (var i = 1; i <= 12; i++) {
-            var slotId = i;
-            var label = 'VER' + pad(i);
-            var streamId = 'slot_' + label;
-            var cell = document.createElement('div');
-            cell.id = 'mv-cell-' + slotId;
-            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #222;';
-            cell.innerHTML =
-                '<div class="mv-placeholder" id="mv-ph-' + slotId + '" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;z-index:1">' +
-                    '<span style="font-size:22px;opacity:.3">📡</span>' +
-                    '<span style="font-size:12px;font-weight:600;color:#555">' + label + '</span>' +
-                    '<span style="font-size:10px;color:#333">aguardando...</span>' +
-                '</div>' +
-                '<video id="mv-vid-' + slotId + '" autoplay playsinline muted style="width:100%;height:100%;object-fit:contain;display:none;position:relative;z-index:2"></video>' +
-                '<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#333;z-index:3" id="mv-dot-' + slotId + '"></div>' +
-                '<div style="position:absolute;bottom:3px;left:3px;background:rgba(0,0,0,.7);color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;z-index:3">' + label + '</div>';
-            container.appendChild(cell);
-        }
-
-        this._updateMultiViewStreams();
+        this._updateMultiViewGrid();
         if (this._vereadoresGridInterval) clearInterval(this._vereadoresGridInterval);
-        this._vereadoresGridInterval = setInterval(this._updateMultiViewStreams.bind(this), 2000);
+        this._vereadoresGridInterval = setInterval(this._updateMultiViewGrid.bind(this), 2000);
     }
 
-    _updateMultiViewStreams() {
+    _updateMultiViewGrid() {
         if (!this._vereadoresActive) return;
+        var container = document.getElementById('multiview-grid');
+        if (!container) return;
+        var connected = [];
+        var pad = function(n){ return String(n).padStart(2,'0'); };
         for (var i = 1; i <= 12; i++) {
-            var vid = document.getElementById('mv-vid-' + i);
-            var ph = document.getElementById('mv-ph-' + i);
-            var dot = document.getElementById('mv-dot-' + i);
-            if (!vid || !ph || !dot) continue;
             var stream = this.vereadorManager && this.vereadorManager.connections ? this.vereadorManager.connections[i] : null;
             if (stream && stream.active && stream.getVideoTracks().length > 0) {
-                if (vid.srcObject !== stream) {
-                    vid.srcObject = stream;
-                    vid.style.display = 'block';
-                    ph.style.display = 'none';
-                }
-                dot.style.background = '#4caf50';
-                dot.style.boxShadow = '0 0 4px #4caf50';
-            } else {
-                vid.srcObject = null;
-                vid.style.display = 'none';
-                ph.style.display = 'flex';
-                dot.style.background = '#333';
-                dot.style.boxShadow = 'none';
+                connected.push(i);
             }
+        }
+        var n = connected.length;
+        if (n === 0) {
+            container.innerHTML = '<div style="grid-column:1;-1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#444;font-size:14px;gap:8px;min-height:200px"><span style="font-size:40px">📡</span><span>Nenhum vereador conectado</span></div>';
+            container.style.gridTemplateColumns = '1fr';
+            return;
+        }
+        var cols = 1;
+        if (n >= 5) cols = 4;
+        else if (n >= 3) cols = 3;
+        else if (n === 2) cols = 2;
+        container.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+        container.innerHTML = '';
+        for (var j = 0; j < n; j++) {
+            var id = connected[j];
+            var label = 'VER' + pad(id);
+            var stream = this.vereadorManager.connections[id];
+            var cell = document.createElement('div');
+            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #333;aspect-ratio:16/9;';
+            var vid = document.createElement('video');
+            vid.autoplay = true;
+            vid.playsInline = true;
+            vid.muted = true;
+            vid.srcObject = stream;
+            vid.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;position:relative;z-index:2;';
+            cell.appendChild(vid);
+            var dot = document.createElement('div');
+            dot.style.cssText = 'position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#4caf50;box-shadow:0 0 4px #4caf50;z-index:3;';
+            cell.appendChild(dot);
+            var lbl = document.createElement('div');
+            lbl.style.cssText = 'position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:700;z-index:3;';
+            lbl.textContent = label;
+            cell.appendChild(lbl);
+            container.appendChild(cell);
         }
     }
 
@@ -517,10 +519,6 @@ class OBSClone {
         if (this._vereadoresGridInterval) {
             clearInterval(this._vereadoresGridInterval);
             this._vereadoresGridInterval = null;
-        }
-        for (var i = 1; i <= 12; i++) {
-            var vid = document.getElementById('mv-vid-' + i);
-            if (vid) { try { vid.srcObject = null; } catch(e) {} }
         }
         this.clearPreview();
         this.renderScenes();
