@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>NossaTV - Multi-View</title>
+    <style>
+        *{margin:0;padding:0;box-sizing:border-box}
+        html,body{width:100%;height:100%;background:#000;color:#fff;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden}
+        .toolbar{position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,.85);padding:8px 12px;display:flex;gap:8px;align-items:center;z-index:100;flex-wrap:wrap;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px)}
+        .toolbar select,.toolbar button{background:#222;color:#fff;border:1px solid #444;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
+        .toolbar button:hover{background:#333}
+        .toolbar label{font-size:12px;color:#aaa;display:flex;align-items:center;gap:4px}
+        .status{font-size:11px;padding:3px 8px;border-radius:4px}
+        .status.online{color:#4caf50}
+        .status.offline{color:#f44336}
+        .status.connecting{color:#ff9800}
+        .grid{position:absolute;top:44px;left:0;right:0;bottom:0;display:grid;gap:3px;padding:3px}
+        .cell{position:relative;background:#111;border-radius:6px;overflow:hidden;display:flex;align-items:center;justify-content:center;cursor:pointer;border:2px solid #222;transition:border-color .3s}
+        .cell:hover{border-color:#555}
+        .cell.live{border-color:#4caf50}
+        .cell video{width:100%;height:100%;object-fit:contain;background:#000;display:block}
+        .cell video.hidden{display:none}
+        .placeholder{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;z-index:1}
+        .placeholder .icon{font-size:28px;opacity:.4}
+        .placeholder .name{font-size:13px;font-weight:600;color:#888}
+        .placeholder .sub{font-size:11px;color:#555}
+        .label{position:absolute;top:6px;left:6px;background:rgba(0,0,0,.75);color:#fff;padding:2px 8px;border-radius:5px;font-size:11px;font-weight:700;z-index:2}
+        .dot{position:absolute;top:6px;right:6px;width:8px;height:8px;border-radius:50%;z-index:2;transition:background .3s}
+        .dot.off{background:#555}
+        .dot.live{background:#4caf50;box-shadow:0 0 6px #4caf50}
+        .dot.error{background:#f44336}
+        @media(max-width:600px){.toolbar{gap:4px;padding:6px 8px}.toolbar select,.toolbar button{font-size:10px;padding:3px 6px}.grid{top:40px;gap:2px;padding:2px}.placeholder .icon{font-size:20px}.placeholder .name{font-size:11px}}
+    </style>
+</head>
+<body>
+    <div class="toolbar">
+        <label>Layout
+            <select id="layout">
+                <option value="auto">Auto</option>
+                <option value="2x2">2×2</option>
+                <option value="3x3">3×3</option>
+                <option value="3x4">3×4</option>
+                <option value="4x4">4×4</option>
+                <option value="4x6">4×6</option>
+            </select>
+        </label>
+        <button id="applyBtn">Aplicar</button>
+        <span class="status" id="status">Conectando...</span>
+        <span style="flex:1"></span>
+        <span style="font-size:11px;color:#555">Clique em um slot para abrir o link do convidado</span>
+    </div>
+    <div class="grid" id="grid"></div>
+
+<script>
+(function(){
+    'use strict';
+
+    var TOTAL = 12;
+    var room = 'nossatv';
+    var layout = 'auto';
+    var vdo = null;
+    var connected = false;
+    var viewStreams = {};
+    var retryTimers = {};
+
+    var gridEl = document.getElementById('grid');
+    var statusEl = document.getElementById('status');
+    var layoutSel = document.getElementById('layout');
+    var applyBtn = document.getElementById('applyBtn');
+
+    function pad(n){ return String(n).padStart(2,'0') }
+
+    function computeLayout(n){
+        if(layout !== 'auto'){
+            var parts = layout.split('x');
+            return { cols: parseInt(parts[0]), rows: parseInt(parts[1]) };
+        }
+        if(n <= 1) return { cols:1, rows:1 };
+        if(n <= 2) return { cols:2, rows:1 };
+        if(n <= 4) return { cols:2, rows:2 };
+        if(n <= 6) return { cols:3, rows:2 };
+        if(n <= 9) return { cols:3, rows:3 };
+        if(n <= 12) return { cols:4, rows:3 };
+        return { cols:4, rows:3 };
+    }
+
+    function buildGrid(){
+        gridEl.innerHTML = '';
+        var cl = computeLayout(TOTAL);
+        gridEl.style.gridTemplateColumns = 'repeat(' + cl.cols + ', 1fr)';
+        gridEl.style.gridTemplateRows = 'repeat(' + cl.rows + ', 1fr)';
+        for(var i=1; i<=TOTAL; i++){
+            var slotId = 'VER' + pad(i);
+            var streamId = 'slot_' + slotId;
+            var cell = document.createElement('div');
+            cell.className = 'cell';
+            cell.id = 'cell-' + streamId;
+            cell.innerHTML =
+                '<div class="placeholder" id="ph-' + streamId + '">' +
+                    '<div class="icon">&#x1F4E1;</div>' +
+                    '<div class="name">' + slotId + '</div>' +
+                    '<div class="sub">aguardando...</div>' +
+                '</div>' +
+                '<video id="vid-' + streamId + '" autoplay playsinline muted class="hidden"></video>' +
+                '<div class="label">' + slotId + '</div>' +
+                '<div class="dot off" id="dot-' + streamId + '"></div>';
+            cell.addEventListener('click', (function(sid){
+                return function(){
+                    var url = new URL('guest.html', window.location.href);
+                    url.searchParams.set('room', room);
+                    url.searchParams.set('slot', sid);
+                    window.open(url.href, '_blank');
+                };
+            })(slotId));
+            gridEl.appendChild(cell);
+        }
+    }
+
+    function setSlotStatus(streamId, state){
+        var dot = document.getElementById('dot-' + streamId);
+        var ph = document.getElementById('ph-' + streamId);
+        var vid = document.getElementById('vid-' + streamId);
+        if(!dot) return;
+        dot.className = 'dot';
+        if(state === 'live'){
+            dot.classList.add('live');
+            if(ph) ph.style.display = 'none';
+            if(vid) vid.classList.remove('hidden');
+        } else if(state === 'error'){
+            dot.classList.add('error');
+        } else {
+            dot.classList.add('off');
+            if(ph) ph.style.display = 'flex';
+            if(vid) { vid.classList.add('hidden'); try { vid.srcObject = null; } catch(e){} }
+        }
+    }
+
+    function viewSlot(streamId){
+        if(viewStreams[streamId]) return;
+        if(retryTimers[streamId]) { clearTimeout(retryTimers[streamId]); delete retryTimers[streamId]; }
+        setSlotStatus(streamId, '');
+        if(!vdo || !connected) return;
+        viewStreams[streamId] = true;
+        vdo.view(streamId, { audio: false, video: true }).then(function(stream){
+            if(stream && stream.active && stream.getVideoTracks().length > 0){
+                var vid = document.getElementById('vid-' + streamId);
+                if(vid){
+                    vid.srcObject = stream;
+                    setSlotStatus(streamId, 'live');
+                }
+            } else {
+                delete viewStreams[streamId];
+                retryTimers[streamId] = setTimeout(function(){ viewSlot(streamId); }, 5000);
+            }
+        }).catch(function(){
+            delete viewStreams[streamId];
+            setSlotStatus(streamId, 'error');
+            retryTimers[streamId] = setTimeout(function(){ viewSlot(streamId); }, 10000);
+        });
+    }
+
+    function viewAll(){
+        for(var i=1; i<=TOTAL; i++){
+            viewSlot('slot_VER' + pad(i));
+        }
+    }
+
+    function stopViewAll(){
+        for(var key in retryTimers){
+            if(retryTimers[key]) { clearTimeout(retryTimers[key]); }
+        }
+        retryTimers = {};
+        for(var key2 in viewStreams){
+            delete viewStreams[key2];
+            try { vdo.stopViewing(key2); } catch(e){}
+            setSlotStatus(key2, '');
+        }
+        viewStreams = {};
+    }
+
+    function setStatus(text, cls){
+        statusEl.textContent = text;
+        statusEl.className = 'status ' + (cls || '');
+    }
+
+    function connect(){
+        setStatus('Conectando...', 'connecting');
+        vdo = new VDONinjaSDK({
+            iceServers: [
+                { urls: 'stun:stun.l.google.com:19302' },
+                { urls: 'stun:stun1.l.google.com:19302' },
+                { urls: 'stun:stun2.l.google.com:19302' },
+                { urls: 'stun:stun3.l.google.com:19302' },
+                { urls: 'stun:stun4.l.google.com:19302' },
+            ],
+            iceTransportPolicy: 'all',
+        });
+        vdo.connect().then(function(){
+            return vdo.joinRoom({ room: room });
+        }).then(function(){
+            connected = true;
+            setStatus('Online', 'online');
+            viewAll();
+        }).catch(function(err){
+            setStatus('Erro: ' + (err.message||'conexão'), 'offline');
+            setTimeout(connect, 5000);
+        });
+    }
+
+    function init(){
+        buildGrid();
+        var s = document.createElement('script');
+        s.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
+        s.onload = function(){ connect(); };
+        s.onerror = function(){
+            setStatus('Erro ao carregar SDK', 'offline');
+            var s2 = document.createElement('script');
+            s2.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
+            s2.onload = function(){ connect(); };
+            s2.onerror = function(){ setStatus('SDK indisponível', 'offline'); };
+            document.head.appendChild(s2);
+        };
+        document.head.appendChild(s);
+    }
+
+    applyBtn.addEventListener('click', function(){
+        layout = layoutSel.value;
+        stopViewAll();
+        buildGrid();
+        if(connected) viewAll();
+    });
+
+    window.addEventListener('beforeunload', function(){
+        stopViewAll();
+        if(vdo) try { vdo.disconnect(); } catch(e){}
+    });
+
+    init();
+})();
+</script>
+</body>
+</html>

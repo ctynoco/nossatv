@@ -1,5 +1,5 @@
 const CACHE = 'nossatv-v2';
-const URLS = ['index.html', 'styles.css', 'script.js', 'source-types.js', 'vereador-manager.js', 'manifest.json', 'favicon.svg'];
+const URLS = ['index.html', 'guest.html', 'scene.html', 'styles.css', 'script.js', 'source-types.js', 'vereador-manager.js', 'manifest.json', 'favicon.svg'];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(

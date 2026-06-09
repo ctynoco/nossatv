@@ -14,6 +14,7 @@ const files = [
   { name: 'vereador-manager.js', minify: 'module' },
   { name: 'qrcode.js', minify: 'module' },
   { name: 'guest.html', minify: 'html' },
+  { name: 'scene.html', minify: 'html' },
   { name: 'manifest.json' },
   { name: 'favicon.svg' },
   { name: 'service-worker.js' },
