@@ -2377,6 +2377,14 @@ class OBSClone {
                 if (child.classList.contains('screen-placeholder') || child.classList.contains('vereador-pip')) return;
                 const clone = child.cloneNode(true);
                 programArea.appendChild(clone);
+                // Restaura srcObject dos vídeos (cloneNode não copia streams)
+                if (clone.querySelectorAll) {
+                    var origVids = child.querySelectorAll('video[id^="mvv-"]');
+                    var cloneVids = clone.querySelectorAll('video[id^="mvv-"]');
+                    for (var vi = 0; vi < origVids.length && vi < cloneVids.length; vi++) {
+                        cloneVids[vi].srcObject = origVids[vi].srcObject;
+                    }
+                }
             });
             programArea.style.backgroundColor = previewArea.style.backgroundColor;
         }
@@ -2479,6 +2487,13 @@ class OBSClone {
                     clone.style.height = '100%';
                 }
                 screenContent.appendChild(clone);
+                if (clone.querySelectorAll) {
+                    var origVids = child.querySelectorAll('video[id^="mvv-"]');
+                    var cloneVids = clone.querySelectorAll('video[id^="mvv-"]');
+                    for (var vi = 0; vi < origVids.length && vi < cloneVids.length; vi++) {
+                        cloneVids[vi].srcObject = origVids[vi].srcObject;
+                    }
+                }
             });
 
             // Clona PiP (apenas 1) para o vertical
