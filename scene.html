@@ -161,31 +161,11 @@
         }
     }
 
-    var _overlay = null;
-
-    function _getOverlay(){
-        if(!_overlay){
-            _overlay = document.createElement('div');
-            _overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99;opacity:0;pointer-events:none;transition:opacity ' + TRANSITION_DURATION + 'ms ease';
-            document.body.appendChild(_overlay);
-        }
-        return _overlay;
-    }
-
     function switchScene(sceneId){
-        if(_transitioning || sceneId === currentScene) return;
-        _transitioning = true;
-        var ol = _getOverlay();
-        ol.style.transition = 'opacity ' + TRANSITION_DURATION + 'ms ease';
-        ol.style.opacity = '1';
-        var self = this;
-        setTimeout(function(){
-            currentScene = sceneId;
-            applySceneLayout(sceneId);
-            _buildSceneButtons();
-            ol.style.opacity = '0';
-            setTimeout(function(){ _transitioning = false; }, TRANSITION_DURATION + 50);
-        }, TRANSITION_DURATION + 50);
+        if(sceneId === currentScene) return;
+        currentScene = sceneId;
+        applySceneLayout(sceneId);
+        _buildSceneButtons();
     }
 
     function _buildSceneButtons(){
