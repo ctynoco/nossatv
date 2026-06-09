@@ -28,6 +28,7 @@ class OBSClone {
         this._vuAnimId      = null;
         this.masterVolume   = 1;
         this._objectUrls    = {};
+        this._vereadorAudio = {};
         this._vereadoresActive = false;
         this._vereadoresGridInterval = null;
         this.settings       = this._loadSettings();
@@ -54,6 +55,7 @@ class OBSClone {
         this._restoreSectionLayout();
         this.startAutoSave();
         this.startAudioMixerLoop();
+        this.renderAudioMixer();
         this._pipSyncInterval = setInterval(() => this._syncProgramPip(), 500);
         this._setupSettingsUI();
         this._setupPreviewLogoDrag();
@@ -1391,6 +1393,66 @@ class OBSClone {
         this.renderAudioMixer();
     }
 
+    setupVereadorAudio(slotId, stream, label) {
+        if (this._vereadorAudio[slotId]) this.cleanupVereadorAudio(slotId);
+        const ctx = new AudioContext();
+        if (ctx.state === 'suspended') ctx.resume();
+        var src = ctx.createMediaStreamSource(stream);
+        var gain = ctx.createGain();
+        var panner = ctx.createStereoPanner();
+        var analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        src.connect(gain);
+        gain.connect(panner);
+        panner.connect(analyser);
+        analyser.connect(ctx.destination);
+        this._vereadorAudio[slotId] = {
+            context: ctx, source: src, gain: gain, panner: panner,
+            analyser: analyser, muted: false, solo: false,
+            volume: 1, pan: 0, label: label || 'Vereador ' + slotId
+        };
+        this.renderAudioMixer();
+    }
+
+    cleanupVereadorAudio(slotId) {
+        var va = this._vereadorAudio[slotId];
+        if (!va) return;
+        try {
+            if (va.context && va.context.state !== 'closed') va.context.close();
+        } catch(e) {}
+        delete this._vereadorAudio[slotId];
+        this.renderAudioMixer();
+    }
+
+    setVereadorVolume(slotId, val) {
+        var va = this._vereadorAudio[slotId];
+        if (!va) return;
+        va.volume = val;
+        va.gain.gain.value = val;
+        this._updateSoloState();
+    }
+
+    setVereadorPan(slotId, val) {
+        var va = this._vereadorAudio[slotId];
+        if (!va) return;
+        va.pan = val;
+        va.panner.pan.value = val;
+    }
+
+    toggleVereadorMute(slotId) {
+        var va = this._vereadorAudio[slotId];
+        if (!va) return;
+        va.muted = !va.muted;
+        this._updateSoloState();
+    }
+
+    toggleVereadorSolo(slotId) {
+        var va = this._vereadorAudio[slotId];
+        if (!va) return;
+        va.solo = !va.solo;
+        this._updateSoloState();
+    }
+
     setAudioLayout(layout) {
         const list = document.getElementById('audio-mixer-list');
         if (!list) return;
@@ -1405,29 +1467,38 @@ class OBSClone {
         const list = document.getElementById('audio-mixer-list');
         if (!list) return;
 
-        const scene = this.activeScene;
-        if (!scene) {
-            list.innerHTML = '<p class="audio-empty">Nenhuma cena ativa</p>';
-            return;
-        }
+        let scene = this.activeScene;
+        if (!scene) scene = { sources: [] };
 
-        const audioSources = scene.sources.filter(s =>
+        const audioSources = scene.sources ? scene.sources.filter(s =>
             AUDIO_SOURCE_TYPES.includes(s.type)
-        );
+        ) : [];
 
-        list.innerHTML = '';
-        if (audioSources.length > 0) {
-            list.innerHTML = audioSources.map(s => this.renderMixerCard(s)).join('') +
-                '<div class="audio-master">' +
-                    '<div class="audio-master-header"><span>🔊 Master</span><span class="master-db" id="master-db">0.0 dB</span></div>' +
-                    '<input type="range" class="audio-master-slider" min="0" max="1" step="0.01" value="' + this.masterVolume + '" />' +
-                '</div>';
-        } else {
-            list.innerHTML = '<p class="audio-empty">Nenhuma fonte de áudio</p>';
-            return;
+        var vereadorCards = '';
+        for (var sk in this._vereadorAudio) {
+            var va = this._vereadorAudio[sk];
+            vereadorCards += '<div class="audio-card" data-id="vereador-' + sk + '" data-type="vereador">' +
+                '<div class="audio-card-header"><span class="audio-label">📱 ' + va.label + '</span>' +
+                '<div class="audio-card-btns">' +
+                    '<button class="audio-mute-btn" title="Mutar">🔇</button>' +
+                    '<button class="audio-solo-btn" title="Solo">S</button>' +
+                '</div></div>' +
+                '<div class="audio-card-body">' +
+                    '<input type="range" class="audio-fader" min="0" max="1" step="0.01" value="' + va.volume + '" />' +
+                    '<div class="audio-pan"><span>Pan</span>' +
+                    '<input type="range" class="audio-pan-slider" min="-1" max="1" step="0.01" value="' + va.pan + '" /></div>' +
+                    '<div class="audio-vu-bar"><div class="audio-vu-fill" id="vu-vereador-' + sk + '"></div></div>' +
+                '</div></div>';
         }
 
-        // Attach events
+        list.innerHTML = (audioSources.length > 0 ? audioSources.map(s => this.renderMixerCard(s)).join('') : '') +
+            vereadorCards +
+            '<div class="audio-master">' +
+                '<div class="audio-master-header"><span>🔊 Master</span><span class="master-db" id="master-db">0.0 dB</span></div>' +
+                '<input type="range" class="audio-master-slider" min="0" max="1" step="0.01" value="' + this.masterVolume + '" />' +
+            '</div>';
+
+        // Attach events - regular sources
         audioSources.forEach(s => {
             const chain = this.audioChains[s.id];
             const card = list.querySelector(`.audio-card[data-id="${s.id}"]`);
@@ -1465,6 +1536,41 @@ class OBSClone {
                 filtersBtn.addEventListener('click', () => this.openAudioFilters(s.id));
             }
         });
+
+        // events for vereador cards
+        for (var sk in this._vereadorAudio) {
+            var card = list.querySelector('.audio-card[data-id="vereador-' + sk + '"]');
+            if (!card) continue;
+            (function(id){
+                var va = this._vereadorAudio[id];
+                var fader = card.querySelector('.audio-fader');
+                if (fader) {
+                    fader.value = va.volume;
+                    fader.addEventListener('input', function(e){
+                        this.setVereadorVolume(id, parseFloat(e.target.value));
+                    }.bind(this));
+                }
+                var pan = card.querySelector('.audio-pan-slider');
+                if (pan) {
+                    pan.value = va.pan;
+                    pan.addEventListener('input', function(e){
+                        this.setVereadorPan(id, parseFloat(e.target.value));
+                    }.bind(this));
+                }
+                var muteBtn = card.querySelector('.audio-mute-btn');
+                if (muteBtn) {
+                    muteBtn.addEventListener('click', function(){
+                        this.toggleVereadorMute(id);
+                    }.bind(this));
+                }
+                var soloBtn = card.querySelector('.audio-solo-btn');
+                if (soloBtn) {
+                    soloBtn.addEventListener('click', function(){
+                        this.toggleVereadorSolo(id);
+                    }.bind(this));
+                }
+            }).call(this, sk);
+        }
 
         const masterSlider = list.querySelector('.audio-master-slider');
         if (masterSlider) {
@@ -1593,16 +1699,37 @@ class OBSClone {
                 ctx.fillRect(x, 0, 1, barH);
             }
         }
+        for (var vid in this._vereadorAudio) {
+            var va = this._vereadorAudio[vid];
+            var fill = document.getElementById('vu-vereador-' + vid);
+            if (!fill || !va.analyser) continue;
+            var data = new Uint8Array(va.analyser.frequencyBinCount);
+            va.analyser.getByteFrequencyData(data);
+            var avg = 0;
+            for (var i = 0; i < data.length; i++) avg += data[i];
+            avg /= data.length;
+            var pct = Math.min(1, avg / 128);
+            fill.style.width = (pct * 100) + '%';
+            fill.style.background = pct > 0.82 ? '#cc0000' : (pct > 0.6 ? '#ffcc00' : '#44cc44');
+        }
     }
 
     _updateSoloState() {
-        const chains = Object.values(this.audioChains);
-        const hasSolo = chains.some(c => c.solo);
-        for (const id in this.audioChains) {
-            const chain = this.audioChains[id];
-            const shouldPlay = !hasSolo || chain.solo;
-            const target = shouldPlay ? (chain.muted ? 0 : chain.volume * this.masterVolume) : 0;
+        var chains = Object.values(this.audioChains);
+        var vaList = Object.values(this._vereadorAudio);
+        var hasSolo = chains.some(function(c){ return c.solo; }) ||
+                      vaList.some(function(v){ return v.solo; });
+        for (var id in this.audioChains) {
+            var chain = this.audioChains[id];
+            var shouldPlay = !hasSolo || chain.solo;
+            var target = shouldPlay ? (chain.muted ? 0 : chain.volume * this.masterVolume) : 0;
             chain.volumeGain.gain.setValueAtTime(target, chain.context.currentTime);
+        }
+        for (var sid in this._vereadorAudio) {
+            var va = this._vereadorAudio[sid];
+            var shouldPlay = !hasSolo || va.solo;
+            var target = shouldPlay ? (va.muted ? 0 : va.volume * this.masterVolume) : 0;
+            va.gain.gain.setValueAtTime(target, va.context.currentTime);
         }
     }
 
