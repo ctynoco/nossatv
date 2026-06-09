@@ -70,7 +70,6 @@
     var connected = false;
     var viewStreams = {};
     var retryTimers = {};
-    var _liveStreams = {};
     var _transitioning = false;
     var TRANSITION_DURATION = 300;
 
@@ -132,7 +131,14 @@
 
     function _cellHasVideo(streamId){
         var vid = document.getElementById('vid-' + streamId);
-        return vid && vid.srcObject && vid.srcObject.active && vid.srcObject.getVideoTracks().some(function(t){ return t.readyState === 'live'; });
+        return vid && vid.srcObject && vid.srcObject.getVideoTracks().length > 0;
+    }
+
+    function _markLive(streamId){
+        var cell = document.getElementById('cell-' + streamId);
+        if(!cell) return;
+        applySceneLayout(currentScene);
+        setSlotStatus(streamId, 'live');
     }
 
     function applySceneLayout(sceneId){
@@ -233,15 +239,6 @@
             if(!vid) { delete viewStreams[streamId]; return; }
             vid.srcObject = stream;
             setSlotStatus(streamId, 'waiting');
-            var checkTracks = function(){
-                if(stream && stream.active && stream.getVideoTracks().some(function(t){ return t.readyState === 'live'; })){
-                    _liveStreams[streamId] = true;
-                    setSlotStatus(streamId, 'live');
-                    return;
-                }
-                if(stream && stream.active) setTimeout(checkTracks, 500);
-            };
-            setTimeout(checkTracks, 1000);
         }).catch(function(){
             delete viewStreams[streamId];
             setSlotStatus(streamId, 'error');
@@ -284,6 +281,9 @@
                 { urls: 'stun:stun4.l.google.com:19302' },
             ],
             iceTransportPolicy: 'all',
+        });
+        vdo.addEventListener('track', function(e){
+            if(e.detail && e.detail.streamID) _markLive(e.detail.streamID);
         });
         vdo.connect().then(function(){
             return vdo.joinRoom({ room: room });
