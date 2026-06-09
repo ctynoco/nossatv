@@ -2,26 +2,52 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>Convidado</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <style>
-        *{margin:0;padding:0;box-sizing:border-box}
-        body{font-family:'Segoe UI',sans-serif;background:#0f0f1a;color:#fff;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px}
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#fff;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased}
         .card{background:#1a1a2e;border-radius:16px;padding:32px 24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
         .sub{color:#888;font-size:0.82em;margin-bottom:20px}
         .video-wrap{position:relative;border-radius:8px;overflow:hidden;background:#000;margin-bottom:16px}
         .video-wrap video{width:100%;display:block;border-radius:8px}
+        .video-wrap video.mirror{transform:scaleX(-1)}
         .video-wrap video.hidden{display:none}
         .dot{position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:#555;transition:background .3s;z-index:2}
         .dot.on{background:#4caf50;box-shadow:0 0 6px #4caf50}
+        .dot.warning{background:#ff9800;box-shadow:0 0 6px #ff9800}
+        .dot.off{background:#f44336;box-shadow:0 0 6px #f44336}
         .return-video{width:100%;border-radius:8px;background:#000;margin-bottom:16px;display:none}
         .return-video.active{display:block}
-        .btn{width:100%;padding:14px;border:none;border-radius:50px;font-size:1em;font-weight:700;cursor:pointer;transition:opacity .2s}
-        .btn:disabled{opacity:0.5;cursor:not-allowed}
+        .btn{width:100%;padding:14px;border:none;border-radius:50px;font-size:1em;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;-webkit-tap-highlight-color:transparent}
+        .btn:active{transform:scale(0.98)}
+        .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
         .btn-primary{background:#1976d2;color:#fff}
         .btn-primary:hover:not(:disabled){background:#1565c0}
+        .btn-danger{background:#d32f2f;color:#fff}
+        .btn-danger:hover:not(:disabled){background:#b71c1c}
         .info{font-size:0.78em;color:#666;margin-top:12px;line-height:1.5}
+        .quality{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:0.72em;color:#555}
+        .quality .bar{flex:1;height:3px;border-radius:2px;background:#333;overflow:hidden}
+        .quality .bar span{display:block;height:100%;border-radius:2px;transition:width .5s,background .5s}
+        .quality .bar span.good{background:#4caf50;width:80%}
+        .quality .bar span.fair{background:#ff9800;width:45%}
+        .quality .bar span.poor{background:#f44336;width:20%}
+        .fs-btn{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.55);border:none;color:#fff;padding:6px 10px;border-radius:6px;font-size:0.7em;cursor:pointer;z-index:3;opacity:0.7;transition:opacity .3s;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
+        .video-wrap:hover .fs-btn{opacity:1}
+        .video-wrap .fs-btn:active{opacity:1;background:rgba(0,0,0,0.75)}
+        .vu-meter{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:0.72em;color:#555}
+        .vu-meter .vu-label{white-space:nowrap}
+        .vu-meter .vu-track{flex:1;height:4px;border-radius:3px;background:#222;overflow:hidden}
+        .vu-meter .vu-fill{height:100%;width:0%;border-radius:3px;background:#4caf50;transition:width .1s linear}
+        .vu-meter .vu-fill.warn{background:#ff9800}
+        .vu-meter .vu-fill.clip{background:#f44336}
+        .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,0.1);border-top-color:#1976d2;border-radius:50%;animation:spin .6s linear infinite;display:none;margin:0 auto 8px}
+        .spinner.active{display:block}
+        @keyframes spin{to{transform:rotate(360deg)}}
     </style>
 </head>
 <body>
@@ -30,14 +56,26 @@
         <div class="video-wrap">
             <video id="local-video" autoplay playsinline muted class="hidden"></video>
             <div class="dot" id="dot"></div>
+            <button class="fs-btn" id="fs-btn">⛶ Tela Cheia</button>
         </div>
+        <div class="spinner" id="spinner"></div>
         <video id="return-video" class="return-video" autoplay playsinline></video>
         <button id="btn-toggle" class="btn btn-primary">Ativar Câmera</button>
+        <div class="quality" id="quality-indicator" style="display:none">
+            <span>Qualidade</span>
+            <div class="bar"><span id="quality-bar"></span></div>
+        </div>
+        <div class="vu-meter" id="vu-meter" style="display:none">
+            <span class="vu-label">Áudio</span>
+            <div class="vu-track"><div class="vu-fill" id="vu-fill"></div></div>
+        </div>
         <p class="info" id="info-text">Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.</p>
     </div>
-    <script src="https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js" integrity="sha384-/xDAcwjdhN3g8ilH5vtF0Agq4V9XxMqRwgxde0EVDrfjVJUk87pBL/SgjNUsBFEq" crossorigin="anonymous"></script>
     <script>
     (function() {
+        'use strict';
+
+        // ---- DOM refs ----
         var params = new URLSearchParams(location.search);
         var room = params.get('room') || 'nossatv';
         var slot = params.get('slot');
@@ -55,81 +93,301 @@
         var localStream = null;
         var connected = false;
         var viewRetry = null;
-        var returnStream = null;
-
-        window.addEventListener('beforeunload', function(e) {
-            if (connected) { e.preventDefault(); e.returnValue = ''; }
-        });
+        var qualityInterval = null;
+        var vuInterval = null;
+        var audioContext = null;
+        var analyserNode = null;
+        var reconnectAttempt = 0;
+        var reconnectTimer = null;
+        var maxReconnectDelay = 30;
+        var wasEverConnected = false;
 
         var localVideo = document.getElementById('local-video');
         var returnVideo = document.getElementById('return-video');
         var toggleBtn = document.getElementById('btn-toggle');
         var infoText = document.getElementById('info-text');
         var dot = document.getElementById('dot');
+        var spinner = document.getElementById('spinner');
+        var qualityEl = document.getElementById('quality-indicator');
+        var qualityBar = document.getElementById('quality-bar');
+        var vuMeter = document.getElementById('vu-meter');
+        var vuFill = document.getElementById('vu-fill');
+        var fsBtn = document.getElementById('fs-btn');
 
-        function showVideo() {
-            localVideo.classList.remove('hidden');
-        }
+        // ---- helpers ----
+        function showVideo() { localVideo.classList.remove('hidden'); localVideo.classList.add('mirror'); }
+        function hideVideo() { localVideo.classList.remove('mirror'); localVideo.classList.add('hidden'); }
 
-        function hideVideo() {
-            localVideo.classList.add('hidden');
-        }
-
-        function setDot(on) {
-            dot.classList.toggle('on', on);
+        function setDot(state) {
+            dot.classList.remove('on','warning','off');
+            if (state === 'on') dot.classList.add('on');
+            else if (state === 'warning') dot.classList.add('warning');
+            else if (state === 'off') dot.classList.add('off');
         }
 
         function setBtnText(connecting) {
-            toggleBtn.textContent = connecting ? 'Conectando...' : (connected ? 'Desativar Câmera' : 'Ativar Câmera');
+            toggleBtn.textContent = connecting
+                ? 'Conectando...'
+                : (connected ? 'Desativar Câmera' : 'Ativar Câmera');
+            toggleBtn.className = 'btn ' + (connected ? 'btn-danger' : 'btn-primary');
         }
 
-        function attachReturnStream() {
-            if (returnStream && returnStream.active) {
-                returnVideo.srcObject = returnStream;
-                returnVideo.classList.add('active');
-                returnVideo.play().catch(function() {});
-                try {
-                    var actx = new (window.AudioContext || window.webkitAudioContext)();
-                    if (actx.state === 'suspended') actx.resume();
-                    var src = actx.createMediaStreamSource(returnStream);
-                    var gain = actx.createGain();
-                    gain.gain.value = 0.7;
-                    src.connect(gain);
-                    gain.connect(actx.destination);
-                } catch(e) {}
-                if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
+        function showSpinner() { spinner.classList.add('active'); }
+        function hideSpinner() { spinner.classList.remove('active'); }
+
+        // ---- VU meter (indicador de áudio) ----
+        function startVUMeter(stream) {
+            try {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                var src = audioContext.createMediaStreamSource(stream);
+                analyserNode = audioContext.createAnalyser();
+                analyserNode.fftSize = 256;
+                src.connect(analyserNode);
+                vuMeter.style.display = 'flex';
+                var data = new Uint8Array(analyserNode.frequencyBinCount);
+                vuInterval = setInterval(function() {
+                    analyserNode.getByteTimeDomainData(data);
+                    var max = 0;
+                    for (var i = 0; i < data.length; i++) {
+                        var v = Math.abs(data[i] - 128);
+                        if (v > max) max = v;
+                    }
+                    var pct = (max / 128) * 100;
+                    vuFill.style.width = Math.min(pct, 100) + '%';
+                    vuFill.className = 'vu-fill';
+                    if (pct > 90) vuFill.classList.add('clip');
+                    else if (pct > 50) vuFill.classList.add('warn');
+                }, 100);
+            } catch(e) {
+                console.warn('[Guest] VU meter not available:', e);
             }
         }
-
-        function onTrack(event) {
-            var detail = event.detail;
-            if (!detail || detail.streamID !== programID) return;
-            var track = detail.track;
-            if (!track) return;
-            if (!returnStream) returnStream = new MediaStream();
-            returnStream.addTrack(track);
-            attachReturnStream();
+        function stopVUMeter() {
+            if (vuInterval) { clearInterval(vuInterval); vuInterval = null; }
+            if (audioContext) { try { audioContext.close(); } catch(e) {} audioContext = null; analyserNode = null; }
+            vuMeter.style.display = 'none';
+            vuFill.style.width = '0%';
         }
 
+        // ---- getUserMedia com fallback (PC sem facingMode + áudio adaptável) ----
+        function getAudioConstraints() {
+            return {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                sampleRate: { ideal: 48000 },
+                channelCount: { ideal: 1 }
+            };
+        }
+        function getUserMediaWithFallback() {
+            var audio = getAudioConstraints();
+            return navigator.mediaDevices.getUserMedia({
+                video: {
+                    facingMode: 'user',
+                    width: { ideal: 1280, min: 320, max: 1920 },
+                    height: { ideal: 720, min: 240, max: 1080 }
+                },
+                audio: audio
+            }).catch(function(err) {
+                if (err.name === 'OverconstrainedError' || err.name === 'TypeError') {
+                    // fallback 1: sem facingMode
+                    return navigator.mediaDevices.getUserMedia({
+                        video: {
+                            width: { ideal: 1280, min: 320, max: 1920 },
+                            height: { ideal: 720, min: 240, max: 1080 }
+                        },
+                        audio: audio
+                    });
+                }
+                if (err.name === 'NotReadableError' || err.name === 'NotFoundError') {
+                    // fallback 2: áudio mínimo (sampleRate/channelCount podem falhar)
+                    return navigator.mediaDevices.getUserMedia({
+                        video: {
+                            facingMode: 'user',
+                            width: { ideal: 1280, min: 320, max: 1920 },
+                            height: { ideal: 720, min: 240, max: 1080 }
+                        },
+                        audio: {
+                            echoCancellation: true,
+                            noiseSuppression: true,
+                            autoGainControl: true
+                        }
+                    });
+                }
+                throw err;
+            });
+        }
+
+        // ---- SDK preload (inicia imediatamente, evita gesture expiry iOS) ----
+        var sdkLoaded = null;
+        function loadSDK() {
+            if (sdkLoaded) return sdkLoaded;
+            sdkLoaded = new Promise(function(resolve, reject) {
+                if (typeof VDONinjaSDK !== 'undefined') { resolve(); return; }
+                var s = document.createElement('script');
+                s.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
+                s.integrity = 'sha384-/xDAcwjdhN3g8ilH5vtF0Agq4V9XxMqRwgxde0EVDrfjVJUk87pBL/SgjNUsBFEq';
+                s.crossOrigin = 'anonymous';
+                s.onload = function() { resolve(); };
+                s.onerror = function() {
+                    var s2 = document.createElement('script');
+                    s2.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
+                    s2.onload = function() { resolve(); };
+                    s2.onerror = function() { reject(new Error('Falha ao carregar SDK de transmissão.')); };
+                    document.body.appendChild(s2);
+                };
+                document.body.appendChild(s);
+            });
+            return sdkLoaded;
+        }
+        // inicia o carregamento imediatamente
+        loadSDK();
+
+        // ---- reconnect ----
+        function scheduleReconnect() {
+            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+            if (!wasEverConnected) return;
+            reconnectAttempt++;
+            var delay = Math.min(1 << reconnectAttempt, maxReconnectDelay);
+            infoText.textContent = 'Conexão perdida. Reconectando em ' + delay + 's...';
+            setDot('warning');
+            reconnectTimer = setTimeout(function() {
+                infoText.textContent = 'Reconectando...';
+                attemptReconnect();
+            }, delay * 1000);
+        }
+
+        function attemptReconnect() {
+            if (connected) return;
+            if (!localStream) { reconnectAttempt = 0; return; }
+            toggleBtn.disabled = true;
+            setBtnText(true);
+            showSpinner();
+            if (vdo) { try { vdo.disconnect(); } catch(e) {} }
+            vdo = new VDONinjaSDK({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                ],
+                iceTransportPolicy: 'all',
+            });
+            vdo.connect().then(function() {
+                return vdo.joinRoom({ room: room });
+            }).then(function() {
+                return vdo.publish(localStream, { streamID: streamID });
+            }).then(function() {
+                connected = true;
+                wasEverConnected = true;
+                reconnectAttempt = 0;
+                setDot('on');
+                toggleBtn.disabled = false;
+                setBtnText(false);
+                hideSpinner();
+                infoText.textContent = 'Reconectado com sucesso.';
+                startViewReturn();
+                startQualityMonitor();
+            }).catch(function(err) {
+                console.warn('[Guest] Reconnect failed:', err);
+                if (reconnectAttempt < 5) {
+                    scheduleReconnect();
+                } else {
+                    hideSpinner();
+                    toggleBtn.disabled = false;
+                    setBtnText(false);
+                    infoText.textContent = 'Não foi possível reconectar. Clique em "Ativar Câmera" para tentar novamente.';
+                    setDot('off');
+                }
+            });
+        }
+
+        // ---- fullscreen (compatível iOS + desktop) ----
+        function toggleFullscreen() {
+            var el = returnVideo;
+            // iOS Safari: usa webkitEnterFullscreen no elemento video
+            if (el.webkitEnterFullscreen && !document.webkitFullscreenElement && !document.fullscreenElement) {
+                el.webkitEnterFullscreen();
+                return;
+            }
+            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
+                if (el.requestFullscreen) el.requestFullscreen();
+                else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            } else {
+                if (document.exitFullscreen) document.exitFullscreen();
+                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
+            }
+        }
+        fsBtn.addEventListener('click', toggleFullscreen);
+
+        // ---- quality monitor ----
+        function startQualityMonitor() {
+            qualityEl.style.display = 'flex';
+            qualityInterval = setInterval(function() {
+                if (!vdo || !connected) return;
+                var pc = vdo._pc || vdo.peerConnection || null;
+                if (!pc) {
+                    connected = false;
+                    scheduleReconnect();
+                    return;
+                }
+                if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+                    connected = false;
+                    scheduleReconnect();
+                    return;
+                }
+                try {
+                    pc.getStats(null).then(function(stats) {
+                        stats.forEach(function(report) {
+                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                                var rtt = report.currentRoundTripTime;
+                                var quality = 'good';
+                                var pct = 80;
+                                if (rtt > 0.3) { quality = 'fair'; pct = 45; }
+                                if (rtt > 0.6) { quality = 'poor'; pct = 20; }
+                                qualityBar.className = quality;
+                                qualityBar.style.width = pct + '%';
+                            }
+                        });
+                    }).catch(function() {});
+                } catch(e) {}
+            }, 3000);
+        }
+
+        function stopQualityMonitor() {
+            if (qualityInterval) { clearInterval(qualityInterval); qualityInterval = null; }
+            qualityEl.style.display = 'none';
+        }
+
+        // ---- view return ----
         function startViewReturn() {
             if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
             if (!vdo || !connected) return;
             vdo.view(programID, { audio: true, video: true }).then(function(stream) {
                 if (stream && stream.active) {
-                    returnStream = stream;
-                    attachReturnStream();
+                    returnVideo.srcObject = stream;
+                    returnVideo.classList.add('active');
+                    returnVideo.play().catch(function(e) { console.warn('[Guest] Return play:', e); });
                 } else {
                     viewRetry = setTimeout(startViewReturn, 3000);
                 }
-            }).catch(function() {
+            }).catch(function(err) {
+                console.warn('[Guest] View error:', err);
                 viewRetry = setTimeout(startViewReturn, 3000);
             });
         }
 
+        // ---- cleanup ----
         function cleanup() {
+            if (reconnectTimer) { clearTimeout(reconnectTimer); reconnectTimer = null; }
+            reconnectAttempt = 0;
+            wasEverConnected = false;
             if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
+            stopQualityMonitor();
+            stopVUMeter();
             if (vdo) {
-                try { if (localStream) vdo.stopPublishing(); } catch(e) {}
+                try { vdo.stopPublishing(); } catch(e) {}
                 try { vdo.stopViewing(programID); } catch(e) {}
             }
             if (localStream) {
@@ -140,11 +398,12 @@
             hideVideo();
             returnVideo.srcObject = null;
             returnVideo.classList.remove('active');
-            returnStream = null;
             connected = false;
-            setDot(false);
+            setDot('');
+            hideSpinner();
         }
 
+        // ---- main toggle ----
         toggleBtn.addEventListener('click', function() {
             if (connected) {
                 if (vdo && localStream) {
@@ -161,16 +420,17 @@
 
             toggleBtn.disabled = true;
             setBtnText(true);
-            infoText.textContent = 'Solicitando câmera e microfone...';
+            showSpinner();
+            infoText.textContent = 'Carregando...';
 
-            navigator.mediaDevices.getUserMedia({
-                video: { facingMode: 'user', width: { ideal: 640 }, height: { ideal: 480 } },
-                audio: true
+            // --- Step 0: load SDK (lazy) + getUserMedia ---
+            var p = loadSDK().then(function() {
+                infoText.textContent = 'Solicitando câmera e microfone...';
+                return getUserMediaWithFallback();
             }).then(function(stream) {
                 localStream = stream;
                 localVideo.srcObject = stream;
                 showVideo();
-                console.log('[Guest] Stream tracks:', stream.getTracks().map(function(t) { return t.kind + ' enabled=' + t.enabled + ' ready=' + t.readyState; }).join(', '));
                 toggleBtn.textContent = 'Conectando...';
                 infoText.textContent = 'Conectando ao servidor...';
 
@@ -178,53 +438,72 @@
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
                         { urls: 'stun:stun1.l.google.com:19302' },
+                        { urls: 'stun:stun2.l.google.com:19302' },
+                        { urls: 'stun:stun3.l.google.com:19302' },
+                        { urls: 'stun:stun4.l.google.com:19302' },
                     ],
+                    iceTransportPolicy: 'all',
                 });
-                vdo.addEventListener('track', onTrack);
-                return vdo.connect().then(function() {
-                    return vdo.joinRoom({ room: room });
-                }).then(function() {
-                    return vdo.publish(localStream, { streamID: streamID });
-                }).then(function() {
-                    console.log('[Guest] Publish success');
-                    connected = true;
-                    setDot(true);
-                    toggleBtn.disabled = false;
-                    setBtnText(false);
-                    infoText.textContent = 'Conectado à transmissão.';
-                    startViewReturn();
-                }).catch(function(err) {
-                    console.error('[Guest] Connection error:', err);
-                    if (localStream) {
-                        localStream.getTracks().forEach(function(t) { t.stop(); });
-                        localStream = null;
-                    }
-                    localVideo.srcObject = null;
-                    hideVideo();
-                    if (vdo) { try { vdo.disconnect(); } catch(e) {} }
-                    vdo = null;
-                    connected = false;
-                    setDot(false);
-                    toggleBtn.disabled = false;
-                    setBtnText(false);
-                    infoText.textContent = 'Erro: ' + err.message;
-                    if (err.name === 'NotAllowedError') {
-                        infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
-                    } else if (err.name === 'NotFoundError') {
-                        infoText.textContent = 'Nenhuma câmera encontrada neste dispositivo.';
-                    }
-                }).catch(function(err) {
-                    console.error('[Guest] getUserMedia error:', err);
-                    hideVideo();
-                    toggleBtn.disabled = false;
-                    setBtnText(false);
-                    infoText.textContent = 'Erro: ' + err.message;
-                    if (err.name === 'NotAllowedError') {
-                        infoText.textContent = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
-                    } else if (err.name === 'NotFoundError') {
-                        infoText.textContent = 'Nenhuma câmera encontrada neste dispositivo.';
-                    }
-                });
+
+                return vdo.connect();
+            });
+
+            // --- Step 2: joinRoom ---
+            p = p.then(function() {
+                infoText.textContent = 'Entrando na sala...';
+                return vdo.joinRoom({ room: room });
+            });
+
+            // --- Step 3: publish ---
+            p = p.then(function() {
+                infoText.textContent = 'Publicando transmissão...';
+                return vdo.publish(localStream, { streamID: streamID });
+            });
+
+            // --- Step 4: success ---
+            p = p.then(function() {
+                connected = true;
+                wasEverConnected = true;
+                setDot('on');
+                toggleBtn.disabled = false;
+                setBtnText(false);
+                hideSpinner();
+                infoText.textContent = 'Conectado à transmissão.';
+                startVUMeter(localStream);
+                startViewReturn();
+                startQualityMonitor();
+            });
+
+            // --- Error handler ---
+            p.catch(function(err) {
+                console.error('[Guest] Error:', err);
+                cleanup();
+                if (vdo) { try { vdo.disconnect(); } catch(e) {} }
+                vdo = null;
+                toggleBtn.disabled = false;
+                setBtnText(false);
+                hideSpinner();
+                var msg = err.message || 'Erro desconhecido';
+                if (err.name === 'NotAllowedError') {
+                    msg = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
+                } else if (err.name === 'NotFoundError') {
+                    msg = 'Nenhuma câmera encontrada neste dispositivo.';
+                } else if (err.name === 'NotReadableError') {
+                    msg = 'Câmera ocupada por outro aplicativo. Feche e tente novamente.';
+                } else if (err.name === 'OverconstrainedError') {
+                    msg = 'Câmera não suporta a resolução necessária.';
+                } else if (err.name === 'AbortError') {
+                    msg = 'Falha de rede ao acessar a câmera. Verifique sua conexão.';
+                } else if (err.name === 'SecurityError') {
+                    msg = 'Acesso bloqueado por política de segurança (HTTPS requerido).';
+                }
+                infoText.textContent = msg;
+            });
+        });
+
+        // ---- beforeunload ----
+        window.addEventListener('beforeunload', function(e) {
+            if (connected) { e.preventDefault(); e.returnValue = ''; }
         });
     })();
     </script>

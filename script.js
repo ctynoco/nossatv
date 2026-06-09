@@ -1,6 +1,12 @@
 import { SOURCE_TYPES, SOURCE_FORMS, VIDEO_SOURCE_TYPES, AUDIO_SOURCE_TYPES } from './source-types.js';
 import { VereadorManager } from './vereador-manager.js';
 
+function escapeHtml(str) {
+    var div = document.createElement('div');
+    div.appendChild(document.createTextNode(str));
+    return div.innerHTML;
+}
+
 // ─────────────────────────────────────────
 //  CLASSE PRINCIPAL
 // ─────────────────────────────────────────
@@ -459,7 +465,7 @@ class OBSClone {
         list.innerHTML = this.scenes.map(s => `
             <div class="scene-item ${this.activeSceneId === s.id ? 'active' : ''}" data-id="${s.id}" draggable="true">
                 <span class="drag-handle">⠿</span>
-                <span class="scene-name" title="${s.name}">${s.name}</span>
+                <span class="scene-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
                 <button class="scene-rename-btn" title="Renomear">✎</button>
             </div>
         `).join('');
@@ -727,12 +733,11 @@ class OBSClone {
                     if (slideUrls.length > 0) {
                         imgEl.src = slideUrls[0];
                         if (slideUrls.length > 1) {
-                            setInterval(loadNextSlide, source.config.interval || 3000);
+                            source._slideshowInterval = setInterval(loadNextSlide, source.config.interval || 3000);
                         }
                     }
                 };
                 loadSlides();
-                source._slideshowInterval = null;
                 break;
             }
 
@@ -977,6 +982,12 @@ class OBSClone {
 
         this.cleanupAudioChain(id);
         this._stopChromaCanvas(id);
+        // limpa intervalo do slideshow
+        var src = scene.sources.find(function(s) { return s.id === id; });
+        if (src && src._slideshowInterval) {
+            clearInterval(src._slideshowInterval);
+            src._slideshowInterval = null;
+        }
 
         scene.sources = scene.sources.filter(s => s.id !== id);
         if (this.activeSource === id) {
@@ -1022,12 +1033,19 @@ class OBSClone {
         if (!source) return;
         const stream = this.mediaStreams[source.id];
         if (!stream) return;
-        const video = document.createElement('video');
+        // reutiliza elemento video em vez de criar um novo a cada chamada
+        if (canvas._chromaVideo) {
+            canvas._chromaVideo.srcObject = null;
+            canvas._chromaVideo.pause();
+        } else {
+            canvas._chromaVideo = document.createElement('video');
+        }
+        const video = canvas._chromaVideo;
         video.autoplay = true;
         video.muted = true;
         video.playsInline = true;
         video.srcObject = stream;
-        video.play().catch(() => {});
+        video.play().catch(function() {});
         const color = source.chromaKey?.color || '#00ff00';
         const similarity = (source.chromaKey?.similarity ?? 80) / 100;
         const smoothness = (source.chromaKey?.smoothness ?? 50) / 100;
@@ -1087,7 +1105,14 @@ class OBSClone {
     _stopChromaCanvas(id) {
         if (this._chromaSourceId === id) {
             const canvas = document.getElementById('chroma-preview-canvas');
-            if (canvas && canvas._chromaAnim) cancelAnimationFrame(canvas._chromaAnim);
+            if (canvas) {
+                if (canvas._chromaAnim) cancelAnimationFrame(canvas._chromaAnim);
+                if (canvas._chromaVideo) {
+                    canvas._chromaVideo.pause();
+                    canvas._chromaVideo.srcObject = null;
+                    canvas._chromaVideo = null;
+                }
+            }
         }
     }
 
@@ -1279,7 +1304,7 @@ class OBSClone {
                 <div class="audio-card-header">
                     <span class="drag-handle">⠿</span>
                     <span class="audio-icon">${source.icon}</span>
-                    <span class="audio-name" title="${source.name}">${source.name}</span>
+                    <span class="audio-name" title="${escapeHtml(source.name)}">${escapeHtml(source.name)}</span>
                     <span class="audio-db-readout">${muted ? '-∞' : volDb} dB</span>
                     <button class="audio-btn audio-filters-btn">⚙</button>
                     <button class="audio-btn audio-mute-btn ${muted ? 'muted' : ''}">${muteIcon}</button>
@@ -1690,7 +1715,7 @@ class OBSClone {
             return `<div class="source-item ${this.activeSource === s.id ? 'active' : ''}" data-id="${s.id}" draggable="true">
                 <span class="drag-handle">⠿</span>
                 <span class="source-icon">${s.icon}</span>
-                <span class="source-name" title="${s.name}">${s.name}</span>
+                <span class="source-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
                 <div class="source-actions">
                     <button class="btn-eye" onclick="obsClone.selectSource(${s.id})" title="Ativar">👁</button>
                     ${hasChroma ? `<button class="btn-chroma" onclick="obsClone.openChromaKey(${s.id})" title="Chroma Key">🎨</button>` : ''}
@@ -1925,17 +1950,31 @@ class OBSClone {
     _trimOldData() {
         try {
             localStorage.removeItem(this._snapshotKey);
-            const data = {
-                scenes: this.scenes.map(scene => ({
-                    ...scene,
-                    sources: scene.sources.map(s => {
-                        const clean = { ...s, config: { ...s.config } };
-                        if (clean.config.file && typeof clean.config.file === 'string' && clean.config.file.length > 50000) {
-                            clean.config.file = clean.config.file.substring(0, 50000);
-                        }
-                        return clean;
-                    }),
-                })),
+            var totalSize = 0;
+            var data = {
+                scenes: this.scenes.map(function(scene) {
+                    return {
+                        ...scene,
+                        sources: scene.sources.map(function(s) {
+                            var clean = { ...s, config: { ...s.config } };
+                            if (clean.config.file && typeof clean.config.file === 'string' && clean.config.file.length > 50000) {
+                                delete clean.config.file;
+                                clean.config._trimmed = true;
+                            }
+                            if (clean.config.files) {
+                                try {
+                                    var urls = JSON.parse(clean.config.files);
+                                    if (Array.isArray(urls)) {
+                                        clean.config.files = JSON.stringify(urls.filter(function(u) {
+                                            return typeof u !== 'string' || u.length <= 50000;
+                                        }));
+                                    }
+                                } catch(e) {}
+                            }
+                            return clean;
+                        }),
+                    };
+                }),
                 activeSceneId: this.activeSceneId,
             };
             localStorage.setItem('obsScenes', JSON.stringify(data));
@@ -3197,7 +3236,7 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
                         <div class="form-group">
                             <label>${t.platform === 'rtmp' ? 'URL RTMP' : 'Chave de Stream'}</label>
                             <div style="display:flex;gap:4px">
-                                <input type="${t.platform === 'rtmp' ? 'url' : 'password'}" class="target-key" data-target-id="${t.id}" value="${t.platform === 'rtmp' ? (t.url || '') : (t.key || '')}" placeholder="${t.platform === 'rtmp' ? 'rtmp://...' : 'Chave...'}" style="flex:1" />
+                                <input type="${t.platform === 'rtmp' ? 'url' : 'password'}" class="target-key" data-target-id="${t.id}" value="${escapeHtml(t.platform === 'rtmp' ? (t.url || '') : (t.key || ''))}" placeholder="${t.platform === 'rtmp' ? 'rtmp://...' : 'Chave...'}" style="flex:1" />
                                 ${t.platform !== 'rtmp' ? '<button class="btn-key-toggle" data-target-id="' + t.id + '" title="Mostrar/ocultar chave" style="background:none;border:1px solid #444;color:#888;border-radius:4px;cursor:pointer;padding:4px 8px;font-size:0.85em">👁</button>' : ''}
                             </div>
                         </div>
