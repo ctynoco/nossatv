@@ -59,7 +59,7 @@
             <button class="fs-btn" id="fs-btn">⛶ Tela Cheia</button>
         </div>
         <div class="spinner" id="spinner"></div>
-        <video id="return-video" class="return-video" autoplay playsinline></video>
+        <video id="return-video" class="return-video" autoplay playsinline muted></video>
         <button id="btn-toggle" class="btn btn-primary">Ativar Câmera</button>
         <div class="quality" id="quality-indicator" style="display:none">
             <span>Qualidade</span>
@@ -288,9 +288,9 @@
                 hideSpinner();
                 infoText.textContent = 'Reconectado com sucesso.';
                 startViewReturn().then(function() {
-                    setTimeout(startQualityMonitor, 5000);
+                    setTimeout(startQualityMonitor, 8000);
                 }, function() {
-                    setTimeout(startQualityMonitor, 5000);
+                    setTimeout(startQualityMonitor, 8000);
                 });
             }).catch(function(err) {
                 console.warn('[Guest] Reconnect failed:', err);
@@ -374,22 +374,30 @@
         }
 
         // ---- view return ----
+        var viewRetryCount = 0;
         function startViewReturn() {
             return new Promise(function(resolve) {
                 if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
                 if (!vdo || !connected) { resolve(); return; }
-                vdo.view(programID, { audio: true, video: true }).then(function(stream) {
+                vdo.view(programID, { audio: false, video: true }).then(function(stream) {
                     if (stream && stream.active) {
                         returnVideo.srcObject = stream;
                         returnVideo.classList.add('active');
                         returnVideo.play().catch(function(e) { console.warn('[Guest] Return play:', e); });
-                    } else {
-                        viewRetry = setTimeout(startViewReturn, 3000);
+                        viewRetryCount = 0;
+                    } else if (viewRetryCount < 5) {
+                        var d = Math.min(3000 * (1 << viewRetryCount), 30000);
+                        viewRetryCount++;
+                        viewRetry = setTimeout(startViewReturn, d);
                     }
                     resolve();
                 }).catch(function(err) {
                     console.warn('[Guest] View error:', err);
-                    viewRetry = setTimeout(startViewReturn, 3000);
+                    if (viewRetryCount < 5) {
+                        var d = Math.min(3000 * (1 << viewRetryCount), 30000);
+                        viewRetryCount++;
+                        viewRetry = setTimeout(startViewReturn, d);
+                    }
                     resolve();
                 });
             });
@@ -401,6 +409,7 @@
             reconnectAttempt = 0;
             wasEverConnected = false;
             if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
+            viewRetryCount = 0;
             stopQualityMonitor();
             stopVUMeter();
             if (vdo) {
@@ -488,9 +497,9 @@
                 infoText.textContent = 'Conectado à transmissão.';
                 startVUMeter(localStream);
                 startViewReturn().then(function() {
-                    setTimeout(startQualityMonitor, 5000);
+                    setTimeout(startQualityMonitor, 8000);
                 }, function() {
-                    setTimeout(startQualityMonitor, 5000);
+                    setTimeout(startQualityMonitor, 8000);
                 });
             });
 
