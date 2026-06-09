@@ -136,6 +136,9 @@
 
         // ---- VU meter (indicador de áudio) ----
         function startVUMeter(stream) {
+            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
+                vuMeter.style.display = 'none'; return;
+            }
             try {
                 audioContext = new (window.AudioContext || window.webkitAudioContext)();
                 var src = audioContext.createMediaStreamSource(stream);
@@ -475,7 +478,7 @@
                 setBtnText(false);
                 hideSpinner();
                 infoText.textContent = 'Conectado à transmissão.';
-                startVUMeter(localStream);
+                setTimeout(function() { startVUMeter(localStream); }, 1000);
                 startViewReturn().then(function() {
                     setTimeout(startQualityMonitor, 8000);
                 }, function() {
