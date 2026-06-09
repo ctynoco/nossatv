@@ -101,6 +101,7 @@
         var reconnectTimer = null;
         var maxReconnectDelay = 30;
         var wasEverConnected = false;
+        var publishPC = null;
 
         var localVideo = document.getElementById('local-video');
         var returnVideo = document.getElementById('return-video');
@@ -282,6 +283,7 @@
                 connected = true;
                 wasEverConnected = true;
                 reconnectAttempt = 0;
+                publishPC = vdo._pc || vdo.peerConnection || null;
                 setDot('on');
                 toggleBtn.disabled = false;
                 setBtnText(false);
@@ -331,7 +333,7 @@
             qualityFails = 0;
             qualityInterval = setInterval(function() {
                 if (!vdo || !connected) return;
-                var pc = vdo._pc || vdo.peerConnection || null;
+                var pc = publishPC || vdo._pc || vdo.peerConnection || null;
                 if (!pc) {
                     qualityFails++;
                     if (qualityFails >= 2) {
@@ -410,6 +412,7 @@
             wasEverConnected = false;
             if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
             viewRetryCount = 0;
+            publishPC = null;
             stopQualityMonitor();
             stopVUMeter();
             if (vdo) {
@@ -490,6 +493,7 @@
             p = p.then(function() {
                 connected = true;
                 wasEverConnected = true;
+                publishPC = vdo._pc || vdo.peerConnection || null;
                 setDot('on');
                 toggleBtn.disabled = false;
                 setBtnText(false);
