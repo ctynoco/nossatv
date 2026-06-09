@@ -101,17 +101,11 @@
         return { cols:4, rows:3 };
     }
 
-    function buildGrid(sceneId){
+    function buildGrid(){
         gridEl.innerHTML = '';
-        var s = SCENES[sceneId] || SCENES['vereadores'];
-        var cl = computeLayout(TOTAL, sceneId);
-        gridEl.style.gridTemplateColumns = 'repeat(' + cl.cols + ', 1fr)';
-        gridEl.style.gridTemplateRows = 'repeat(' + cl.rows + ', 1fr)';
-        gridEl.dataset.scene = sceneId;
         for(var i=1; i<=TOTAL; i++){
             var slotId = 'VER' + pad(i);
             var streamId = 'slot_' + slotId;
-            if(s.hideEmpty && !_liveStreams[streamId]) continue;
             var cell = document.createElement('div');
             cell.className = 'cell';
             cell.id = 'cell-' + streamId;
@@ -133,7 +127,33 @@
                 };
             })(slotId));
             gridEl.appendChild(cell);
-            if(_liveStreams[streamId]) setSlotStatus(streamId, 'live');
+        }
+    }
+
+    function applySceneLayout(sceneId, animate){
+        var s = SCENES[sceneId] || SCENES['vereadores'];
+        var cl = computeLayout(TOTAL, sceneId);
+        gridEl.style.gridTemplateColumns = 'repeat(' + cl.cols + ', 1fr)';
+        gridEl.style.gridTemplateRows = 'repeat(' + cl.rows + ', 1fr)';
+        gridEl.dataset.scene = sceneId;
+        for(var i=1; i<=TOTAL; i++){
+            var streamId = 'slot_VER' + pad(i);
+            var cell = document.getElementById('cell-' + streamId);
+            if(!cell) continue;
+            if(s.hideEmpty && !_liveStreams[streamId]){
+                cell.style.display = 'none';
+            } else {
+                cell.style.display = '';
+                if(_liveStreams[streamId]) setSlotStatus(streamId, 'live');
+            }
+        }
+        if(animate){
+            gridEl.style.transition = 'opacity 0ms ease';
+            gridEl.style.opacity = '0';
+            requestAnimationFrame(function(){
+                gridEl.style.transition = 'opacity ' + TRANSITION_DURATION + 'ms ease';
+                gridEl.style.opacity = '1';
+            });
         }
     }
 
@@ -143,13 +163,13 @@
         var dur = TRANSITION_DURATION;
         gridEl.style.transition = 'opacity ' + dur + 'ms ease';
         gridEl.style.opacity = '0';
+        var self = this;
         setTimeout(function(){
             currentScene = sceneId;
-            buildGrid(sceneId);
-            viewAll();
+            applySceneLayout(sceneId, false);
+            _buildSceneButtons();
             gridEl.style.transition = 'opacity ' + dur + 'ms ease';
             gridEl.style.opacity = '1';
-            _buildSceneButtons();
             setTimeout(function(){ _transitioning = false; }, dur);
         }, dur + 50);
     }
@@ -271,7 +291,8 @@
 
     function init(){
         _buildSceneButtons();
-        buildGrid(currentScene);
+        buildGrid();
+        applySceneLayout(currentScene, true);
         var s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
         s.onload = function(){ connect(); };
@@ -288,9 +309,7 @@
 
     applyBtn.addEventListener('click', function(){
         layout = layoutSel.value;
-        stopViewAll();
-        buildGrid(currentScene);
-        if(connected) viewAll();
+        applySceneLayout(currentScene, true);
     });
 
     window.addEventListener('beforeunload', function(){
