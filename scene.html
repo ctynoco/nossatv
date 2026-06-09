@@ -239,6 +239,7 @@
             if(!vid) { delete viewStreams[streamId]; return; }
             vid.srcObject = stream;
             setSlotStatus(streamId, 'waiting');
+            setTimeout(function(){ _markLive(streamId); }, 1500);
         }).catch(function(){
             delete viewStreams[streamId];
             setSlotStatus(streamId, 'error');
