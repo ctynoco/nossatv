@@ -27,6 +27,7 @@ class OBSClone {
         this.audioChains    = {};
         this._vuAnimId      = null;
         this.masterVolume   = 1;
+        this._objectUrls    = {};
         this._vereadoresActive = false;
         this._vereadoresGridInterval = null;
         this.settings       = this._loadSettings();
@@ -786,11 +787,12 @@ class OBSClone {
 
             case 'image': {
                 let url = source.config.file;
-                if (!url || url instanceof File) {
-                    const file = url instanceof File ? url : document.getElementById('src-file')?.files[0];
-                    if (!file) throw new Error('Nenhuma imagem selecionada');
-                    url = await this.readFileAsDataURL(file);
-                    source.config.file = url;
+                if (url instanceof File || (!url && document.getElementById('src-file')?.files[0])) {
+                    const file = url instanceof File ? url : document.getElementById('src-file').files[0];
+                    url = URL.createObjectURL(file);
+                    this._objectUrls[source.id] = url;
+                } else if (!url) {
+                    throw new Error('Nenhuma imagem selecionada');
                 }
                 const img = document.createElement('img');
                 img.src = url;
@@ -855,12 +857,15 @@ class OBSClone {
                     if (typeof files === 'string') {
                         slideUrls = JSON.parse(files);
                     } else {
+                        var blobUrls = this._objectUrls[source.id];
+                        if (blobUrls) blobUrls.forEach(function(u){ URL.revokeObjectURL(u); });
+                        blobUrls = [];
                         for (const file of files) {
-                            const url = file instanceof File ? await this.readFileAsDataURL(file) : file;
+                            const url = file instanceof File ? URL.createObjectURL(file) : file;
+                            blobUrls.push(url);
                             slideUrls.push(url);
                         }
-                        source.config.files = JSON.stringify(slideUrls);
-                        await this.saveData();
+                        this._objectUrls[source.id] = blobUrls;
                     }
                     if (slideUrls.length > 0) {
                         imgEl.src = slideUrls[0];
@@ -923,21 +928,28 @@ class OBSClone {
 
             case 'media': {
                 let file = source.config.file;
-                if (!file || file instanceof File) {
-                    const inputFile = file instanceof File ? file : document.getElementById('src-media-file')?.files[0];
-                    if (!inputFile) throw new Error('Nenhum arquivo de mídia selecionado');
-                    file = await this.readFileAsDataURL(inputFile);
-                    source.config.file = file;
+                if (file instanceof File || (!file && document.getElementById('src-media-file')?.files[0])) {
+                    file = file instanceof File ? file : document.getElementById('src-media-file').files[0];
+                    const url = URL.createObjectURL(file);
+                    this._objectUrls[source.id] = url;
+                    file = url;
+                } else if (!file) {
+                    throw new Error('Nenhum arquivo de mídia selecionado');
                 }
                 const video = document.createElement('video');
                 video.src = file;
                 video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
                 video.loop = source.config.loop !== false;
                 video.autoplay = source.config.autoplay === true;
-                video.controls = false;
-                video.muted = true;
+                video.controls = true;
+                video.muted = false;
                 previewArea.appendChild(video);
-                video.play().catch(() => {});
+                video.play().catch(function(e){
+                    if (e.name === 'NotAllowedError') {
+                        video.muted = true;
+                        video.play().catch(function(){});
+                    }
+                });
                 break;
             }
 
@@ -1123,6 +1135,11 @@ class OBSClone {
         if (src && src._slideshowInterval) {
             clearInterval(src._slideshowInterval);
             src._slideshowInterval = null;
+        }
+        if (this._objectUrls[id]) {
+            var urls = Array.isArray(this._objectUrls[id]) ? this._objectUrls[id] : [this._objectUrls[id]];
+            urls.forEach(function(u){ URL.revokeObjectURL(u); });
+            delete this._objectUrls[id];
         }
 
         scene.sources = scene.sources.filter(s => s.id !== id);
