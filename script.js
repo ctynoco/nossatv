@@ -26,6 +26,7 @@ class OBSClone {
         this._maxSnapshots  = 10;
         this.audioChains    = {};
         this._vuAnimId      = null;
+        this.masterVolume   = 1;
         this._vereadoresActive = false;
         this._vereadoresGridInterval = null;
         this.settings       = this._loadSettings();
@@ -1322,10 +1323,13 @@ class OBSClone {
 
             const compressor = context.createDynamicsCompressor();
 
-            // Cadeia: stream → compressor → volumeGain → analyser → destination
+            const panner = context.createStereoPanner();
+
+            // Cadeia: stream → compressor → volumeGain → panner → analyser → destination
             mediaSource.connect(compressor);
             compressor.connect(volumeGain);
-            volumeGain.connect(analyser);
+            volumeGain.connect(panner);
+            panner.connect(analyser);
             analyser.connect(context.destination);
 
             this.audioChains[sourceId] = {
@@ -1333,8 +1337,11 @@ class OBSClone {
                 mediaSource,
                 compressor,
                 volumeGain,
+                panner,
                 analyser,
                 muted: false,
+                solo: false,
+                pan: 0,
                 volume: 1,
                 filterState: {
                     noiseSuppression: !!(stream.getAudioTracks()[0]?.getSettings()?.noiseSuppression),
@@ -1391,24 +1398,37 @@ class OBSClone {
             AUDIO_SOURCE_TYPES.includes(s.type)
         );
 
-        if (audioSources.length === 0) {
+        list.innerHTML = '';
+        if (audioSources.length > 0) {
+            list.innerHTML = audioSources.map(s => this.renderMixerCard(s)).join('') +
+                '<div class="audio-master">' +
+                    '<div class="audio-master-header"><span>🔊 Master</span><span class="master-db" id="master-db">0.0 dB</span></div>' +
+                    '<input type="range" class="audio-master-slider" min="0" max="1" step="0.01" value="' + this.masterVolume + '" />' +
+                '</div>';
+        } else {
             list.innerHTML = '<p class="audio-empty">Nenhuma fonte de áudio</p>';
             return;
         }
 
-        list.innerHTML = audioSources.map(s => this.renderMixerCard(s)).join('');
-
-        // Attach events after render
+        // Attach events
         audioSources.forEach(s => {
             const chain = this.audioChains[s.id];
             const card = list.querySelector(`.audio-card[data-id="${s.id}"]`);
             if (!card) return;
 
-            const slider = card.querySelector('.audio-volume-slider');
-            if (slider) {
-                slider.value = chain ? chain.volume : 1;
-                slider.addEventListener('input', (e) => {
+            const fader = card.querySelector('.audio-fader');
+            if (fader) {
+                if (chain) fader.value = chain.volume;
+                fader.addEventListener('input', (e) => {
                     this.setVolume(s.id, parseFloat(e.target.value));
+                });
+            }
+
+            const panSlider = card.querySelector('.audio-pan-slider');
+            if (panSlider) {
+                if (chain) panSlider.value = chain.pan;
+                panSlider.addEventListener('input', (e) => {
+                    this.setPan(s.id, parseFloat(e.target.value));
                 });
             }
 
@@ -1418,38 +1438,61 @@ class OBSClone {
                 if (chain?.muted) muteBtn.classList.add('muted');
             }
 
+            const soloBtn = card.querySelector('.audio-solo-btn');
+            if (soloBtn) {
+                soloBtn.addEventListener('click', () => this.toggleSolo(s.id));
+            }
+
             const filtersBtn = card.querySelector('.audio-filters-btn');
             if (filtersBtn) {
                 filtersBtn.addEventListener('click', () => this.openAudioFilters(s.id));
             }
         });
 
+        const masterSlider = list.querySelector('.audio-master-slider');
+        if (masterSlider) {
+            masterSlider.addEventListener('input', (e) => {
+                this.setMasterVolume(parseFloat(e.target.value));
+                const db = parseFloat(e.target.value) <= 0 ? '-∞' : (Math.round(20 * Math.log10(parseFloat(e.target.value)) * 10) / 10).toFixed(1);
+                const el = document.getElementById('master-db');
+                if (el) el.textContent = db + ' dB';
+            });
+        }
+
         this._setupDragDrop(list, 'audio');
     }
 
     renderMixerCard(source) {
-        const isHorizontal = document.getElementById('audio-mixer-list')?.classList.contains('horizontal');
-
         const chain = this.audioChains[source.id];
         const vol = chain ? chain.volume : 1;
         const volDb = vol <= 0 ? '-∞' : (Math.round(20 * Math.log10(vol) * 10) / 10).toFixed(1);
         const muted = chain?.muted || false;
         const muteIcon = muted ? '🔇' : '🔊';
+        const solo = chain?.solo || false;
+        const pan = chain ? chain.pan : 0;
         return `
-            <div class="audio-card" data-id="${source.id}" draggable="true">
+            <div class="audio-card" data-id="${source.id}">
                 <div class="audio-card-header">
                     <span class="drag-handle">⠿</span>
                     <span class="audio-icon">${source.icon}</span>
                     <span class="audio-name" title="${escapeHtml(source.name)}">${escapeHtml(source.name)}</span>
-                    <span class="audio-db-readout">${muted ? '-∞' : volDb} dB</span>
-                    <button class="audio-btn audio-filters-btn">⚙</button>
-                    <button class="audio-btn audio-mute-btn ${muted ? 'muted' : ''}">${muteIcon}</button>
                 </div>
                 <div class="audio-meter-row">
                     <canvas class="vu-canvas" id="vu-${source.id}"></canvas>
                 </div>
-                <div class="audio-slider-row">
-                    <input type="range" class="audio-volume-slider" min="0" max="1" step="0.01" value="${vol}" />
+                <div class="audio-fader-row">
+                    <input type="range" class="audio-fader" min="0" max="1" step="0.01" value="${vol}" orient="vertical" />
+                </div>
+                <div class="audio-pan-row">
+                    <span class="pan-label">L</span>
+                    <input type="range" class="audio-pan-slider" min="-1" max="1" step="0.05" value="${pan}" />
+                    <span class="pan-label">R</span>
+                </div>
+                <div class="audio-actions">
+                    <button class="audio-btn audio-mute-btn ${muted ? 'muted' : ''}" title="Mute">${muteIcon}</button>
+                    <button class="audio-btn audio-solo-btn ${solo ? 'solo-active' : ''}" title="Solo / PFL">${solo ? '🔴' : '🔘'}Solo</button>
+                    <span class="audio-db-readout">${muted ? '-∞' : volDb} dB</span>
+                    <button class="audio-btn audio-filters-btn" title="Filtros">⚙</button>
                 </div>
             </div>
         `;
@@ -1535,13 +1578,22 @@ class OBSClone {
         }
     }
 
+    _updateSoloState() {
+        const chains = Object.values(this.audioChains);
+        const hasSolo = chains.some(c => c.solo);
+        for (const id in this.audioChains) {
+            const chain = this.audioChains[id];
+            const shouldPlay = !hasSolo || chain.solo;
+            const target = shouldPlay ? (chain.muted ? 0 : chain.volume * this.masterVolume) : 0;
+            chain.volumeGain.gain.setValueAtTime(target, chain.context.currentTime);
+        }
+    }
+
     setVolume(sourceId, vol) {
         const chain = this.audioChains[sourceId];
         if (!chain) return;
         chain.volume = vol;
-        if (!chain.muted) {
-            chain.volumeGain.gain.setValueAtTime(vol, chain.context.currentTime);
-        }
+        this._updateSoloState();
         this.renderAudioMixer();
     }
 
@@ -1549,8 +1601,29 @@ class OBSClone {
         const chain = this.audioChains[sourceId];
         if (!chain) return;
         chain.muted = !chain.muted;
-        const target = chain.muted ? 0 : chain.volume;
-        chain.volumeGain.gain.setValueAtTime(target, chain.context.currentTime);
+        this._updateSoloState();
+        this.renderAudioMixer();
+    }
+
+    setPan(sourceId, pan) {
+        const chain = this.audioChains[sourceId];
+        if (!chain || !chain.panner) return;
+        chain.pan = pan;
+        chain.panner.pan.setValueAtTime(pan, chain.context.currentTime);
+        this.renderAudioMixer();
+    }
+
+    toggleSolo(sourceId) {
+        const chain = this.audioChains[sourceId];
+        if (!chain) return;
+        chain.solo = !chain.solo;
+        this._updateSoloState();
+        this.renderAudioMixer();
+    }
+
+    setMasterVolume(vol) {
+        this.masterVolume = vol;
+        this._updateSoloState();
         this.renderAudioMixer();
     }
 
