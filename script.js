@@ -485,50 +485,21 @@ class OBSClone {
 
         var container = document.createElement('div');
         container.id = 'multiview-grid';
-        container.style.cssText = 'position:absolute;inset:0;display:grid;gap:3px;padding:3px;align-content:center;opacity:0;transition:opacity ' + (this.transitionDuration || 300) + 'ms ease;';
+        container.style.cssText = 'position:absolute;inset:0;display:grid;gap:3px;padding:3px;align-content:center;';
         previewArea.appendChild(container);
-        setTimeout(function(){ container.style.opacity = '1'; }, 50);
-
-        this._updateMultiViewGrid();
-        if (this._vereadoresGridInterval) clearInterval(this._vereadoresGridInterval);
-        this._vereadoresGridInterval = setInterval(this._updateMultiViewGrid.bind(this), 2000);
-    }
-
-    _updateMultiViewGrid() {
-        if (!this._vereadoresActive) return;
-        var container = document.getElementById('multiview-grid');
-        if (!container) return;
-        var connected = [];
+        this._multiViewCells = {};
         var pad = function(n){ return String(n).padStart(2,'0'); };
         for (var i = 1; i <= 12; i++) {
-            var stream = this.vereadorManager && this.vereadorManager.connections ? this.vereadorManager.connections[i] : null;
-            if (stream && stream.active && stream.getVideoTracks().length > 0) {
-                connected.push(i);
-            }
-        }
-        var n = connected.length;
-        if (n === 0) {
-            container.innerHTML = '<div style="grid-column:1;-1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#444;font-size:14px;gap:8px;min-height:200px"><span style="font-size:40px">📡</span><span>Nenhum vereador conectado</span></div>';
-            container.style.gridTemplateColumns = '1fr';
-            return;
-        }
-        var cols = 1;
-        if (n >= 5) cols = 4;
-        else if (n >= 3) cols = 3;
-        else if (n === 2) cols = 2;
-        container.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
-        container.innerHTML = '';
-        for (var j = 0; j < n; j++) {
-            var id = connected[j];
+            var id = i;
             var label = 'VER' + pad(id);
-            var stream = this.vereadorManager.connections[id];
             var cell = document.createElement('div');
-            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #333;aspect-ratio:16/9;';
+            cell.id = 'mvc-' + id;
+            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:none;align-items:center;justify-content:center;border:1px solid #333;aspect-ratio:16/9;';
             var vid = document.createElement('video');
+            vid.id = 'mvv-' + id;
             vid.autoplay = true;
             vid.playsInline = true;
             vid.muted = true;
-            vid.srcObject = stream;
             vid.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;position:relative;z-index:2;';
             cell.appendChild(vid);
             var dot = document.createElement('div');
@@ -539,7 +510,40 @@ class OBSClone {
             lbl.textContent = label;
             cell.appendChild(lbl);
             container.appendChild(cell);
+            this._multiViewCells[id] = { cell: cell, vid: vid };
         }
+        this._updateMultiViewGrid();
+        if (this._vereadoresGridInterval) clearInterval(this._vereadoresGridInterval);
+        this._vereadoresGridInterval = setInterval(this._updateMultiViewGrid.bind(this), 2000);
+    }
+
+    _updateMultiViewGrid() {
+        if (!this._vereadoresActive) return;
+        var container = document.getElementById('multiview-grid');
+        if (!container) return;
+        var connected = [];
+        for (var i = 1; i <= 12; i++) {
+            var stream = this.vereadorManager && this.vereadorManager.connections ? this.vereadorManager.connections[i] : null;
+            var entry = this._multiViewCells[i];
+            if (!entry) continue;
+            if (stream && stream.active && stream.getVideoTracks().length > 0) {
+                entry.cell.style.display = 'flex';
+                if (entry.vid.srcObject !== stream) entry.vid.srcObject = stream;
+                connected.push(i);
+            } else {
+                entry.cell.style.display = 'none';
+            }
+        }
+        var n = connected.length;
+        if (n === 0) {
+            container.style.gridTemplateColumns = '1fr';
+            return;
+        }
+        var cols = 1;
+        if (n >= 5) cols = 4;
+        else if (n >= 3) cols = 3;
+        else if (n === 2) cols = 2;
+        container.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
     }
 
     stopMultiView() {

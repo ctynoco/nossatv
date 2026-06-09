@@ -602,7 +602,7 @@ section h2 {
 .trans-dur-group input:focus { outline: none; border-color: #0066cc; }
 
 /* Transição Fade */
-.screen-canvas.transition-fade {
+#preview-area.transition-fade {
     animation: fade-transition var(--transition-duration, 300ms) ease;
 }
 
