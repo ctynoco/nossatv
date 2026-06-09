@@ -126,33 +126,37 @@
         if(state === 'live'){
             dot.classList.add('live');
             if(ph) ph.style.display = 'none';
-            if(vid) vid.classList.remove('hidden');
+            if(vid) { vid.classList.remove('hidden'); vid.muted = true; }
         } else if(state === 'error'){
             dot.classList.add('error');
+        } else if(state === 'waiting'){
+            if(ph) ph.style.display = 'none';
+            if(vid) { vid.classList.remove('hidden'); vid.muted = true; }
         } else {
             dot.classList.add('off');
             if(ph) ph.style.display = 'flex';
-            if(vid) { vid.classList.add('hidden'); try { vid.srcObject = null; } catch(e){} }
+            if(vid) { vid.classList.add('hidden'); vid.srcObject = null; }
         }
     }
 
     function viewSlot(streamId){
         if(viewStreams[streamId]) return;
         if(retryTimers[streamId]) { clearTimeout(retryTimers[streamId]); delete retryTimers[streamId]; }
-        setSlotStatus(streamId, '');
         if(!vdo || !connected) return;
         viewStreams[streamId] = true;
         vdo.view(streamId, { audio: false, video: true }).then(function(stream){
-            if(stream && stream.active && stream.getVideoTracks().length > 0){
-                var vid = document.getElementById('vid-' + streamId);
-                if(vid){
-                    vid.srcObject = stream;
+            var vid = document.getElementById('vid-' + streamId);
+            if(!vid) { delete viewStreams[streamId]; return; }
+            vid.srcObject = stream;
+            setSlotStatus(streamId, 'waiting');
+            var checkTracks = function(){
+                if(stream && stream.active && stream.getVideoTracks().some(function(t){ return t.readyState === 'live'; })){
                     setSlotStatus(streamId, 'live');
+                    return;
                 }
-            } else {
-                delete viewStreams[streamId];
-                retryTimers[streamId] = setTimeout(function(){ viewSlot(streamId); }, 5000);
-            }
+                if(stream && stream.active) setTimeout(checkTracks, 500);
+            };
+            setTimeout(checkTracks, 1000);
         }).catch(function(){
             delete viewStreams[streamId];
             setSlotStatus(streamId, 'error');
