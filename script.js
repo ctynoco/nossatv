@@ -54,6 +54,8 @@ class OBSClone {
         this._setupSettingsUI();
         this._setupPreviewLogoDrag();
         this._applyPreviewStyles();
+        document.addEventListener('click', () => this._resumeAudioContexts(), { once: true });
+        document.addEventListener('touchstart', () => this._resumeAudioContexts(), { once: true });
         window.addEventListener('beforeunload', (e) => {
             try {
                 const data = this._captureSyncSnapshot();
@@ -1182,6 +1184,7 @@ class OBSClone {
 
         try {
             const context = new AudioContext();
+            if (context.state === 'suspended') context.resume();
             const mediaSource = context.createMediaStreamSource(stream);
             const volumeGain = context.createGain();
             const analyser = context.createAnalyser();
@@ -3464,6 +3467,15 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
         this._saveSettings();
         this.closeSettings();
         this.showNotification('⚙ Configurações salvas');
+    }
+
+    _resumeAudioContexts() {
+        for (const id in this.audioChains) {
+            const chain = this.audioChains[id];
+            if (chain.context && chain.context.state === 'suspended') {
+                chain.context.resume().catch(() => {});
+            }
+        }
     }
 
     // ─────────────────────────────────────────
