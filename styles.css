@@ -499,6 +499,8 @@ section h2 {
 .btn-scene:hover:not(:disabled) { background: #3a3a3a; border-color: #0066cc; }
 .btn-scene:disabled { opacity: 0.3; cursor: not-allowed; }
 .btn-scene-remove:hover:not(:disabled) { background: #660000; border-color: #cc0000; }
+.btn-multi-view { background: #1a3a5c; border-color: #1976d2; font-size: 0.82em; gap: 4px; white-space: nowrap; }
+.btn-multi-view:hover:not(:disabled) { background: #1e4a7a; border-color: #2196f3; }
 
 /* =============================================
    BARRA DE TRANSIÇÃO (entre Preview e Programa)

@@ -76,6 +76,9 @@ class OBSClone {
         this._populateSourceDropdown();
         document.getElementById('add-scene-btn')   ?.addEventListener('click', () => this.createScene());
         document.getElementById('remove-scene-btn')?.addEventListener('click', () => this.removeScene());
+        document.getElementById('multi-view-btn')  ?.addEventListener('click', () => {
+            window.open('scene.html', '_blank');
+        });
         document.getElementById('backup-restore-btn')?.addEventListener('click', () => this.showBackupList());
         document.getElementById('transition-go-btn')?.addEventListener('click', () => this.doTransition());
         document.getElementById('transition-cut-btn')?.addEventListener('click', () => { this.transitionType = 'cut'; document.getElementById('transition-type').value = 'cut'; this.doTransition(); });
