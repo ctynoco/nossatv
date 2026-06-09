@@ -412,8 +412,9 @@ class OBSClone {
     selectScene(id) {
         if (this._dragHappened) { this._dragHappened = false; return; }
         if (this._transitioning) return;
-        if (this._vereadoresActive) {
-            this.stopMultiView();
+        if (this._vereadoresActive && id !== 'vereadores') {
+            this._doMultiViewTransition(id);
+            return;
         }
         if (id === this.activeSceneId && this.activeScene) {
             this.renderScenePreview();
@@ -448,6 +449,32 @@ class OBSClone {
             this.renderSources();
             this.renderMultiView();
         }
+        this._transitioning = false;
+    }
+
+    _doMultiViewTransition(nextSceneId) {
+        var pa = document.getElementById('preview-area');
+        var grid = document.getElementById('multiview-grid');
+        var dur = this.transitionDuration || 300;
+        if (grid) {
+            grid.style.transition = 'opacity ' + dur + 'ms ease';
+            grid.style.opacity = '0';
+        }
+        var self = this;
+        setTimeout(function(){
+            self.stopMultiView();
+            if (self._transitioning) return;
+            self._transitioning = true;
+            var scene = self.scenes.find(function(s){ return s.id === nextSceneId; });
+            if (!scene) { self._transitioning = false; return; }
+            self.activeSceneId = nextSceneId;
+            self.activeSource = scene.activeSourceId || null;
+            self.renderScenes();
+            self.renderSources();
+            self.renderScenePreview();
+            self.saveData();
+            setTimeout(function(){ self._transitioning = false; }, dur);
+        }, dur + 50);
     }
 
     renderMultiView() {
@@ -458,8 +485,9 @@ class OBSClone {
 
         var container = document.createElement('div');
         container.id = 'multiview-grid';
-        container.style.cssText = 'position:absolute;inset:0;display:grid;gap:3px;padding:3px;align-content:center;';
+        container.style.cssText = 'position:absolute;inset:0;display:grid;gap:3px;padding:3px;align-content:center;opacity:0;transition:opacity ' + (this.transitionDuration || 300) + 'ms ease;';
         previewArea.appendChild(container);
+        setTimeout(function(){ container.style.opacity = '1'; }, 50);
 
         this._updateMultiViewGrid();
         if (this._vereadoresGridInterval) clearInterval(this._vereadoresGridInterval);
