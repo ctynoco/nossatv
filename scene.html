@@ -130,7 +130,12 @@
         }
     }
 
-    function applySceneLayout(sceneId, animate){
+    function _cellHasVideo(streamId){
+        var vid = document.getElementById('vid-' + streamId);
+        return vid && vid.srcObject && vid.srcObject.active && vid.srcObject.getVideoTracks().some(function(t){ return t.readyState === 'live'; });
+    }
+
+    function applySceneLayout(sceneId){
         var s = SCENES[sceneId] || SCENES['vereadores'];
         var cl = computeLayout(TOTAL, sceneId);
         gridEl.style.gridTemplateColumns = 'repeat(' + cl.cols + ', 1fr)';
@@ -140,38 +145,41 @@
             var streamId = 'slot_VER' + pad(i);
             var cell = document.getElementById('cell-' + streamId);
             if(!cell) continue;
-            if(s.hideEmpty && !_liveStreams[streamId]){
+            var hasVideo = _cellHasVideo(streamId);
+            if(s.hideEmpty && !hasVideo){
                 cell.style.display = 'none';
             } else {
                 cell.style.display = '';
-                if(_liveStreams[streamId]) setSlotStatus(streamId, 'live');
+                if(hasVideo) setSlotStatus(streamId, 'live');
             }
         }
-        if(animate){
-            gridEl.style.transition = 'opacity 0ms ease';
-            gridEl.style.opacity = '0';
-            requestAnimationFrame(function(){
-                gridEl.style.transition = 'opacity ' + TRANSITION_DURATION + 'ms ease';
-                gridEl.style.opacity = '1';
-            });
+    }
+
+    var _overlay = null;
+
+    function _getOverlay(){
+        if(!_overlay){
+            _overlay = document.createElement('div');
+            _overlay.style.cssText = 'position:fixed;inset:0;background:#000;z-index:99;opacity:0;pointer-events:none;transition:opacity ' + TRANSITION_DURATION + 'ms ease';
+            document.body.appendChild(_overlay);
         }
+        return _overlay;
     }
 
     function switchScene(sceneId){
         if(_transitioning || sceneId === currentScene) return;
         _transitioning = true;
-        var dur = TRANSITION_DURATION;
-        gridEl.style.transition = 'opacity ' + dur + 'ms ease';
-        gridEl.style.opacity = '0';
+        var ol = _getOverlay();
+        ol.style.transition = 'opacity ' + TRANSITION_DURATION + 'ms ease';
+        ol.style.opacity = '1';
         var self = this;
         setTimeout(function(){
             currentScene = sceneId;
-            applySceneLayout(sceneId, false);
+            applySceneLayout(sceneId);
             _buildSceneButtons();
-            gridEl.style.transition = 'opacity ' + dur + 'ms ease';
-            gridEl.style.opacity = '1';
-            setTimeout(function(){ _transitioning = false; }, dur);
-        }, dur + 50);
+            ol.style.opacity = '0';
+            setTimeout(function(){ _transitioning = false; }, TRANSITION_DURATION + 50);
+        }, TRANSITION_DURATION + 50);
     }
 
     function _buildSceneButtons(){
@@ -292,7 +300,8 @@
     function init(){
         _buildSceneButtons();
         buildGrid();
-        applySceneLayout(currentScene, true);
+        applySceneLayout(currentScene);
+        gridEl.style.opacity = '1';
         var s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
         s.onload = function(){ connect(); };
@@ -309,7 +318,7 @@
 
     applyBtn.addEventListener('click', function(){
         layout = layoutSel.value;
-        applySceneLayout(currentScene, true);
+        applySceneLayout(currentScene);
     });
 
     window.addEventListener('beforeunload', function(){
