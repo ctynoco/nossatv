@@ -26,6 +26,8 @@ class OBSClone {
         this._maxSnapshots  = 10;
         this.audioChains    = {};
         this._vuAnimId      = null;
+        this._vereadoresActive = false;
+        this._vereadoresGridInterval = null;
         this.settings       = this._loadSettings();
         this.isVirtualCam   = false;
         this.isStudioMode   = false;
@@ -63,6 +65,7 @@ class OBSClone {
             } catch (_) {}
             this.saveData();
             if (this._pipSyncInterval) clearInterval(this._pipSyncInterval);
+            if (this._vereadoresGridInterval) clearInterval(this._vereadoresGridInterval);
             Object.keys(this.audioChains).forEach(id => this.cleanupAudioChain(id));
         });
     }
@@ -78,9 +81,6 @@ class OBSClone {
         this._populateSourceDropdown();
         document.getElementById('add-scene-btn')   ?.addEventListener('click', () => this.createScene());
         document.getElementById('remove-scene-btn')?.addEventListener('click', () => this.removeScene());
-        document.getElementById('multi-view-btn')  ?.addEventListener('click', () => {
-            window.open('scene.html', '_blank');
-        });
         document.getElementById('backup-restore-btn')?.addEventListener('click', () => this.showBackupList());
         document.getElementById('transition-go-btn')?.addEventListener('click', () => this.doTransition());
         document.getElementById('transition-cut-btn')?.addEventListener('click', () => { this.transitionType = 'cut'; document.getElementById('transition-type').value = 'cut'; this.doTransition(); });
@@ -412,8 +412,10 @@ class OBSClone {
     selectScene(id) {
         if (this._dragHappened) { this._dragHappened = false; return; }
         if (this._transitioning) return;
+        if (this._vereadoresActive) {
+            this.stopMultiView();
+        }
         if (id === this.activeSceneId && this.activeScene) {
-            // Mesma cena — apenas recarrega preview
             this.renderScenePreview();
             return;
         }
@@ -435,6 +437,94 @@ class OBSClone {
         }
 
         this.saveData();
+    }
+
+    selectVereadoresScene() {
+        if (!this._vereadoresActive) {
+            this._vereadoresActive = true;
+            this.activeSceneId = 'vereadores';
+            this.activeSource = null;
+            this.renderScenes();
+            this.renderSources();
+            this.renderMultiView();
+        }
+    }
+
+    renderMultiView() {
+        var previewArea = document.getElementById('preview-area');
+        if (!previewArea) return;
+        this.clearPreview();
+        previewArea.style.backgroundColor = '#0a0a14';
+
+        var container = document.createElement('div');
+        container.id = 'multiview-grid';
+        container.style.cssText = 'position:absolute;inset:0;display:grid;grid-template-columns:repeat(4,1fr);grid-template-rows:repeat(3,1fr);gap:3px;padding:3px;';
+        previewArea.appendChild(container);
+
+        var pad = function(n){ return String(n).padStart(2,'0'); };
+        for (var i = 1; i <= 12; i++) {
+            var slotId = i;
+            var label = 'VER' + pad(i);
+            var streamId = 'slot_' + label;
+            var cell = document.createElement('div');
+            cell.id = 'mv-cell-' + slotId;
+            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:flex;align-items:center;justify-content:center;border:1px solid #222;';
+            cell.innerHTML =
+                '<div class="mv-placeholder" id="mv-ph-' + slotId + '" style="position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;z-index:1">' +
+                    '<span style="font-size:22px;opacity:.3">📡</span>' +
+                    '<span style="font-size:12px;font-weight:600;color:#555">' + label + '</span>' +
+                    '<span style="font-size:10px;color:#333">aguardando...</span>' +
+                '</div>' +
+                '<video id="mv-vid-' + slotId + '" autoplay playsinline muted style="width:100%;height:100%;object-fit:contain;display:none;position:relative;z-index:2"></video>' +
+                '<div style="position:absolute;top:3px;right:3px;width:7px;height:7px;border-radius:50%;background:#333;z-index:3" id="mv-dot-' + slotId + '"></div>' +
+                '<div style="position:absolute;bottom:3px;left:3px;background:rgba(0,0,0,.7);color:#fff;padding:1px 6px;border-radius:4px;font-size:10px;font-weight:700;z-index:3">' + label + '</div>';
+            container.appendChild(cell);
+        }
+
+        this._updateMultiViewStreams();
+        if (this._vereadoresGridInterval) clearInterval(this._vereadoresGridInterval);
+        this._vereadoresGridInterval = setInterval(this._updateMultiViewStreams.bind(this), 2000);
+    }
+
+    _updateMultiViewStreams() {
+        if (!this._vereadoresActive) return;
+        for (var i = 1; i <= 12; i++) {
+            var vid = document.getElementById('mv-vid-' + i);
+            var ph = document.getElementById('mv-ph-' + i);
+            var dot = document.getElementById('mv-dot-' + i);
+            if (!vid || !ph || !dot) continue;
+            var stream = this.vereadorManager && this.vereadorManager.connections ? this.vereadorManager.connections[i] : null;
+            if (stream && stream.active && stream.getVideoTracks().length > 0) {
+                if (vid.srcObject !== stream) {
+                    vid.srcObject = stream;
+                    vid.style.display = 'block';
+                    ph.style.display = 'none';
+                }
+                dot.style.background = '#4caf50';
+                dot.style.boxShadow = '0 0 4px #4caf50';
+            } else {
+                vid.srcObject = null;
+                vid.style.display = 'none';
+                ph.style.display = 'flex';
+                dot.style.background = '#333';
+                dot.style.boxShadow = 'none';
+            }
+        }
+    }
+
+    stopMultiView() {
+        this._vereadoresActive = false;
+        if (this._vereadoresGridInterval) {
+            clearInterval(this._vereadoresGridInterval);
+            this._vereadoresGridInterval = null;
+        }
+        for (var i = 1; i <= 12; i++) {
+            var vid = document.getElementById('mv-vid-' + i);
+            if (vid) { try { vid.srcObject = null; } catch(e) {} }
+        }
+        this.clearPreview();
+        this.renderScenes();
+        this.renderSources();
     }
 
     applyTransition(prevSceneId) {
@@ -461,13 +551,19 @@ class OBSClone {
         const list = document.getElementById('scenes-list');
         if (!list) return;
 
+        var vereadoresActive = this._vereadoresActive ? 'active' : '';
+        var vereadoresHtml = '<div class="scene-item scene-vereadores ' + vereadoresActive + '" data-id="vereadores">' +
+            '<span class="scene-name" title="Vereadores">👥 Vereadores</span>' +
+        '</div>';
+
         if (this.scenes.length === 0) {
-            list.innerHTML = '<p>Nenhuma cena</p>';
+            list.innerHTML = vereadoresHtml + '<p>Nenhuma cena</p>';
             document.getElementById('remove-scene-btn').disabled = true;
+            this._setupSceneListEvents(list);
             return;
         }
 
-        list.innerHTML = this.scenes.map(s => `
+        list.innerHTML = vereadoresHtml + this.scenes.map(s => `
             <div class="scene-item ${this.activeSceneId === s.id ? 'active' : ''}" data-id="${s.id}" draggable="true">
                 <span class="drag-handle">⠿</span>
                 <span class="scene-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
@@ -957,6 +1053,10 @@ class OBSClone {
     clearPreview() {
         const previewArea = document.getElementById('preview-area');
         if (!previewArea) return;
+        if (this._vereadoresGridInterval) {
+            clearInterval(this._vereadoresGridInterval);
+            this._vereadoresGridInterval = null;
+        }
         [...previewArea.children].forEach(child => {
             if (!child.classList.contains('screen-placeholder') && child.id !== 'preview-logo' && !child.classList.contains('vereador-pip')) child.remove();
         });
@@ -1746,7 +1846,11 @@ class OBSClone {
                 return;
             }
             if (this._dragHappened) { this._dragHappened = false; return; }
-            this.selectScene(parseInt(sceneItem.dataset.id));
+            if (sceneItem.dataset.id === 'vereadores') {
+                this.selectVereadoresScene();
+            } else {
+                this.selectScene(parseInt(sceneItem.dataset.id));
+            }
         });
     }
 
