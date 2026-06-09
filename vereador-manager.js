@@ -17,7 +17,7 @@ export class VereadorManager {
     init() {
         for (let i = 1; i <= 12; i++) {
             const label = `VER${String(i).padStart(2, '0')}`;
-            const guestUrl = new URL('guest', window.location.href);
+            const guestUrl = new URL('guest.html', window.location.href);
             guestUrl.searchParams.set('room', 'nossatv');
             guestUrl.searchParams.set('slot', label);
             this.slots.push({
@@ -382,7 +382,7 @@ export class VereadorManager {
             const newLabel = `VER${String(i + 1).padStart(2, '0')}`;
             s.label = newLabel;
             s.streamID = `slot_${newLabel}`;
-            const u = new URL('guest', window.location.href);
+            const u = new URL('guest.html', window.location.href);
             u.searchParams.set('room', 'nossatv');
             u.searchParams.set('slot', newLabel);
             s.link = u.href;
