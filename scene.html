@@ -30,11 +30,18 @@
         .dot.off{background:#555}
         .dot.live{background:#4caf50;box-shadow:0 0 6px #4caf50}
         .dot.error{background:#f44336}
-        @media(max-width:600px){.toolbar{gap:4px;padding:6px 8px}.toolbar select,.toolbar button{font-size:10px;padding:3px 6px}.grid{top:40px;gap:2px;padding:2px}.placeholder .icon{font-size:20px}.placeholder .name{font-size:11px}}
+        .sep{width:1px;height:20px;background:#444;display:inline-block}
+        .scene-btns{display:flex;gap:4px}
+        .scene-btns button{background:#222;color:#aaa;border:1px solid #444;padding:4px 10px;border-radius:6px;font-size:12px;cursor:pointer;font-family:inherit}
+        .scene-btns button.active{background:#4caf50;color:#fff;border-color:#4caf50}
+        .scene-btns button:hover{background:#333;color:#fff}
+        @media(max-width:600px){.toolbar{gap:4px;padding:6px 8px}.toolbar select,.toolbar button{font-size:10px;padding:3px 6px}.grid{top:40px;gap:2px;padding:2px}.placeholder .icon{font-size:20px}.placeholder .name{font-size:11px}.scene-btns button{font-size:10px;padding:3px 6px}}
     </style>
 </head>
 <body>
     <div class="toolbar">
+        <div class="scene-btns" id="sceneBtns"></div>
+        <span class="sep"></span>
         <label>Layout
             <select id="layout">
                 <option value="auto">Auto</option>
@@ -63,6 +70,16 @@
     var connected = false;
     var viewStreams = {};
     var retryTimers = {};
+    var _liveStreams = {};
+    var _transitioning = false;
+    var TRANSITION_DURATION = 300;
+
+    var SCENES = {
+        vereadores: { name: 'Vereadores', gridCols: 4, gridRows: 3, hideEmpty: false },
+        programa:   { name: 'Programa',   gridCols: 3, gridRows: 3, hideEmpty: true  },
+        vertical:   { name: 'Vertical',   gridCols: 2, gridRows: 6, hideEmpty: false },
+    };
+    var currentScene = 'vereadores';
 
     var gridEl = document.getElementById('grid');
     var statusEl = document.getElementById('status');
@@ -71,11 +88,10 @@
 
     function pad(n){ return String(n).padStart(2,'0') }
 
-    function computeLayout(n){
-        if(layout !== 'auto'){
-            var parts = layout.split('x');
-            return { cols: parseInt(parts[0]), rows: parseInt(parts[1]) };
-        }
+    function computeLayout(n, sceneId){
+        if(layout !== 'auto'){ var parts = layout.split('x'); return { cols: parseInt(parts[0]), rows: parseInt(parts[1]) }; }
+        var s = SCENES[sceneId];
+        if(s) return { cols: s.gridCols, rows: s.gridRows };
         if(n <= 1) return { cols:1, rows:1 };
         if(n <= 2) return { cols:2, rows:1 };
         if(n <= 4) return { cols:2, rows:2 };
@@ -85,14 +101,17 @@
         return { cols:4, rows:3 };
     }
 
-    function buildGrid(){
+    function buildGrid(sceneId){
         gridEl.innerHTML = '';
-        var cl = computeLayout(TOTAL);
+        var s = SCENES[sceneId] || SCENES['vereadores'];
+        var cl = computeLayout(TOTAL, sceneId);
         gridEl.style.gridTemplateColumns = 'repeat(' + cl.cols + ', 1fr)';
         gridEl.style.gridTemplateRows = 'repeat(' + cl.rows + ', 1fr)';
+        gridEl.dataset.scene = sceneId;
         for(var i=1; i<=TOTAL; i++){
             var slotId = 'VER' + pad(i);
             var streamId = 'slot_' + slotId;
+            if(s.hideEmpty && !_liveStreams[streamId]) continue;
             var cell = document.createElement('div');
             cell.className = 'cell';
             cell.id = 'cell-' + streamId;
@@ -114,8 +133,45 @@
                 };
             })(slotId));
             gridEl.appendChild(cell);
+            if(_liveStreams[streamId]) setSlotStatus(streamId, 'live');
         }
     }
+
+    function switchScene(sceneId){
+        if(_transitioning || sceneId === currentScene) return;
+        _transitioning = true;
+        var dur = TRANSITION_DURATION;
+        gridEl.style.transition = 'opacity ' + dur + 'ms ease';
+        gridEl.style.opacity = '0';
+        setTimeout(function(){
+            currentScene = sceneId;
+            buildGrid(sceneId);
+            viewAll();
+            gridEl.style.transition = 'opacity ' + dur + 'ms ease';
+            gridEl.style.opacity = '1';
+            _buildSceneButtons();
+            setTimeout(function(){ _transitioning = false; }, dur);
+        }, dur + 50);
+    }
+
+    function _buildSceneButtons(){
+        var container = document.getElementById('sceneBtns');
+        if(!container) return;
+        container.innerHTML = '';
+        for(var key in SCENES){
+            var btn = document.createElement('button');
+            btn.textContent = SCENES[key].name;
+            if(key === currentScene) btn.className = 'active';
+            btn.addEventListener('click', (function(sid){ return function(){ switchScene(sid); }; })(key));
+            container.appendChild(btn);
+        }
+    }
+
+    document.addEventListener('keydown', function(e){
+        if(e.key === '1') switchScene('vereadores');
+        else if(e.key === '2') switchScene('programa');
+        else if(e.key === '3') switchScene('vertical');
+    });
 
     function setSlotStatus(streamId, state){
         var dot = document.getElementById('dot-' + streamId);
@@ -151,6 +207,7 @@
             setSlotStatus(streamId, 'waiting');
             var checkTracks = function(){
                 if(stream && stream.active && stream.getVideoTracks().some(function(t){ return t.readyState === 'live'; })){
+                    _liveStreams[streamId] = true;
                     setSlotStatus(streamId, 'live');
                     return;
                 }
@@ -213,7 +270,8 @@
     }
 
     function init(){
-        buildGrid();
+        _buildSceneButtons();
+        buildGrid(currentScene);
         var s = document.createElement('script');
         s.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
         s.onload = function(){ connect(); };
@@ -231,7 +289,7 @@
     applyBtn.addEventListener('click', function(){
         layout = layoutSel.value;
         stopViewAll();
-        buildGrid();
+        buildGrid(currentScene);
         if(connected) viewAll();
     });
 
