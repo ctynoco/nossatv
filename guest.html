@@ -101,8 +101,6 @@
         var reconnectTimer = null;
         var maxReconnectDelay = 30;
         var wasEverConnected = false;
-        var publishPC = null;
-
         var localVideo = document.getElementById('local-video');
         var returnVideo = document.getElementById('return-video');
         var toggleBtn = document.getElementById('btn-toggle');
@@ -283,7 +281,6 @@
                 connected = true;
                 wasEverConnected = true;
                 reconnectAttempt = 0;
-                publishPC = vdo._pc || vdo.peerConnection || null;
                 setDot('on');
                 toggleBtn.disabled = false;
                 setBtnText(false);
@@ -327,31 +324,13 @@
         fsBtn.addEventListener('click', toggleFullscreen);
 
         // ---- quality monitor ----
-        var qualityFails = 0;
         function startQualityMonitor() {
             qualityEl.style.display = 'flex';
-            qualityFails = 0;
             qualityInterval = setInterval(function() {
                 if (!vdo || !connected) return;
-                var pc = publishPC || vdo._pc || vdo.peerConnection || null;
-                if (!pc) {
-                    qualityFails++;
-                    if (qualityFails >= 2) {
-                        connected = false;
-                        scheduleReconnect();
-                    }
-                    return;
-                }
-                if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-                    qualityFails++;
-                    if (qualityFails >= 2) {
-                        connected = false;
-                        scheduleReconnect();
-                    }
-                    return;
-                }
-                qualityFails = 0;
                 try {
+                    var pc = vdo._pc || null;
+                    if (!pc) return;
                     pc.getStats(null).then(function(stats) {
                         stats.forEach(function(report) {
                             if (report.type === 'candidate-pair' && report.state === 'succeeded') {
@@ -371,7 +350,6 @@
 
         function stopQualityMonitor() {
             if (qualityInterval) { clearInterval(qualityInterval); qualityInterval = null; }
-            qualityFails = 0;
             qualityEl.style.display = 'none';
         }
 
@@ -412,7 +390,6 @@
             wasEverConnected = false;
             if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
             viewRetryCount = 0;
-            publishPC = null;
             stopQualityMonitor();
             stopVUMeter();
             if (vdo) {
@@ -493,7 +470,6 @@
             p = p.then(function() {
                 connected = true;
                 wasEverConnected = true;
-                publishPC = vdo._pc || vdo.peerConnection || null;
                 setDot('on');
                 toggleBtn.disabled = false;
                 setBtnText(false);
