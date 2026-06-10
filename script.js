@@ -29,6 +29,7 @@ class OBSClone {
         this.masterVolume   = 1;
         this._objectUrls    = {};
         this._vereadorAudio = {};
+        this._audioCtx = null;
         this._vereadoresActive = false;
         this._vereadoresGridInterval = null;
         this.settings       = this._loadSettings();
@@ -60,8 +61,8 @@ class OBSClone {
         this._setupSettingsUI();
         this._setupPreviewLogoDrag();
         this._applyPreviewStyles();
-        document.addEventListener('click', () => this._resumeAudioContexts(), { once: true });
-        document.addEventListener('touchstart', () => this._resumeAudioContexts(), { once: true });
+        document.addEventListener('click', () => { this._resumeAudioContexts(); this._getAudioContext(); }, { once: true });
+        document.addEventListener('touchstart', () => { this._resumeAudioContexts(); this._getAudioContext(); }, { once: true });
         window.addEventListener('beforeunload', (e) => {
             try {
                 const data = this._captureSyncSnapshot();
@@ -771,7 +772,7 @@ class OBSClone {
                 });
                 this.mediaStreams[source.id] = stream;
 
-                const video = this.createVideoEl('preview-video', stream, true);
+                const video = this.createVideoEl('preview-video', stream, true, true);
                 previewArea.appendChild(video);
                 this.setupAudioChain(source.id, stream);
                 break;
@@ -781,7 +782,7 @@ class OBSClone {
             case 'window': {
                 const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
                 this.mediaStreams[source.id] = stream;
-                const video = this.createVideoEl('preview-video', stream, false);
+                const video = this.createVideoEl('preview-video', stream, false, false);
                 previewArea.appendChild(video);
                 this.setupAudioChain(source.id, stream);
                 break;
@@ -886,7 +887,7 @@ class OBSClone {
                     audio: true,
                 });
                 this.mediaStreams[source.id] = stream;
-                const video = this.createVideoEl('preview-video', stream, false);
+                const video = this.createVideoEl('preview-video', stream, false, false);
                 previewArea.appendChild(video);
                 this.setupAudioChain(source.id, stream);
                 break;
@@ -914,7 +915,7 @@ class OBSClone {
                     audio: false,
                 });
                 this.mediaStreams[source.id] = stream;
-                const video = this.createVideoEl('preview-video', stream, false);
+                const video = this.createVideoEl('preview-video', stream, false, true);
                 previewArea.appendChild(video);
                 // Re-captura automática se o dispositivo for desconectado e reconectado
                 stream.getVideoTracks()[0]?.addEventListener('ended', () => {
@@ -1037,14 +1038,14 @@ class OBSClone {
         this.renderSources();
     }
 
-    createVideoEl(id, stream, mirror) {
+    createVideoEl(id, stream, mirror, muted) {
         let v = document.getElementById(id);
         if (!v) {
             v = document.createElement('video');
             v.id = id;
         }
         v.autoplay    = true;
-        v.muted       = true;
+        v.muted       = muted !== false;
         v.playsInline = true;
         v.srcObject   = stream;
         v.style.cssText = `position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:${mirror ? 'scaleX(-1)' : 'none'};`;
@@ -1326,6 +1327,16 @@ class OBSClone {
     // ─────────────────────────────────────────
     //  MIXER DE ÁUDIO
     // ─────────────────────────────────────────
+    _getAudioContext() {
+        if (!this._audioCtx) {
+            this._audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        }
+        if (this._audioCtx.state === 'suspended') {
+            this._audioCtx.resume();
+        }
+        return this._audioCtx;
+    }
+
     setupAudioChain(sourceId, stream) {
         const audioTracks = stream.getAudioTracks();
         if (audioTracks.length === 0) return;
@@ -1333,8 +1344,7 @@ class OBSClone {
         this.cleanupAudioChain(sourceId);
 
         try {
-            const context = new AudioContext();
-            if (context.state === 'suspended') context.resume();
+            const context = this._getAudioContext();
             const mediaSource = context.createMediaStreamSource(stream);
             const volumeGain = context.createGain();
             const analyser = context.createAnalyser();
@@ -1395,8 +1405,7 @@ class OBSClone {
 
     setupVereadorAudio(slotId, stream, label) {
         if (this._vereadorAudio[slotId]) this.cleanupVereadorAudio(slotId);
-        const ctx = new AudioContext();
-        if (ctx.state === 'suspended') ctx.resume();
+        const ctx = this._getAudioContext();
         var src = ctx.createMediaStreamSource(stream);
         var gain = ctx.createGain();
         var panner = ctx.createStereoPanner();

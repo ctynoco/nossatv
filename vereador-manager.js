@@ -248,6 +248,7 @@ export class VereadorManager {
         }
         slot.connected = true;
         this.connections[slotId] = stream;
+        this.obs?.setupVereadorAudio(slotId, stream, slot.label);
         this.renderGrid();
         this._setModalStatus('online', `✅ ${slot.label} conectado`);
         this.obs?.showNotification(`📹 ${slot.label} conectado`);
@@ -398,6 +399,7 @@ export class VereadorManager {
             try { this.vdo.stopViewing(slot.streamID); } catch(e) { console.warn('[Vereador] Erro ao parar visualização:', e); }
             delete this._viewActive[slot.id];
         }
+        this.obs?.cleanupVereadorAudio(slotId);
         if (this.connections[slotId]) {
             this.connections[slotId].getTracks().forEach(t => t.stop());
             delete this.connections[slotId];
