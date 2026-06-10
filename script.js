@@ -772,7 +772,7 @@ class OBSClone {
                 });
                 this.mediaStreams[source.id] = stream;
 
-                const video = this.createVideoEl('preview-video', stream, true, true);
+                const video = this.createVideoEl('preview-video', stream, true, false);
                 previewArea.appendChild(video);
                 this.setupAudioChain(source.id, stream);
                 break;
@@ -1038,17 +1038,23 @@ class OBSClone {
         this.renderSources();
     }
 
-    createVideoEl(id, stream, mirror, muted) {
+    createVideoEl(id, stream, mirror, forceMuted) {
         let v = document.getElementById(id);
         if (!v) {
             v = document.createElement('video');
             v.id = id;
         }
         v.autoplay    = true;
-        v.muted       = muted !== false;
+        v.muted       = !!forceMuted;
         v.playsInline = true;
         v.srcObject   = stream;
         v.style.cssText = `position:absolute;inset:0;width:100%;height:100%;object-fit:cover;transform:${mirror ? 'scaleX(-1)' : 'none'};`;
+        v.play().catch(function(e){
+            if (e.name === 'NotAllowedError') {
+                v.muted = true;
+                v.play().catch(function(){});
+            }
+        });
         return v;
     }
 
@@ -1337,41 +1343,45 @@ class OBSClone {
         return this._audioCtx;
     }
 
+    _findVideoEl(sourceId) {
+        var el = document.getElementById('preview-video');
+        if (el && el.tagName === 'VIDEO') return el;
+        var programArea = document.getElementById('program-area');
+        if (programArea) {
+            var v = programArea.querySelector('video[data-source-id="' + sourceId + '"]');
+            if (v) return v;
+        }
+        return null;
+    }
+
     setupAudioChain(sourceId, stream) {
         const audioTracks = stream.getAudioTracks();
-        if (audioTracks.length === 0) return;
+        if (audioTracks.length === 0) {
+            console.log('[OBS] Sem audio para', sourceId);
+            return;
+        }
 
         this.cleanupAudioChain(sourceId);
 
         try {
-            const context = this._getAudioContext();
-            const mediaSource = context.createMediaStreamSource(stream);
-            const volumeGain = context.createGain();
-            const analyser = context.createAnalyser();
+            var context = this._getAudioContext();
+            var mediaSource = context.createMediaStreamSource(stream);
+            var analyser = context.createAnalyser();
             analyser.fftSize = 256;
 
-            const compressor = context.createDynamicsCompressor();
-
-            const panner = context.createStereoPanner();
-
-            // Cadeia: stream → compressor → volumeGain → panner → analyser → destination
-            mediaSource.connect(compressor);
-            compressor.connect(volumeGain);
-            volumeGain.connect(panner);
-            panner.connect(analyser);
-            analyser.connect(context.destination);
+            // feed audio monitor via a small gain node — NÃO conecta ao destination
+            // o audio sai pelo elemento <video> (muted=false)
+            mediaSource.connect(analyser);
 
             this.audioChains[sourceId] = {
-                context,
-                mediaSource,
-                compressor,
-                volumeGain,
-                panner,
-                analyser,
+                context: context,
+                mediaSource: mediaSource,
+                analyser: analyser,
                 muted: false,
                 solo: false,
                 pan: 0,
                 volume: 1,
+                volumeEl: null,
                 filterState: {
                     noiseSuppression: !!(stream.getAudioTracks()[0]?.getSettings()?.noiseSuppression),
                     echoCancellation: !!(stream.getAudioTracks()[0]?.getSettings()?.echoCancellation),
@@ -1384,20 +1394,25 @@ class OBSClone {
                 _gateTimeout: null,
             };
         } catch (e) {
-            console.error('[OBS] Erro ao criar cadeia de audio para', sourceId, e);
+            console.error('[OBS] Erro audio chain', sourceId, e);
         }
 
         this.renderAudioMixer();
     }
 
     cleanupAudioChain(sourceId) {
-        const chain = this.audioChains[sourceId];
+        var chain = this.audioChains[sourceId];
         if (!chain) return;
         try {
             if (chain._gateTimeout) clearTimeout(chain._gateTimeout);
-            if (chain.context && chain.context.state !== 'closed') {
-                chain.context.close();
+            if (chain.mediaSource) {
+                try { chain.mediaSource.disconnect(); } catch(e){}
             }
+            if (chain.analyser) {
+                try { chain.analyser.disconnect(); } catch(e){}
+            }
+            var el = this._findVideoEl(sourceId);
+            if (el) { el.volume = 1; el.muted = false; }
         } catch (e) { console.warn('[OBS] Erro ao limpar cadeia de audio:', e); }
         delete this.audioChains[sourceId];
         this.renderAudioMixer();
@@ -1728,17 +1743,20 @@ class OBSClone {
         var vaList = Object.values(this._vereadorAudio);
         var hasSolo = chains.some(function(c){ return c.solo; }) ||
                       vaList.some(function(v){ return v.solo; });
+
         for (var id in this.audioChains) {
             var chain = this.audioChains[id];
+            var el = this._findVideoEl(id);
             var shouldPlay = !hasSolo || chain.solo;
-            var target = shouldPlay ? (chain.muted ? 0 : chain.volume * this.masterVolume) : 0;
-            chain.volumeGain.gain.setValueAtTime(target, chain.context.currentTime);
+            var vol = shouldPlay ? (chain.muted ? 0 : chain.volume * this.masterVolume) : 0;
+            if (el) { el.volume = vol; el.muted = vol === 0; }
         }
+
         for (var sid in this._vereadorAudio) {
             var va = this._vereadorAudio[sid];
             var shouldPlay = !hasSolo || va.solo;
-            var target = shouldPlay ? (va.muted ? 0 : va.volume * this.masterVolume) : 0;
-            va.gain.gain.setValueAtTime(target, va.context.currentTime);
+            var vol = shouldPlay ? (va.muted ? 0 : va.volume * this.masterVolume) : 0;
+            va.gain.gain.value = vol;
         }
     }
 
@@ -1760,9 +1778,8 @@ class OBSClone {
 
     setPan(sourceId, pan) {
         const chain = this.audioChains[sourceId];
-        if (!chain || !chain.panner) return;
+        if (!chain) return;
         chain.pan = pan;
-        chain.panner.pan.setValueAtTime(pan, chain.context.currentTime);
         this.renderAudioMixer();
     }
 
