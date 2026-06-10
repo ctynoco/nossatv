@@ -23,7 +23,17 @@ export const SOURCE_FORMS = {
         </div>
         <div class="form-group">
             <label>Dispositivo</label>
-            <select id="src-device"><option value="user">Câmera padrão (frontal)</option><option value="environment">Câmera traseira</option></select>
+            <select id="src-device" class="device-select" data-device-kind="videoinput"><option value="">Selecionar dispositivo...</option></select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Largura</label>
+                <input type="number" id="src-width" value="1920" min="320" max="7680" step="10" />
+            </div>
+            <div class="form-group">
+                <label>Altura</label>
+                <input type="number" id="src-height" value="1080" min="240" max="4320" step="10" />
+            </div>
         </div>`,
 
     screen: () => `
@@ -31,14 +41,34 @@ export const SOURCE_FORMS = {
             <label>Nome da fonte</label>
             <input type="text" id="src-name" value="Captura de Tela" />
         </div>
-        <p style="color:#aaa;font-size:0.82em">O navegador solicitará permissão para capturar a tela.</p>`,
+        <p style="color:#aaa;font-size:0.82em">O navegador solicitará permissão para capturar a tela.</p>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Largura</label>
+                <input type="number" id="src-width" value="1920" min="320" max="7680" step="10" />
+            </div>
+            <div class="form-group">
+                <label>Altura</label>
+                <input type="number" id="src-height" value="1080" min="240" max="4320" step="10" />
+            </div>
+        </div>`,
 
     window: () => `
         <div class="form-group">
             <label>Nome da fonte</label>
             <input type="text" id="src-name" value="Captura de Janela" />
         </div>
-        <p style="color:#aaa;font-size:0.82em">Selecione uma janela específica na próxima etapa.</p>`,
+        <p style="color:#aaa;font-size:0.82em">Selecione uma janela específica na próxima etapa.</p>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Largura</label>
+                <input type="number" id="src-width" value="1920" min="320" max="7680" step="10" />
+            </div>
+            <div class="form-group">
+                <label>Altura</label>
+                <input type="number" id="src-height" value="1080" min="240" max="4320" step="10" />
+            </div>
+        </div>`,
 
     image: () => `
         <div class="form-group">
@@ -81,7 +111,7 @@ export const SOURCE_FORMS = {
         </div>
         <div class="form-group">
             <label>Dispositivo de áudio</label>
-            <select id="src-device"><option value="default">Microfone padrão</option></select>
+            <select id="src-device" class="device-select" data-device-kind="audioinput"><option value="">Selecionar dispositivo...</option></select>
         </div>`,
 
     browser: () => `
@@ -149,6 +179,16 @@ export const SOURCE_FORMS = {
                 <option value="any">Qualquer tela</option>
                 <option value="borderless">Janela sem borda</option>
             </select>
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Largura</label>
+                <input type="number" id="src-width" value="1920" min="320" max="7680" step="10" />
+            </div>
+            <div class="form-group">
+                <label>Altura</label>
+                <input type="number" id="src-height" value="1080" min="240" max="4320" step="10" />
+            </div>
         </div>`,
 
     audioOutputCapture: () => `
@@ -156,13 +196,7 @@ export const SOURCE_FORMS = {
             <label>Nome da fonte</label>
             <input type="text" id="src-name" value="Áudio do Sistema" />
         </div>
-        <p style="color:#aaa;font-size:0.82em">Captura o áudio que está sendo reproduzido no sistema.</p>
-        <div class="form-group">
-            <label>Dispositivo de saída</label>
-            <select id="src-audio-output">
-                <option value="default">Áudio do Sistema (Padrão)</option>
-            </select>
-        </div>`,
+        <p style="color:#aaa;font-size:0.82em">Captura o áudio que está sendo reproduzido no sistema.</p>`,
 
     videoCaptureDevice: () => `
         <div class="form-group">
@@ -171,10 +205,7 @@ export const SOURCE_FORMS = {
         </div>
         <div class="form-group">
             <label>Dispositivo</label>
-            <select id="src-video-device">
-                <option value="user">Câmera padrão (frontal)</option>
-                <option value="environment">Câmera traseira</option>
-            </select>
+            <select id="src-video-device" class="device-select" data-device-kind="videoinput"><option value="">Selecionar dispositivo...</option></select>
         </div>
         <div class="form-row">
             <div class="form-group">

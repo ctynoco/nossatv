@@ -35,6 +35,7 @@ class OBSClone {
         this.settings       = this._loadSettings();
         this.isVirtualCam   = false;
         this.isStudioMode   = false;
+        this._devices = { videoinput: [], audioinput: [], audiooutput: [] };
         try {
             this.init();
         } catch (e) {
@@ -46,8 +47,44 @@ class OBSClone {
         }
     }
 
+    async _enumerateDevices() {
+        try {
+            if (!navigator.mediaDevices?.enumerateDevices) return;
+            const raw = await navigator.mediaDevices.enumerateDevices();
+            this._devices.videoinput = raw.filter(d => d.kind === 'videoinput');
+            this._devices.audioinput = raw.filter(d => d.kind === 'audioinput');
+            this._devices.audiooutput = raw.filter(d => d.kind === 'audiooutput');
+            navigator.mediaDevices.addEventListener('devicechange', () => {
+                this._enumerateDevices().catch(() => {});
+            }, { once: true });
+        } catch (e) {
+            console.warn('[OBS] Erro ao enumerar dispositivos:', e.message);
+        }
+    }
+
+    _populateDeviceSelects(root) {
+        (root || document).querySelectorAll('.device-select[data-device-kind]').forEach(sel => {
+            const kind = sel.dataset.deviceKind;
+            const devices = this._devices[kind] || [];
+            const currentVal = sel.value;
+            sel.innerHTML = '<option value="">Selecionar dispositivo...</option>';
+            devices.forEach(d => {
+                const label = d.label || `Dispositivo ${d.deviceId.slice(0, 8)}...`;
+                const opt = document.createElement('option');
+                opt.value = d.deviceId === 'default' ? 'default' : d.deviceId;
+                opt.textContent = label;
+                if (opt.value === currentVal) opt.selected = true;
+                sel.appendChild(opt);
+            });
+            if (!currentVal && devices.length > 0) {
+                sel.selectedIndex = 1;
+            }
+        });
+    }
+
     init() {
         this.setupEventListeners();
+        this._enumerateDevices().catch(() => {});
         this.setupSectionDragDrop();
         this.vereadorManager = new VereadorManager(this);
         this.setupFloatingWindow();
@@ -330,6 +367,7 @@ class OBSClone {
         const info = SOURCE_TYPES[type];
         document.getElementById('config-modal-title').textContent = `${info.icon} ${info.label}`;
         document.getElementById('config-modal-body').innerHTML = SOURCE_FORMS[type]();
+        this._populateDeviceSelects(document.getElementById('config-modal-body'));
         document.getElementById('modal-source-config').style.display = 'flex';
     }
 
@@ -684,9 +722,19 @@ class OBSClone {
         const g = (id) => { const el = document.getElementById(id); return el ? el.value : null; };
         const fileInput = (id) => { const el = document.getElementById(id); return el && el.files ? el.files : null; };
         switch (type) {
-            case 'camera':  return { device: g('src-device') === 'environment' ? 'environment' : 'user' };
-            case 'screen':  return {};
-            case 'window':  return {};
+            case 'camera':  return {
+                deviceId: g('src-device') || '',
+                width: this._validateNumber(g('src-width'), 320, 7680, 1920),
+                height: this._validateNumber(g('src-height'), 240, 4320, 1080),
+            };
+            case 'screen':  return {
+                width: this._validateNumber(g('src-width'), 320, 7680, 1920),
+                height: this._validateNumber(g('src-height'), 240, 4320, 1080),
+            };
+            case 'window':  return {
+                width: this._validateNumber(g('src-width'), 320, 7680, 1920),
+                height: this._validateNumber(g('src-height'), 240, 4320, 1080),
+            };
             case 'image':   return { file: this.getImageDataUrl() };
             case 'text':    return {
                 text: this._validateString(g('src-text'), 2000),
@@ -694,7 +742,7 @@ class OBSClone {
                 fontSize: this._validateNumber(g('src-fontsize'), 10, 200, 48),
                 bg: this._validateColor(g('src-bg')),
             };
-            case 'audio':   return { device: g('src-device') || 'default' };
+            case 'audio':   return { deviceId: g('src-device') || 'default' };
             case 'browser': return {
                 url: this._validateString(g('src-url'), 2048),
                 width: this._validateNumber(g('src-width'), 320, 7680, 1280),
@@ -706,10 +754,14 @@ class OBSClone {
                 interval: this._validateNumber(g('src-slideshow-interval'), 500, 30000, 3000),
                 transition: ['fade', 'cut'].includes(g('src-slideshow-transition')) ? g('src-slideshow-transition') : 'fade',
             };
-            case 'gameCapture': return { mode: g('src-game-mode') || 'any' };
-            case 'audioOutputCapture': return { device: g('src-audio-output') || 'default' };
+            case 'gameCapture': return {
+                mode: g('src-game-mode') || 'any',
+                width: this._validateNumber(g('src-width'), 320, 7680, 1920),
+                height: this._validateNumber(g('src-height'), 240, 4320, 1080),
+            };
+            case 'audioOutputCapture': return {};
             case 'videoCaptureDevice': return {
-                device: g('src-video-device') === 'environment' ? 'environment' : 'user',
+                deviceId: g('src-video-device') || '',
                 width: this._validateNumber(g('src-video-width'), 320, 7680, 1920),
                 height: this._validateNumber(g('src-video-height'), 240, 4320, 1080),
             };
@@ -766,10 +818,11 @@ class OBSClone {
 
         switch (source.type) {
             case 'camera': {
-                const stream = await navigator.mediaDevices.getUserMedia({
-                    video: { facingMode: source.config.device || 'user', width: { ideal: 1920 }, height: { ideal: 1080 } },
-                    audio: true,
-                });
+                const camConstraints = { video: { width: { ideal: source.config.width || 1920 }, height: { ideal: source.config.height || 1080 } }, audio: true };
+                if (source.config.deviceId) {
+                    camConstraints.video.deviceId = { exact: source.config.deviceId };
+                }
+                const stream = await navigator.mediaDevices.getUserMedia(camConstraints);
                 this.mediaStreams[source.id] = stream;
 
                 const video = this.createVideoEl('preview-video', stream, true, false);
@@ -780,7 +833,14 @@ class OBSClone {
 
             case 'screen':
             case 'window': {
-                const stream = await navigator.mediaDevices.getDisplayMedia({ video: true, audio: true });
+                const displayConstraints = {
+                    video: {
+                        width: { ideal: source.config.width || 1920 },
+                        height: { ideal: source.config.height || 1080 },
+                    },
+                    audio: true,
+                };
+                const stream = await navigator.mediaDevices.getDisplayMedia(displayConstraints);
                 this.mediaStreams[source.id] = stream;
                 const video = this.createVideoEl('preview-video', stream, false, false);
                 previewArea.appendChild(video);
@@ -816,7 +876,11 @@ class OBSClone {
             }
 
             case 'audio': {
-                const stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
+                const audioConstraints = { audio: true, video: false };
+                if (source.config.deviceId && source.config.deviceId !== 'default') {
+                    audioConstraints.audio = { deviceId: { exact: source.config.deviceId } };
+                }
+                const stream = await navigator.mediaDevices.getUserMedia(audioConstraints);
                 this.mediaStreams[source.id] = stream;
                 this.renderAudioVisualizer(previewArea, stream);
                 this.setupAudioChain(source.id, stream);
@@ -882,10 +946,15 @@ class OBSClone {
             }
 
             case 'gameCapture': {
-                const stream = await navigator.mediaDevices.getDisplayMedia({
-                    video: { cursor: 'always' },
+                const gameConstraints = {
+                    video: {
+                        cursor: 'always',
+                        width: { ideal: source.config.width || 1920 },
+                        height: { ideal: source.config.height || 1080 },
+                    },
                     audio: true,
-                });
+                };
+                const stream = await navigator.mediaDevices.getDisplayMedia(gameConstraints);
                 this.mediaStreams[source.id] = stream;
                 const video = this.createVideoEl('preview-video', stream, false, false);
                 previewArea.appendChild(video);
@@ -906,14 +975,17 @@ class OBSClone {
             }
 
             case 'videoCaptureDevice': {
-                const stream = await navigator.mediaDevices.getUserMedia({
+                const vcdConstraints = {
                     video: {
-                        facingMode: source.config.device || 'user',
                         width: { ideal: source.config.width || 1920 },
                         height: { ideal: source.config.height || 1080 },
                     },
                     audio: false,
-                });
+                };
+                if (source.config.deviceId) {
+                    vcdConstraints.video.deviceId = { exact: source.config.deviceId };
+                }
+                const stream = await navigator.mediaDevices.getUserMedia(vcdConstraints);
                 this.mediaStreams[source.id] = stream;
                 const video = this.createVideoEl('preview-video', stream, false, true);
                 previewArea.appendChild(video);
