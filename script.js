@@ -389,30 +389,7 @@ class OBSClone {
         document.getElementById('config-modal-title').textContent = `${info.icon} ${info.label}`;
         document.getElementById('config-modal-body').innerHTML = SOURCE_FORMS[type]();
         this._populateDeviceSelects(document.getElementById('config-modal-body'));
-        if (type === 'vereador') this._populateVereadorLinks();
         document.getElementById('modal-source-config').style.display = 'flex';
-    }
-
-    _populateVereadorLinks() {
-        const container = document.getElementById('vereador-links-list');
-        if (!container) return;
-        const mgr = window.vereadorManager;
-        if (!mgr || !mgr.slots) return;
-        container.innerHTML = mgr.slots.map(s => `
-            <div class="vereador-link-item" style="display:flex;align-items:center;gap:6px;padding:4px 0">
-                <span style="font-weight:600;min-width:55px;font-size:0.85em">${s.label}:</span>
-                <input type="text" value="${s.link}" readonly style="flex:1;font-size:0.8em;padding:3px 6px;border:1px solid #444;border-radius:4px;background:#222;color:#ccc" />
-                <button class="btn btn-small btn-secondary copy-vereador-link-btn" data-link="${s.link}" style="padding:2px 8px;font-size:0.8em">📋</button>
-            </div>
-        `).join('');
-        container.querySelectorAll('.copy-vereador-link-btn').forEach(btn => {
-            btn.addEventListener('click', () => {
-                navigator.clipboard.writeText(btn.dataset.link).then(() => {
-                    btn.textContent = '✅';
-                    setTimeout(() => { btn.textContent = '📋'; }, 1500);
-                });
-            });
-        });
     }
 
     closeConfigModal() {
@@ -2222,7 +2199,7 @@ class OBSClone {
     }
 
     _renderVereadorLinksList(list) {
-        const mgr = window.vereadorManager;
+        const mgr = this.vereadorManager;
         if (!mgr || !mgr.slots) { list.innerHTML = '<p>Nenhum vereador configurado</p>'; return; }
         list.innerHTML = mgr.slots.map((s, i) => {
             const isOnline = s.peerId ? 'online' : '';
