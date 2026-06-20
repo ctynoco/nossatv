@@ -141,6 +141,8 @@ class OBSClone {
             b.addEventListener('click', () => this.setAudioLayout(b.dataset.layout));
         });
 
+        document.getElementById('monitor-link-btn')?.addEventListener('click', () => this._openMonitorLink());
+
         document.getElementById('close-audio-filters')?.addEventListener('click', () => this.closeAudioFilters());
         document.getElementById('close-audio-filters-btn')?.addEventListener('click', () => this.closeAudioFilters());
 
@@ -2634,7 +2636,7 @@ class OBSClone {
 
             this.startProgramMirror();
 
-            // Publica programa no VDO.Ninja para retorno dos convidados
+            // Publica programa no VDO.Ninja para retorno dos convidados + monitor
             if (this.vereadorManager?.vdo) {
                 setTimeout(() => {
                     const progStream = this._getProgramStream();
@@ -2642,6 +2644,7 @@ class OBSClone {
                         for (const s of this.vereadorManager.slots || []) {
                             this.vereadorManager.publishProgram(progStream, s.label);
                         }
+                        this.vereadorManager.publishMonitor(progStream);
                     }
                 }, 500);
             }
@@ -3270,11 +3273,12 @@ class OBSClone {
         if (placeholder) placeholder.style.display = 'flex';
         this.stopProgramMirror();
 
-        // Para publicação do programa no VDO.Ninja
+        // Para publicação do programa no VDO.Ninja + monitor
         if (this.vereadorManager?.vdo) {
             for (const s of this.vereadorManager.slots || []) {
                 this.vereadorManager.stopProgramPublish(s.label);
             }
+            this.vereadorManager.stopMonitorPublish();
         }
 
         this.showNotification('⬛ Transmissão parada.');
@@ -3983,6 +3987,27 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
     // ─────────────────────────────────────────
     //  NOTIFICAÇÕES (toast)
     // ─────────────────────────────────────────
+    _openMonitorLink() {
+        const link = this.vereadorManager?.getMonitorLink();
+        if (!link) { this.showNotification('⚠️ VDO.Ninja não inicializado'); return; }
+        if (navigator.share) {
+            navigator.share({ title: 'NossaTV - Monitor', text: 'Acompanhe a transmissão ao vivo:', url: link })
+                .catch(() => this._copyMonitorLink(link));
+        } else {
+            this._copyMonitorLink(link);
+        }
+    }
+
+    _copyMonitorLink(link) {
+        const el = document.createElement('textarea');
+        el.value = link;
+        document.body.appendChild(el);
+        el.select();
+        document.execCommand('copy');
+        el.remove();
+        this.showNotification('📱 Link do monitor copiado! Envie para seu celular.');
+    }
+
     showNotification(message) {
         console.log(`[OBS] ${message}`);
         let toast = document.getElementById('obs-toast');

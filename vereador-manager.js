@@ -541,4 +541,28 @@ export class VereadorManager {
             console.warn('[Vereador] Erro ao parar publicação:', e);
         }
     }
+
+    publishMonitor(stream) {
+        if (!this.vdo || !stream) return;
+        try {
+            this.vdo.publish(stream, { streamID: 'program_MONITOR' });
+        } catch (e) {
+            console.warn('[Vereador] Erro ao publicar monitor:', e);
+        }
+    }
+
+    stopMonitorPublish() {
+        if (!this.vdo) return;
+        try {
+            this.vdo.stopPublishing();
+        } catch (e) {
+            console.warn('[Vereador] Erro ao parar monitor:', e);
+        }
+    }
+
+    getMonitorLink() {
+        const url = new URL('monitor.html', window.location.href);
+        url.searchParams.set('room', this._room);
+        return url.href;
+    }
 }
