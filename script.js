@@ -3647,6 +3647,14 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
             this._applyPreviewStyles();
         });
 
+        // TURN: clear
+        document.getElementById('clear-turn-btn')?.addEventListener('click', () => {
+            localStorage.removeItem('nossatv_turn');
+            const turnEl = document.getElementById('set-turn-servers');
+            if (turnEl) turnEl.value = '';
+            this.showNotification('🧹 Servidores TURN removidos');
+        });
+
         // Horizontal: logo
         document.getElementById('set-horizontal-logo-file')?.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -3870,6 +3878,13 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
         setVal('set-theme', s.general.theme);
         setVal('set-language', s.general.language);
 
+        // Carrega TURN
+        const turnEl = document.getElementById('set-turn-servers');
+        if (turnEl) {
+            const stored = localStorage.getItem('nossatv_turn');
+            turnEl.value = stored ? JSON.stringify(JSON.parse(stored), null, 2) : '';
+        }
+
         setVal('set-vertical-logo-width', s.vertical.logo.width);
         setVal('set-vertical-logo-height', s.vertical.logo.height);
 
@@ -3906,6 +3921,19 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
             ? g('set-theme') : 'dark';
         this.settings.general.language = ['pt-BR', 'en'].includes(g('set-language'))
             ? g('set-language') : 'pt-BR';
+
+        // Salva TURN
+        const turnEl = document.getElementById('set-turn-servers');
+        if (turnEl && turnEl.value.trim()) {
+            try {
+                const parsed = JSON.parse(turnEl.value.trim());
+                if (Array.isArray(parsed)) {
+                    localStorage.setItem('nossatv_turn', JSON.stringify(parsed));
+                }
+            } catch (e) {
+                // JSON inválido — ignora e mantém anterior
+            }
+        }
 
         this.settings.vertical.logo.width = this._validateNumber(g('set-vertical-logo-width'), 16, 300, 60);
         this.settings.vertical.logo.height = this._validateNumber(g('set-vertical-logo-height'), 16, 300, 60);

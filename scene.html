@@ -64,7 +64,14 @@
     'use strict';
 
     var TOTAL = 12;
-    var room = 'nossatv';
+    var room = (function(){
+        var r = localStorage.getItem('nossatv_room');
+        if (!r) {
+            r = 'nossatv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+            localStorage.setItem('nossatv_room', r);
+        }
+        return r;
+    })();
     var layout = 'auto';
     var vdo = null;
     var connected = false;
@@ -253,6 +260,11 @@
 
     function connect(){
         setStatus('Conectando...', 'connecting');
+        var turnConf = [];
+        try {
+            var stored = localStorage.getItem('nossatv_turn');
+            if (stored) turnConf = JSON.parse(stored);
+        } catch(e) {}
         vdo = new VDONinjaSDK({
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -260,11 +272,18 @@
                 { urls: 'stun:stun2.l.google.com:19302' },
                 { urls: 'stun:stun3.l.google.com:19302' },
                 { urls: 'stun:stun4.l.google.com:19302' },
+                ...turnConf,
             ],
             iceTransportPolicy: 'all',
         });
         vdo.addEventListener('track', function(e){
             if(e.detail && e.detail.streamID) _markLive(e.detail.streamID);
+        });
+        vdo.addEventListener('disconnected', function(){
+            connected = false;
+            setStatus('Desconectado — reconectando...', 'offline');
+            stopViewAll();
+            setTimeout(connect, 3000);
         });
         vdo.connect().then(function(){
             return vdo.joinRoom({ room: room });
@@ -283,18 +302,22 @@
         buildGrid();
         applySceneLayout(currentScene);
         gridEl.style.opacity = '1';
-        var s = document.createElement('script');
-        s.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
-        s.onload = function(){ connect(); };
-        s.onerror = function(){
-            setStatus('Erro ao carregar SDK', 'offline');
-            var s2 = document.createElement('script');
-            s2.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
-            s2.onload = function(){ connect(); };
-            s2.onerror = function(){ setStatus('SDK indisponível', 'offline'); };
-            document.head.appendChild(s2);
-        };
-        document.head.appendChild(s);
+        var SDK_URLS = [
+            'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js',
+            'https://unpkg.com/@vdoninja/sdk@1.3.18/dist/vdoninja-sdk.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/vdo-ninja-sdk/1.3.18/vdoninja-sdk.min.js',
+        ];
+        var sdkIdx = 0;
+        function loadSDK() {
+            if (typeof VDONinjaSDK !== 'undefined') { connect(); return; }
+            if (sdkIdx >= SDK_URLS.length) { setStatus('SDK indisponível', 'offline'); return; }
+            var s = document.createElement('script');
+            s.src = SDK_URLS[sdkIdx++];
+            s.onload = function(){ connect(); };
+            s.onerror = function(){ loadSDK(); };
+            document.head.appendChild(s);
+        }
+        loadSDK();
     }
 
     applyBtn.addEventListener('click', function(){

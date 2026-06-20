@@ -217,24 +217,30 @@
         }
 
         // ---- SDK preload (inicia imediatamente, evita gesture expiry iOS) ----
+        var SDK_URLS = [
+            'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js',
+            'https://unpkg.com/@vdoninja/sdk@1.3.18/dist/vdoninja-sdk.min.js',
+            'https://cdnjs.cloudflare.com/ajax/libs/vdo-ninja-sdk/1.3.18/vdoninja-sdk.min.js',
+        ];
         var sdkLoaded = null;
         function loadSDK() {
             if (sdkLoaded) return sdkLoaded;
             sdkLoaded = new Promise(function(resolve, reject) {
                 if (typeof VDONinjaSDK !== 'undefined') { resolve(); return; }
-                var s = document.createElement('script');
-                s.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
-                s.integrity = 'sha384-/xDAcwjdhN3g8ilH5vtF0Agq4V9XxMqRwgxde0EVDrfjVJUk87pBL/SgjNUsBFEq';
-                s.crossOrigin = 'anonymous';
-                s.onload = function() { resolve(); };
-                s.onerror = function() {
-                    var s2 = document.createElement('script');
-                    s2.src = 'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js';
-                    s2.onload = function() { resolve(); };
-                    s2.onerror = function() { reject(new Error('Falha ao carregar SDK de transmissão.')); };
-                    document.body.appendChild(s2);
-                };
-                document.body.appendChild(s);
+                var idx = 0;
+                function tryLoad() {
+                    if (idx >= SDK_URLS.length) {
+                        reject(new Error('Falha ao carregar SDK de transmissão.'));
+                        return;
+                    }
+                    var s = document.createElement('script');
+                    s.src = SDK_URLS[idx++];
+                    s.crossOrigin = 'anonymous';
+                    s.onload = function() { resolve(); };
+                    s.onerror = function() { tryLoad(); };
+                    document.body.appendChild(s);
+                }
+                tryLoad();
             });
             return sdkLoaded;
         }
@@ -373,6 +379,11 @@
                 toggleBtn.textContent = 'Conectando...';
                 infoText.textContent = 'Conectando ao servidor...';
 
+                var turnConf = [];
+                try {
+                    var stored = localStorage.getItem('nossatv_turn');
+                    if (stored) turnConf = JSON.parse(stored);
+                } catch(e) {}
                 vdo = new VDONinjaSDK({
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -380,8 +391,19 @@
                         { urls: 'stun:stun2.l.google.com:19302' },
                         { urls: 'stun:stun3.l.google.com:19302' },
                         { urls: 'stun:stun4.l.google.com:19302' },
+                        ...turnConf,
                     ],
                     iceTransportPolicy: 'all',
+                });
+
+                vdo.addEventListener('disconnected', function() {
+                    infoText.textContent = '⚠️ Conexão perdida. Clique em "Ativar Câmera" para reconectar.';
+                    setDot('off');
+                    if (connected) {
+                        connected = false;
+                        toggleBtn.textContent = 'Ativar Câmera';
+                        toggleBtn.className = 'btn btn-primary';
+                    }
                 });
 
                 return vdo.connect();

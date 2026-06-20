@@ -1,5 +1,29 @@
 import { generateQRCode } from './qrcode.js';
 
+function _getRoomId() {
+    let room = localStorage.getItem('nossatv_room');
+    if (!room) {
+        room = 'nossatv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
+        localStorage.setItem('nossatv_room', room);
+    }
+    return room;
+}
+
+function _getIceServers() {
+    const stored = localStorage.getItem('nossatv_turn');
+    const custom = stored ? JSON.parse(stored) : [];
+    return [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+        ...custom,
+    ];
+}
+
+export function getVdoRoomId() { return _getRoomId(); }
+
 export class VereadorManager {
     constructor(obs) {
         this.obs = obs;
@@ -11,6 +35,11 @@ export class VereadorManager {
         this._viewActive = {};
         this._pendingStreams = {};
         this._pendingTimeouts = {};
+        this._reconnectTimer = null;
+        this._reconnectAttempts = 0;
+        this._maxReconnect = 10;
+        this._room = _getRoomId();
+        this._destroyed = false;
         this.init();
     }
 
@@ -18,7 +47,7 @@ export class VereadorManager {
         for (let i = 1; i <= 12; i++) {
             const label = `VER${String(i).padStart(2, '0')}`;
             const guestUrl = new URL('guest.html', window.location.href);
-            guestUrl.searchParams.set('room', 'nossatv');
+            guestUrl.searchParams.set('room', this._room);
             guestUrl.searchParams.set('slot', label);
             this.slots.push({
                 id: i,
@@ -36,14 +65,13 @@ export class VereadorManager {
     _initVDO() {
         if (typeof VDONinjaSDK === 'undefined') {
             console.warn('[Vereador] VDO.Ninja SDK não disponível');
+            this._scheduleReconnect();
             return;
         }
         try {
             this.vdo = new VDONinjaSDK({
-                iceServers: [
-                    { urls: 'stun:stun.l.google.com:19302' },
-                    { urls: 'stun:stun1.l.google.com:19302' },
-                ],
+                iceServers: _getIceServers(),
+                iceTransportPolicy: 'all',
             });
 
             this.vdo.addEventListener('track', (event) => {
@@ -68,20 +96,50 @@ export class VereadorManager {
 
             this.vdo.addEventListener('connected', () => {
                 this._vdoReady = true;
+                this._reconnectAttempts = 0;
+            });
+
+            this.vdo.addEventListener('disconnected', () => {
+                this._vdoReady = false;
+                this.obs?.showNotification('⚠️ VDO.Ninja desconectado — reconectando...');
+                this._scheduleReconnect();
             });
 
             this.vdo.connect().then(() => {
-                return this.vdo.joinRoom({ room: 'nossatv' });
+                return this.vdo.joinRoom({ room: this._room });
             }).then(() => {
                 this._startViewing();
             }).catch((err) => {
                 console.warn('[Vereador] Erro VDO.Ninja:', err);
                 this.obs?.showNotification('⚠️ Erro ao conectar VDO.Ninja: ' + (err.message || 'desconhecido'));
+                this._scheduleReconnect();
             });
         } catch (e) {
             console.warn('[Vereador] Falha ao iniciar VDO.Ninja:', e);
             this.obs?.showNotification('⚠️ Falha ao iniciar VDO.Ninja');
+            this._scheduleReconnect();
         }
+    }
+
+    _scheduleReconnect() {
+        if (this._destroyed) return;
+        if (this._reconnectAttempts >= this._maxReconnect) {
+            this.obs?.showNotification('❌ VDO.Ninja: máximo de tentativas excedido. Recarregue a página.');
+            return;
+        }
+        if (this._reconnectTimer) return;
+        const delay = Math.min(2000 * Math.pow(1.5, this._reconnectAttempts), 30000);
+        this._reconnectAttempts++;
+        this._reconnectTimer = setTimeout(() => {
+            this._reconnectTimer = null;
+            if (this._destroyed) return;
+            if (this.vdo) {
+                try { this.vdo.disconnect(); } catch(e) {}
+                this.vdo = null;
+            }
+            this._vdoReady = false;
+            this._initVDO();
+        }, delay);
     }
 
     _startViewing() {
@@ -221,6 +279,18 @@ export class VereadorManager {
         if (ph) ph.style.display = 'flex';
         document.getElementById('modal-vereador').style.display = 'none';
         this.activeSlot = null;
+    }
+
+    destroy() {
+        this._destroyed = true;
+        if (this._reconnectTimer) {
+            clearTimeout(this._reconnectTimer);
+            this._reconnectTimer = null;
+        }
+        if (this.vdo) {
+            try { this.vdo.disconnect(); } catch(e) {}
+            this.vdo = null;
+        }
     }
 
     async testLocal() {
@@ -383,7 +453,7 @@ export class VereadorManager {
             s.label = newLabel;
             s.streamID = `slot_${newLabel}`;
             const u = new URL('guest.html', window.location.href);
-            u.searchParams.set('room', 'nossatv');
+            u.searchParams.set('room', this._room);
             u.searchParams.set('slot', newLabel);
             s.link = u.href;
         });

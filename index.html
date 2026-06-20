@@ -322,6 +322,12 @@
                                 <option value="en">English</option>
                             </select>
                         </div>
+                        <div class="form-group">
+                            <label>Servidores TURN (conexão Vereadores)</label>
+                            <p class="settings-hint">Formato JSON: <code>[{"urls":"turn:exemplo.com:3478","username":"user","credential":"pass"}]</code></p>
+                            <textarea id="set-turn-servers" rows="4" style="width:100%;background:#222;color:#fff;border:1px solid #444;border-radius:4px;padding:6px;font-size:12px;font-family:monospace"></textarea>
+                            <button class="btn btn-small btn-secondary" id="clear-turn-btn" style="margin-top:4px">Remover TURN personalizado</button>
+                        </div>
                     </div>
                     <!-- Vertical -->
                     <div class="settings-pane" id="pane-vertical">
