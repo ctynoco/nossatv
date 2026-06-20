@@ -5,470 +5,1062 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="mobile-web-app-capable" content="yes">
-    <title>Convidado</title>
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <title>NossaTV — Transmissão</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
-        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
-        body{font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;background:#0f0f1a;color:#fff;min-height:100dvh;display:flex;align-items:center;justify-content:center;padding:20px;-webkit-font-smoothing:antialiased}
-        .card{background:#1a1a2e;border-radius:16px;padding:32px 24px;max-width:420px;width:100%;box-shadow:0 8px 32px rgba(0,0,0,0.5)}
-        .sub{color:#888;font-size:0.82em;margin-bottom:20px}
-        .video-wrap{position:relative;border-radius:8px;overflow:hidden;background:#000;margin-bottom:16px}
-        .video-wrap video{width:100%;display:block;border-radius:8px}
-        .video-wrap video.mirror{transform:scaleX(-1)}
-        .video-wrap video.hidden{display:none}
-        .dot{position:absolute;top:8px;right:8px;width:10px;height:10px;border-radius:50%;background:#555;transition:background .3s;z-index:2}
-        .dot.on{background:#4caf50;box-shadow:0 0 6px #4caf50}
-        .dot.warning{background:#ff9800;box-shadow:0 0 6px #ff9800}
-        .dot.off{background:#f44336;box-shadow:0 0 6px #f44336}
-        .return-video{width:100%;border-radius:8px;background:#000;margin-bottom:16px;display:none}
-        .return-video.active{display:block}
-        .btn{width:100%;padding:14px;border:none;border-radius:50px;font-size:1em;font-weight:700;cursor:pointer;transition:opacity .2s,transform .1s;-webkit-tap-highlight-color:transparent}
-        .btn:active{transform:scale(0.98)}
-        .btn:disabled{opacity:0.5;cursor:not-allowed;transform:none}
-        .btn-primary{background:#1976d2;color:#fff}
-        .btn-primary:hover:not(:disabled){background:#1565c0}
-        .btn-danger{background:#d32f2f;color:#fff}
-        .btn-danger:hover:not(:disabled){background:#b71c1c}
-        .info{font-size:0.78em;color:#666;margin-top:12px;line-height:1.5}
-        .quality{display:flex;align-items:center;gap:6px;margin-top:8px;font-size:0.72em;color:#555}
-        .quality .bar{flex:1;height:3px;border-radius:2px;background:#333;overflow:hidden}
-        .quality .bar span{display:block;height:100%;border-radius:2px;transition:width .5s,background .5s}
-        .quality .bar span.good{background:#4caf50;width:80%}
-        .quality .bar span.fair{background:#ff9800;width:45%}
-        .quality .bar span.poor{background:#f44336;width:20%}
-        .fs-btn{position:absolute;bottom:8px;right:8px;background:rgba(0,0,0,0.55);border:none;color:#fff;padding:6px 10px;border-radius:6px;font-size:0.7em;cursor:pointer;z-index:3;opacity:0.7;transition:opacity .3s;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px)}
-        .video-wrap:hover .fs-btn{opacity:1}
-        .video-wrap .fs-btn:active{opacity:1;background:rgba(0,0,0,0.75)}
-        .vu-meter{display:flex;align-items:center;gap:8px;margin-top:10px;font-size:0.72em;color:#555}
-        .vu-meter .vu-label{white-space:nowrap}
-        .vu-meter .vu-track{flex:1;height:4px;border-radius:3px;background:#222;overflow:hidden}
-        .vu-meter .vu-fill{height:100%;width:0%;border-radius:3px;background:#4caf50;transition:width .1s linear}
-        .vu-meter .vu-fill.warn{background:#ff9800}
-        .vu-meter .vu-fill.clip{background:#f44336}
-        .spinner{width:20px;height:20px;border:2px solid rgba(255,255,255,0.1);border-top-color:#1976d2;border-radius:50%;animation:spin .6s linear infinite;display:none;margin:0 auto 8px}
-        .spinner.active{display:block}
-        @keyframes spin{to{transform:rotate(360deg)}}
+        :root {
+            --bg: #080810;
+            --surface: #111120;
+            --surface2: #191928;
+            --surface3: #222235;
+            --border: rgba(255,255,255,0.07);
+            --border2: rgba(255,255,255,0.13);
+            --accent: #4f6ef7;
+            --accent2: #7c3aed;
+            --green: #22c55e;
+            --orange: #f59e0b;
+            --red: #ef4444;
+            --text: #f0f0fa;
+            --text2: #8888aa;
+            --text3: #44445a;
+            --radius: 16px;
+            --radius-sm: 10px;
+        }
+        * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100dvh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: env(safe-area-inset-top, 16px) 0 env(safe-area-inset-bottom, 20px);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .page {
+            width: 100%;
+            max-width: 460px;
+            padding: 16px 16px 32px;
+            display: flex;
+            flex-direction: column;
+            gap: 14px;
+        }
+
+        /* ── HEADER ─────────────────────────────── */
+        .hdr {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding-bottom: 4px;
+        }
+        .hdr-logo {
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 14px;
+        }
+        .hdr-info { flex: 1; }
+        .hdr-title {
+            font-size: 15px;
+            font-weight: 700;
+            background: linear-gradient(135deg, #7a9fff, #c4b5fd);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        .hdr-slot {
+            font-size: 11px;
+            color: var(--text3);
+        }
+
+        /* status pill */
+        .status-pill {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 6px 12px;
+            font-size: 11px;
+            color: var(--text2);
+            transition: all 0.3s;
+        }
+        .status-pill.online {
+            background: rgba(34,197,94,0.1);
+            border-color: rgba(34,197,94,0.3);
+            color: var(--green);
+        }
+        .status-pill.error {
+            background: rgba(239,68,68,0.1);
+            border-color: rgba(239,68,68,0.3);
+            color: var(--red);
+        }
+        .s-dot {
+            width: 7px;
+            height: 7px;
+            border-radius: 50%;
+            background: currentColor;
+            flex-shrink: 0;
+        }
+        .status-pill.connecting .s-dot { animation: blink 1s infinite; }
+        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
+
+        /* ── CARD ────────────────────────────────── */
+        .card {
+            background: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            overflow: hidden;
+        }
+        .card-header {
+            padding: 12px 14px 10px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border-bottom: 1px solid var(--border);
+        }
+        .card-icon { font-size: 14px; }
+        .card-label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--text2);
+            flex: 1;
+        }
+        .card-body { padding: 14px; }
+
+        /* ── VIDEO LOCAL ─────────────────────────── */
+        .video-container {
+            position: relative;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 16/9;
+            width: 100%;
+        }
+        .video-container video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .local-video { transform: scaleX(-1); display: none; }
+        .local-video.show { display: block; }
+
+        /* live indicator */
+        .live-badge {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            background: var(--red);
+            color: #fff;
+            font-size: 9px;
+            font-weight: 800;
+            letter-spacing: 1px;
+            padding: 3px 7px;
+            border-radius: 4px;
+            display: none;
+            animation: live-pulse 2s infinite;
+        }
+        .live-badge.show { display: block; }
+        @keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:.65} }
+
+        /* placeholder */
+        .video-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #05050a;
+        }
+        .video-placeholder span:first-child { font-size: 28px; opacity: 0.3; }
+        .video-placeholder span:last-child { font-size: 12px; color: var(--text3); }
+        .video-placeholder.hide { display: none; }
+
+        /* controls overlay sobre o vídeo */
+        .video-overlay-controls {
+            position: absolute;
+            bottom: 0;
+            left: 0;
+            right: 0;
+            background: linear-gradient(transparent, rgba(0,0,0,0.7));
+            padding: 20px 10px 8px;
+            display: flex;
+            justify-content: flex-end;
+            gap: 6px;
+        }
+        .icon-btn {
+            background: rgba(255,255,255,0.1);
+            border: none;
+            color: #fff;
+            width: 32px;
+            height: 32px;
+            border-radius: 8px;
+            font-size: 14px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            backdrop-filter: blur(4px);
+            transition: background 0.15s;
+        }
+        .icon-btn:active { background: rgba(255,255,255,0.2); }
+
+        /* ── RETORNO (programa ao vivo) ──────────── */
+        .return-container {
+            position: relative;
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            background: #000;
+            aspect-ratio: 16/9;
+            width: 100%;
+        }
+        .return-video {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            display: none;
+        }
+        .return-video.active { display: block; }
+        .return-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: #05050a;
+        }
+        .return-placeholder span:first-child { font-size: 22px; opacity: 0.25; }
+        .return-placeholder span:last-child { font-size: 11px; color: var(--text3); }
+
+        /* return volume */
+        .return-vol-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            padding: 10px 14px;
+            border-top: 1px solid var(--border);
+        }
+        .return-vol-label { font-size: 11px; color: var(--text2); white-space: nowrap; }
+
+        /* ── VOLUME SLIDERS ──────────────────────── */
+        .vol-block { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+        .vol-row {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        .vol-icon { font-size: 16px; flex-shrink: 0; }
+        .vol-info { flex-shrink: 0; width: 56px; }
+        .vol-name { font-size: 10px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+        .vol-pct { font-size: 13px; color: var(--text); font-weight: 700; }
+        .vol-slider {
+            flex: 1;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 5px;
+            border-radius: 3px;
+            background: var(--surface3);
+            outline: none;
+            cursor: pointer;
+        }
+        .vol-slider::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            cursor: pointer;
+            box-shadow: 0 2px 8px rgba(79,110,247,0.5);
+            transition: transform 0.1s;
+        }
+        .vol-slider::-webkit-slider-thumb:active { transform: scale(1.15); }
+        .vol-slider::-moz-range-thumb {
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            cursor: pointer;
+            border: none;
+        }
+        .vol-divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0 14px;
+        }
+
+        /* ── VU METER ────────────────────────────── */
+        .vu-section {
+            padding: 10px 14px 12px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            border-top: 1px solid var(--border);
+        }
+        .vu-label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .vu-label { font-size: 10px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
+        .vu-peak { font-size: 10px; color: var(--text3); }
+        .vu-track {
+            width: 100%;
+            height: 6px;
+            border-radius: 3px;
+            background: var(--surface3);
+            overflow: hidden;
+            position: relative;
+        }
+        .vu-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 3px;
+            transition: width 0.07s linear;
+            background: linear-gradient(90deg, var(--green) 0%, var(--orange) 70%, var(--red) 100%);
+        }
+        /* peak marker */
+        .vu-peak-marker {
+            position: absolute;
+            top: 0;
+            width: 2px;
+            height: 100%;
+            background: var(--red);
+            border-radius: 1px;
+            transition: left 0.1s;
+            display: none;
+        }
+        .vu-peak-marker.show { display: block; }
+
+        /* ── QUALITY ─────────────────────────────── */
+        .quality-section {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 14px;
+            border-top: 1px solid var(--border);
+            display: none;
+        }
+        .quality-section.show { display: flex; }
+        .quality-label { font-size: 10px; color: var(--text3); white-space: nowrap; }
+        .quality-track {
+            flex: 1;
+            height: 4px;
+            border-radius: 2px;
+            background: var(--surface3);
+            overflow: hidden;
+        }
+        .quality-bar {
+            height: 100%;
+            border-radius: 2px;
+            transition: width 0.5s, background 0.5s;
+        }
+        .quality-bar.good { background: var(--green); width: 80%; }
+        .quality-bar.fair { background: var(--orange); width: 45%; }
+        .quality-bar.poor { background: var(--red); width: 20%; }
+        .quality-rtt { font-size: 10px; color: var(--text3); white-space: nowrap; }
+
+        /* ── MAIN BUTTON ─────────────────────────── */
+        .main-btn {
+            width: 100%;
+            padding: 16px;
+            border: none;
+            border-radius: 50px;
+            font-size: 16px;
+            font-weight: 700;
+            cursor: pointer;
+            transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
+            font-family: 'Inter', sans-serif;
+            letter-spacing: 0.3px;
+        }
+        .main-btn:active { transform: scale(0.97); }
+        .main-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
+        .main-btn.start {
+            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(79,110,247,0.4);
+        }
+        .main-btn.start:hover:not(:disabled) { opacity: 0.92; box-shadow: 0 6px 28px rgba(79,110,247,0.5); }
+        .main-btn.stop {
+            background: linear-gradient(135deg, #ef4444, #dc2626);
+            color: #fff;
+            box-shadow: 0 4px 20px rgba(239,68,68,0.35);
+        }
+        .main-btn.stop:hover:not(:disabled) { opacity: 0.92; }
+
+        /* spinner dentro do botão */
+        .btn-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,0.25);
+            border-top-color: #fff;
+            border-radius: 50%;
+            animation: spin 0.6s linear infinite;
+            vertical-align: middle;
+            margin-right: 8px;
+        }
+        @keyframes spin { to { transform: rotate(360deg); } }
+
+        /* ── INFO TEXT ───────────────────────────── */
+        .info-text {
+            font-size: 12px;
+            color: var(--text3);
+            line-height: 1.6;
+            text-align: center;
+            padding: 4px 8px;
+        }
+        .info-text.error { color: var(--red); }
+        .info-text.success { color: var(--green); }
+
+        /* ── CAMERA TOGGLE ───────────────────────── */
+        .cam-toggle-row {
+            display: flex;
+            gap: 8px;
+            padding: 10px 14px;
+            border-top: 1px solid var(--border);
+        }
+        .cam-toggle-btn {
+            flex: 1;
+            padding: 8px;
+            border-radius: var(--radius-sm);
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text2);
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-align: center;
+        }
+        .cam-toggle-btn:hover { background: var(--surface3); color: var(--text); }
+        .cam-toggle-btn.active { background: rgba(79,110,247,0.15); border-color: rgba(79,110,247,0.35); color: #8ba0ff; }
     </style>
 </head>
 <body>
-    <div class="card">
-        <p class="sub" id="slot-label">Conectando...</p>
-        <div class="video-wrap">
-            <video id="local-video" autoplay playsinline muted class="hidden"></video>
-            <div class="dot" id="dot"></div>
-            <button class="fs-btn" id="fs-btn">⛶ Tela Cheia</button>
-        </div>
-        <div class="spinner" id="spinner"></div>
-        <video id="return-video" class="return-video" autoplay playsinline muted></video>
-        <button id="btn-toggle" class="btn btn-primary">Ativar Câmera</button>
-        <div class="quality" id="quality-indicator" style="display:none">
-            <span>Qualidade</span>
-            <div class="bar"><span id="quality-bar"></span></div>
-        </div>
-        <div class="vu-meter" id="vu-meter" style="display:none">
-            <span class="vu-label">Áudio</span>
-            <div class="vu-track"><div class="vu-fill" id="vu-fill"></div></div>
-        </div>
-        <p class="info" id="info-text">Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.</p>
-    </div>
-    <script>
-    (function() {
-        'use strict';
+<div class="page">
 
-        // ---- DOM refs ----
-        var room = 'NossaTV';
-        var slot = new URLSearchParams(location.search).get('slot');
-        if (!slot) {
-            document.getElementById('slot-label').textContent = 'Link inválido';
-            document.getElementById('btn-toggle').disabled = true;
+    <!-- HEADER -->
+    <div class="hdr">
+        <div class="hdr-logo">📺</div>
+        <div class="hdr-info">
+            <div class="hdr-title">NossaTV</div>
+            <div class="hdr-slot" id="hdr-slot">Conectando...</div>
+        </div>
+        <div class="status-pill connecting" id="status-pill">
+            <span class="s-dot"></span>
+            <span id="status-pill-text">Aguardando</span>
+        </div>
+    </div>
+
+    <!-- CÂMERA LOCAL -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-icon">📷</span>
+            <span class="card-label">Sua Câmera (envio)</span>
+            <span id="cam-badge"></span>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div class="video-container">
+                <video id="local-video" class="local-video" autoplay playsinline muted></video>
+                <span class="live-badge" id="live-badge">AO VIVO</span>
+                <div class="video-placeholder" id="video-ph">
+                    <span>📷</span>
+                    <span>Câmera inativa</span>
+                </div>
+                <div class="video-overlay-controls" id="video-overlay">
+                    <button class="icon-btn" id="btn-flip" title="Virar câmera">🔄</button>
+                    <button class="icon-btn" id="btn-fs-local" title="Tela cheia">⛶</button>
+                </div>
+            </div>
+
+            <!-- VU Meter (input) -->
+            <div class="vu-section" id="vu-section" style="display:none">
+                <div class="vu-label-row">
+                    <span class="vu-label">🎙️ Nível de Áudio (entrada)</span>
+                    <span class="vu-peak" id="vu-peak-text">0 dB</span>
+                </div>
+                <div class="vu-track">
+                    <div class="vu-fill" id="vu-fill"></div>
+                    <div class="vu-peak-marker" id="vu-peak-marker"></div>
+                </div>
+            </div>
+
+            <!-- Câmera toggle -->
+            <div class="cam-toggle-row" id="cam-toggle-row" style="display:none">
+                <button class="cam-toggle-btn active" id="btn-cam-front" title="Câmera frontal">🤳 Frontal</button>
+                <button class="cam-toggle-btn" id="btn-cam-back" title="Câmera traseira">📸 Traseira</button>
+            </div>
+
+            <!-- Volume de entrada (mic) -->
+            <div class="vol-block" id="vol-input-block" style="display:none">
+                <div class="vol-row">
+                    <span class="vol-icon">🎤</span>
+                    <div class="vol-info">
+                        <div class="vol-name">Entrada</div>
+                        <div class="vol-pct" id="vol-input-pct">100%</div>
+                    </div>
+                    <input type="range" class="vol-slider" id="vol-input" min="0" max="200" value="100" step="5">
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- RETORNO (programa ao vivo) -->
+    <div class="card">
+        <div class="card-header">
+            <span class="card-icon">📺</span>
+            <span class="card-label">Retorno (Programa ao Vivo)</span>
+        </div>
+        <div class="card-body" style="padding:0">
+            <div class="return-container">
+                <video id="return-video" class="return-video" autoplay playsinline></video>
+                <div class="return-placeholder" id="return-ph">
+                    <span>📡</span>
+                    <span>Aguardando transmissão...</span>
+                </div>
+                <div class="video-overlay-controls">
+                    <button class="icon-btn" id="btn-fs-return" title="Tela cheia no retorno">⛶</button>
+                </div>
+            </div>
+
+            <!-- Volume de saída (retorno) -->
+            <div class="return-vol-row">
+                <span class="vol-icon" style="font-size:16px">🔊</span>
+                <span class="return-vol-label">Saída:</span>
+                <input type="range" class="vol-slider" id="vol-output" min="0" max="200" value="100" step="5" style="flex:1;margin:0 10px">
+                <span class="vol-pct" id="vol-output-pct" style="font-size:13px;font-weight:700;min-width:38px;text-align:right">100%</span>
+            </div>
+
+            <!-- Qualidade de conexão -->
+            <div class="quality-section" id="quality-section">
+                <span class="quality-label">Qualidade</span>
+                <div class="quality-track">
+                    <div class="quality-bar good" id="quality-bar"></div>
+                </div>
+                <span class="quality-rtt" id="quality-rtt">--ms</span>
+            </div>
+        </div>
+    </div>
+
+    <!-- BOTÃO PRINCIPAL -->
+    <button class="main-btn start" id="main-btn" disabled>Ativar Câmera</button>
+
+    <!-- INFO -->
+    <div class="info-text" id="info-text">Preparando...</div>
+
+</div>
+
+<script>
+(function () {
+    'use strict';
+
+    // ─── CONFIG ──────────────────────────────────────────────────
+    var ROOM = 'NossaTV';
+    var RETURN_STREAM_ID = 'NossaTV_CAM';
+    var SDK_URLS = [
+        'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js',
+        'https://unpkg.com/@vdoninja/sdk@1.3.18/dist/vdoninja-sdk.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/vdo-ninja-sdk/1.3.18/vdoninja-sdk.min.js',
+    ];
+    var ICE = [
+        { urls: 'stun:stun.l.google.com:19302' },
+        { urls: 'stun:stun1.l.google.com:19302' },
+        { urls: 'stun:stun2.l.google.com:19302' },
+        { urls: 'stun:stun3.l.google.com:19302' },
+        { urls: 'stun:stun4.l.google.com:19302' },
+    ];
+
+    // ─── SLOT ────────────────────────────────────────────────────
+    var slot = new URLSearchParams(location.search).get('slot');
+    if (!slot) {
+        document.getElementById('hdr-slot').textContent = 'Link inválido';
+        document.getElementById('info-text').textContent = '❌ Link sem parâmetro de slot. Solicite um novo link.';
+        document.getElementById('info-text').className = 'info-text error';
+        return;
+    }
+    var streamID = 'slot_' + slot;
+    document.getElementById('hdr-slot').textContent = slot;
+    document.title = 'NossaTV — ' + slot;
+
+    // ─── STATE ───────────────────────────────────────────────────
+    var vdo = null;
+    var localStream = null;
+    var connected = false;
+    var publishing = false;
+    var facingMode = 'user';
+    var vuInterval = null;
+    var qualityInterval = null;
+    var viewRetry = null;
+    var audioCtx = null;
+    var inputGainNode = null;
+    var outputGainNode = null;
+    var returnAudioCtx = null;
+    var returnGainNode = null;
+    var peakDecay = 0;
+    var peakHoldTimer = null;
+
+    // ─── DOM ─────────────────────────────────────────────────────
+    var mainBtn       = document.getElementById('main-btn');
+    var infoText      = document.getElementById('info-text');
+    var statusPill    = document.getElementById('status-pill');
+    var statusPillTxt = document.getElementById('status-pill-text');
+    var localVideo    = document.getElementById('local-video');
+    var returnVideo   = document.getElementById('return-video');
+    var liveBadge     = document.getElementById('live-badge');
+    var videoPh       = document.getElementById('video-ph');
+    var returnPh      = document.getElementById('return-ph');
+    var vuSection     = document.getElementById('vu-section');
+    var vuFill        = document.getElementById('vu-fill');
+    var vuPeakText    = document.getElementById('vu-peak-text');
+    var vuPeakMarker  = document.getElementById('vu-peak-marker');
+    var qualitySection = document.getElementById('quality-section');
+    var qualityBar    = document.getElementById('quality-bar');
+    var qualityRtt    = document.getElementById('quality-rtt');
+    var volInput      = document.getElementById('vol-input');
+    var volInputPct   = document.getElementById('vol-input-pct');
+    var volOutput     = document.getElementById('vol-output');
+    var volOutputPct  = document.getElementById('vol-output-pct');
+    var camToggleRow  = document.getElementById('cam-toggle-row');
+    var volInputBlock = document.getElementById('vol-input-block');
+
+    // ─── STATUS ──────────────────────────────────────────────────
+    function setStatus(text, cls) {
+        statusPillTxt.textContent = text;
+        statusPill.className = 'status-pill ' + (cls || '');
+    }
+    function setInfo(text, cls) {
+        infoText.textContent = text;
+        infoText.className = 'info-text ' + (cls || '');
+    }
+
+    // ─── SHOW/HIDE CAMERA ────────────────────────────────────────
+    function showLocalCamera() {
+        localVideo.classList.add('show');
+        videoPh.classList.add('hide');
+        liveBadge.classList.add('show');
+        camToggleRow.style.display = 'flex';
+        volInputBlock.style.display = 'block';
+    }
+    function hideLocalCamera() {
+        localVideo.classList.remove('show');
+        videoPh.classList.remove('hide');
+        liveBadge.classList.remove('show');
+        camToggleRow.style.display = 'none';
+        volInputBlock.style.display = 'none';
+    }
+
+    // ─── VU METER ────────────────────────────────────────────────
+    function startVUMeter(stream) {
+        stopVUMeter();
+        var audioTracks = stream.getAudioTracks();
+        if (audioTracks.length === 0) return;
+        try {
+            audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            var src = audioCtx.createMediaStreamSource(stream);
+            inputGainNode = audioCtx.createGain();
+            inputGainNode.gain.value = parseInt(volInput.value) / 100;
+            var analyser = audioCtx.createAnalyser();
+            analyser.fftSize = 256;
+            src.connect(inputGainNode);
+            inputGainNode.connect(analyser);
+            // Não conectar ao destination para não gerar echo local
+
+            vuSection.style.display = 'block';
+            var data = new Uint8Array(analyser.frequencyBinCount);
+            peakDecay = 0;
+
+            vuInterval = setInterval(function () {
+                analyser.getByteTimeDomainData(data);
+                var max = 0;
+                for (var i = 0; i < data.length; i++) {
+                    var v = Math.abs(data[i] - 128);
+                    if (v > max) max = v;
+                }
+                var pct = (max / 128) * 100;
+                vuFill.style.width = Math.min(pct, 100) + '%';
+
+                // peak hold
+                if (pct >= peakDecay) {
+                    peakDecay = pct;
+                    clearTimeout(peakHoldTimer);
+                    peakHoldTimer = setTimeout(function () { peakDecay = 0; }, 1500);
+                } else {
+                    peakDecay = Math.max(0, peakDecay - 1.5);
+                }
+                vuPeakMarker.style.left = Math.min(peakDecay, 99) + '%';
+                vuPeakMarker.classList.toggle('show', peakDecay > 2);
+
+                // dB approximation
+                var db = pct > 0 ? Math.round(20 * Math.log10(pct / 100)) : -100;
+                vuPeakText.textContent = (db > -100 ? db : '−∞') + ' dB';
+            }, 70);
+        } catch (e) { console.warn('[Guest] VU meter error:', e); }
+    }
+
+    function stopVUMeter() {
+        clearInterval(vuInterval);
+        vuInterval = null;
+        clearTimeout(peakHoldTimer);
+        if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; }
+        inputGainNode = null;
+        vuSection.style.display = 'none';
+        vuFill.style.width = '0%';
+        vuPeakMarker.classList.remove('show');
+        peakDecay = 0;
+    }
+
+    // ─── RETURN AUDIO ────────────────────────────────────────────
+    function setupReturnAudio(stream) {
+        // Conectar retorno com controle de volume
+        try {
+            if (!returnAudioCtx) {
+                returnAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+            }
+            var src = returnAudioCtx.createMediaStreamSource(stream);
+            returnGainNode = returnAudioCtx.createGain();
+            returnGainNode.gain.value = parseInt(volOutput.value) / 100;
+            src.connect(returnGainNode);
+            returnGainNode.connect(returnAudioCtx.destination);
+        } catch (e) {
+            // fallback: usa o atributo de volume do video
+            returnVideo.volume = parseInt(volOutput.value) / 100;
+        }
+    }
+
+    // ─── VOLUME CONTROLS ─────────────────────────────────────────
+    volInput.addEventListener('input', function () {
+        var pct = parseInt(volInput.value);
+        volInputPct.textContent = pct + '%';
+        if (inputGainNode) inputGainNode.gain.value = pct / 100;
+    });
+
+    volOutput.addEventListener('input', function () {
+        var pct = parseInt(volOutput.value);
+        volOutputPct.textContent = pct + '%';
+        if (returnGainNode) {
+            returnGainNode.gain.value = pct / 100;
+        } else {
+            returnVideo.volume = Math.min(pct / 100, 1);
+        }
+    });
+
+    // ─── QUALITY MONITOR ─────────────────────────────────────────
+    function startQualityMonitor() {
+        qualitySection.classList.add('show');
+        qualityInterval = setInterval(function () {
+            if (!vdo || !connected) return;
+            try {
+                var pc = vdo._pc || null;
+                if (!pc) return;
+                pc.getStats(null).then(function (stats) {
+                    stats.forEach(function (report) {
+                        if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                            var rtt = report.currentRoundTripTime;
+                            var ms = Math.round((rtt || 0) * 1000);
+                            qualityRtt.textContent = ms + 'ms';
+                            var cls = 'good';
+                            if (rtt > 0.3) cls = 'fair';
+                            if (rtt > 0.6) cls = 'poor';
+                            qualityBar.className = 'quality-bar ' + cls;
+                        }
+                    });
+                }).catch(function () {});
+            } catch (e) {}
+        }, 3000);
+    }
+
+    function stopQualityMonitor() {
+        clearInterval(qualityInterval);
+        qualityInterval = null;
+        qualitySection.classList.remove('show');
+    }
+
+    // ─── VIEW RETURN ─────────────────────────────────────────────
+    var viewRetryCount = 0;
+    function startViewReturn() {
+        if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
+        if (!vdo || !connected) return;
+        vdo.view(RETURN_STREAM_ID, { audio: true, video: true }).then(function (stream) {
+            if (stream && stream.active) {
+                returnVideo.srcObject = stream;
+                returnVideo.classList.add('active');
+                returnPh.style.display = 'none';
+                returnVideo.play().catch(function () {});
+                setupReturnAudio(stream);
+                viewRetryCount = 0;
+            } else {
+                scheduleViewRetry();
+            }
+        }).catch(function (err) {
+            console.warn('[Guest] View return error:', err);
+            scheduleViewRetry();
+        });
+    }
+
+    function scheduleViewRetry() {
+        if (viewRetryCount >= 6) return;
+        var delay = Math.min(3000 * Math.pow(1.5, viewRetryCount), 30000);
+        viewRetryCount++;
+        viewRetry = setTimeout(startViewReturn, delay);
+    }
+
+    // ─── getUserMedia ─────────────────────────────────────────────
+    function getMediaStream() {
+        var audioConstraints = {
+            echoCancellation: true,
+            noiseSuppression: true,
+            autoGainControl: true,
+            sampleRate: { ideal: 48000 },
+            channelCount: { ideal: 1 }
+        };
+        var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
+        var videoConstraints = {
+            width: { ideal: 1280, min: 320 },
+            height: { ideal: 720, min: 240 }
+        };
+        if (isMobile) videoConstraints.facingMode = facingMode;
+
+        return navigator.mediaDevices.getUserMedia({
+            video: videoConstraints,
+            audio: audioConstraints
+        }).catch(function (err) {
+            // fallback: remove sampleRate/channelCount
+            if (err.name === 'NotReadableError' || err.name === 'OverconstrainedError') {
+                return navigator.mediaDevices.getUserMedia({
+                    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                    audio: { echoCancellation: true, noiseSuppression: true }
+                });
+            }
+            throw err;
+        });
+    }
+
+    // ─── FLIP CAMERA ─────────────────────────────────────────────
+    document.getElementById('btn-flip').addEventListener('click', function () {
+        if (!connected || !localStream) return;
+        facingMode = facingMode === 'user' ? 'environment' : 'user';
+        document.getElementById('btn-cam-front').classList.toggle('active', facingMode === 'user');
+        document.getElementById('btn-cam-back').classList.toggle('active', facingMode === 'environment');
+        switchCamera();
+    });
+    document.getElementById('btn-cam-front').addEventListener('click', function () {
+        if (facingMode === 'user') return;
+        facingMode = 'user';
+        this.classList.add('active');
+        document.getElementById('btn-cam-back').classList.remove('active');
+        switchCamera();
+    });
+    document.getElementById('btn-cam-back').addEventListener('click', function () {
+        if (facingMode === 'environment') return;
+        facingMode = 'environment';
+        this.classList.add('active');
+        document.getElementById('btn-cam-front').classList.remove('active');
+        switchCamera();
+    });
+
+    function switchCamera() {
+        if (!localStream) return;
+        localStream.getVideoTracks().forEach(function (t) { t.stop(); });
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        }).then(function (newStream) {
+            var newVideoTrack = newStream.getVideoTracks()[0];
+            localVideo.srcObject = null;
+            var tracks = localStream.getVideoTracks();
+            tracks.forEach(function (t) { localStream.removeTrack(t); });
+            localStream.addTrack(newVideoTrack);
+            localVideo.srcObject = localStream;
+            // replace track na conexão VDO se possível
+            if (vdo && vdo._pc) {
+                var senders = vdo._pc.getSenders ? vdo._pc.getSenders() : [];
+                senders.forEach(function (sender) {
+                    if (sender.track && sender.track.kind === 'video') {
+                        sender.replaceTrack(newVideoTrack).catch(function (e) { console.warn('[Guest] replaceTrack error:', e); });
+                    }
+                });
+            }
+            // aplica espelho conforme câmera
+            localVideo.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'none';
+        }).catch(function (err) {
+            console.warn('[Guest] Switch camera error:', err);
+        });
+    }
+
+    // ─── FULLSCREEN ───────────────────────────────────────────────
+    function requestFS(el) {
+        if (el.webkitEnterFullscreen) { el.webkitEnterFullscreen(); return; }
+        if (el.requestFullscreen) el.requestFullscreen();
+        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+    }
+    document.getElementById('btn-fs-local').addEventListener('click', function () { requestFS(localVideo); });
+    document.getElementById('btn-fs-return').addEventListener('click', function () { requestFS(returnVideo); });
+
+    // ─── SDK LOAD ─────────────────────────────────────────────────
+    var sdkPromise = null;
+    function loadSDK() {
+        if (sdkPromise) return sdkPromise;
+        sdkPromise = new Promise(function (resolve, reject) {
+            if (typeof VDONinjaSDK !== 'undefined') { resolve(); return; }
+            var idx = 0;
+            function tryLoad() {
+                if (idx >= SDK_URLS.length) { reject(new Error('SDK indisponível')); return; }
+                var s = document.createElement('script');
+                s.src = SDK_URLS[idx++];
+                s.crossOrigin = 'anonymous';
+                s.onload = resolve;
+                s.onerror = tryLoad;
+                document.body.appendChild(s);
+            }
+            tryLoad();
+        });
+        return sdkPromise;
+    }
+
+    // ─── CLEANUP ──────────────────────────────────────────────────
+    function cleanup() {
+        if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
+        viewRetryCount = 0;
+        stopVUMeter();
+        stopQualityMonitor();
+        if (vdo) {
+            try { vdo.stopPublishing(); } catch (e) {}
+            try { vdo.stopViewing(RETURN_STREAM_ID); } catch (e) {}
+        }
+        if (localStream) {
+            localStream.getTracks().forEach(function (t) { t.stop(); });
+            localStream = null;
+        }
+        localVideo.srcObject = null;
+        hideLocalCamera();
+        returnVideo.srcObject = null;
+        returnVideo.classList.remove('active');
+        returnPh.style.display = 'flex';
+        connected = false;
+        publishing = false;
+        if (returnAudioCtx) { try { returnAudioCtx.close(); } catch (e) {} returnAudioCtx = null; returnGainNode = null; }
+    }
+
+    // ─── MAIN TOGGLE ─────────────────────────────────────────────
+    mainBtn.addEventListener('click', function () {
+        if (connected) {
+            cleanup();
+            if (vdo) { try { vdo.disconnect(); } catch (e) {} vdo = null; }
+            mainBtn.className = 'main-btn start';
+            mainBtn.textContent = 'Ativar Câmera';
+            setStatus('Desconectado', '');
+            setInfo('Câmera desativada. Clique para reconectar.');
             return;
         }
 
-        var streamID = 'slot_' + slot;
-        document.getElementById('slot-label').textContent = 'Convidado: ' + slot;
+        mainBtn.disabled = true;
+        mainBtn.innerHTML = '<span class="btn-spinner"></span>Carregando...';
+        setInfo('Carregando SDK...');
 
-        var vdo = null;
-        var localStream = null;
-        var connected = false;
-        var viewRetry = null;
-        var qualityInterval = null;
-        var vuInterval = null;
-        var audioContext = null;
-        var analyserNode = null;
-        var localVideo = document.getElementById('local-video');
-        var returnVideo = document.getElementById('return-video');
-        var toggleBtn = document.getElementById('btn-toggle');
-        var infoText = document.getElementById('info-text');
-        var dot = document.getElementById('dot');
-        var spinner = document.getElementById('spinner');
-        var qualityEl = document.getElementById('quality-indicator');
-        var qualityBar = document.getElementById('quality-bar');
-        var vuMeter = document.getElementById('vu-meter');
-        var vuFill = document.getElementById('vu-fill');
-        var fsBtn = document.getElementById('fs-btn');
-
-        // ---- helpers ----
-        function showVideo() { localVideo.classList.remove('hidden'); localVideo.classList.add('mirror'); }
-        function hideVideo() { localVideo.classList.remove('mirror'); localVideo.classList.add('hidden'); }
-
-        function setDot(state) {
-            dot.classList.remove('on','warning','off');
-            if (state === 'on') dot.classList.add('on');
-            else if (state === 'warning') dot.classList.add('warning');
-            else if (state === 'off') dot.classList.add('off');
-        }
-
-        function setBtnText(connecting) {
-            toggleBtn.textContent = connecting
-                ? 'Conectando...'
-                : (connected ? 'Desativar Câmera' : 'Ativar Câmera');
-            toggleBtn.className = 'btn ' + (connected ? 'btn-danger' : 'btn-primary');
-        }
-
-        function showSpinner() { spinner.classList.add('active'); }
-        function hideSpinner() { spinner.classList.remove('active'); }
-
-        // ---- VU meter (indicador de áudio) ----
-        function startVUMeter(stream) {
-            if (/Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent)) {
-                vuMeter.style.display = 'none'; return;
-            }
-            try {
-                audioContext = new (window.AudioContext || window.webkitAudioContext)();
-                var src = audioContext.createMediaStreamSource(stream);
-                analyserNode = audioContext.createAnalyser();
-                analyserNode.fftSize = 256;
-                src.connect(analyserNode);
-                vuMeter.style.display = 'flex';
-                var data = new Uint8Array(analyserNode.frequencyBinCount);
-                vuInterval = setInterval(function() {
-                    analyserNode.getByteTimeDomainData(data);
-                    var max = 0;
-                    for (var i = 0; i < data.length; i++) {
-                        var v = Math.abs(data[i] - 128);
-                        if (v > max) max = v;
-                    }
-                    var pct = (max / 128) * 100;
-                    vuFill.style.width = Math.min(pct, 100) + '%';
-                    vuFill.className = 'vu-fill';
-                    if (pct > 90) vuFill.classList.add('clip');
-                    else if (pct > 50) vuFill.classList.add('warn');
-                }, 100);
-            } catch(e) {
-                console.warn('[Guest] VU meter not available:', e);
-            }
-        }
-        function stopVUMeter() {
-            if (vuInterval) { clearInterval(vuInterval); vuInterval = null; }
-            if (audioContext) { try { audioContext.close(); } catch(e) {} audioContext = null; analyserNode = null; }
-            vuMeter.style.display = 'none';
-            vuFill.style.width = '0%';
-        }
-
-        // ---- getUserMedia com fallback (PC sem facingMode + áudio adaptável) ----
-        function getAudioConstraints() {
-            return {
-                echoCancellation: true,
-                noiseSuppression: true,
-                autoGainControl: true,
-                sampleRate: { ideal: 48000 },
-                channelCount: { ideal: 1 }
-            };
-        }
-        function getUserMediaWithFallback() {
-            var audio = getAudioConstraints();
-            return navigator.mediaDevices.getUserMedia({
-                video: {
-                    facingMode: 'user',
-                    width: { ideal: 1280, min: 320, max: 1920 },
-                    height: { ideal: 720, min: 240, max: 1080 }
-                },
-                audio: audio
-            }).catch(function(err) {
-                if (err.name === 'OverconstrainedError' || err.name === 'TypeError') {
-                    // fallback 1: sem facingMode
-                    return navigator.mediaDevices.getUserMedia({
-                        video: {
-                            width: { ideal: 1280, min: 320, max: 1920 },
-                            height: { ideal: 720, min: 240, max: 1080 }
-                        },
-                        audio: audio
-                    });
-                }
-                if (err.name === 'NotReadableError' || err.name === 'NotFoundError') {
-                    // fallback 2: áudio mínimo (sampleRate/channelCount podem falhar)
-                    return navigator.mediaDevices.getUserMedia({
-                        video: {
-                            facingMode: 'user',
-                            width: { ideal: 1280, min: 320, max: 1920 },
-                            height: { ideal: 720, min: 240, max: 1080 }
-                        },
-                        audio: {
-                            echoCancellation: true,
-                            noiseSuppression: true,
-                            autoGainControl: true
-                        }
-                    });
-                }
-                throw err;
-            });
-        }
-
-        // ---- SDK preload (inicia imediatamente, evita gesture expiry iOS) ----
-        var SDK_URLS = [
-            'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js',
-            'https://unpkg.com/@vdoninja/sdk@1.3.18/dist/vdoninja-sdk.min.js',
-            'https://cdnjs.cloudflare.com/ajax/libs/vdo-ninja-sdk/1.3.18/vdoninja-sdk.min.js',
-        ];
-        var sdkLoaded = null;
-        function loadSDK() {
-            if (sdkLoaded) return sdkLoaded;
-            sdkLoaded = new Promise(function(resolve, reject) {
-                if (typeof VDONinjaSDK !== 'undefined') { resolve(); return; }
-                var idx = 0;
-                function tryLoad() {
-                    if (idx >= SDK_URLS.length) {
-                        reject(new Error('Falha ao carregar SDK de transmissão.'));
-                        return;
-                    }
-                    var s = document.createElement('script');
-                    s.src = SDK_URLS[idx++];
-                    s.crossOrigin = 'anonymous';
-                    s.onload = function() { resolve(); };
-                    s.onerror = function() { tryLoad(); };
-                    document.body.appendChild(s);
-                }
-                tryLoad();
-            });
-            return sdkLoaded;
-        }
-        // inicia o carregamento imediatamente
-        loadSDK();
-
-        // ---- fullscreen (compatível iOS + desktop) ----
-        function toggleFullscreen() {
-            var el = returnVideo;
-            // iOS Safari: usa webkitEnterFullscreen no elemento video
-            if (el.webkitEnterFullscreen && !document.webkitFullscreenElement && !document.fullscreenElement) {
-                el.webkitEnterFullscreen();
-                return;
-            }
-            if (!document.fullscreenElement && !document.webkitFullscreenElement) {
-                if (el.requestFullscreen) el.requestFullscreen();
-                else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-            } else {
-                if (document.exitFullscreen) document.exitFullscreen();
-                else if (document.webkitExitFullscreen) document.webkitExitFullscreen();
-            }
-        }
-        fsBtn.addEventListener('click', toggleFullscreen);
-
-        // ---- quality monitor ----
-        function startQualityMonitor() {
-            qualityEl.style.display = 'flex';
-            qualityInterval = setInterval(function() {
-                if (!vdo || !connected) return;
-                try {
-                    var pc = vdo._pc || null;
-                    if (!pc) return;
-                    pc.getStats(null).then(function(stats) {
-                        stats.forEach(function(report) {
-                            if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-                                var rtt = report.currentRoundTripTime;
-                                var quality = 'good';
-                                var pct = 80;
-                                if (rtt > 0.3) { quality = 'fair'; pct = 45; }
-                                if (rtt > 0.6) { quality = 'poor'; pct = 20; }
-                                qualityBar.className = quality;
-                                qualityBar.style.width = pct + '%';
-                            }
-                        });
-                    }).catch(function() {});
-                } catch(e) {}
-            }, 3000);
-        }
-
-        function stopQualityMonitor() {
-            if (qualityInterval) { clearInterval(qualityInterval); qualityInterval = null; }
-            qualityEl.style.display = 'none';
-        }
-
-        // ---- view return ----
-        var viewRetryCount = 0;
-        function startViewReturn() {
-            return new Promise(function(resolve) {
-                if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
-                if (!vdo || !connected) { resolve(); return; }
-                vdo.view('NossaTV_CAM', { audio: false, video: true }).then(function(stream) {
-                    if (stream && stream.active) {
-                        returnVideo.srcObject = stream;
-                        returnVideo.classList.add('active');
-                        returnVideo.play().catch(function(e) { console.warn('[Guest] Return play:', e); });
-                        viewRetryCount = 0;
-                    } else if (viewRetryCount < 5) {
-                        var d = Math.min(3000 * (1 << viewRetryCount), 30000);
-                        viewRetryCount++;
-                        viewRetry = setTimeout(startViewReturn, d);
-                    }
-                    resolve();
-                }).catch(function(err) {
-                    console.warn('[Guest] View error:', err);
-                    if (viewRetryCount < 5) {
-                        var d = Math.min(3000 * (1 << viewRetryCount), 30000);
-                        viewRetryCount++;
-                        viewRetry = setTimeout(startViewReturn, d);
-                    }
-                    resolve();
-                });
-            });
-        }
-
-        // ---- cleanup ----
-        function cleanup() {
-            if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
-            viewRetryCount = 0;
-            stopQualityMonitor();
-            stopVUMeter();
-            if (vdo) {
-                try { vdo.stopPublishing(); } catch(e) {}
-                try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
-            }
-            if (localStream) {
-                localStream.getTracks().forEach(function(t) { t.stop(); });
-                localStream = null;
-            }
-            localVideo.srcObject = null;
-            hideVideo();
-            returnVideo.srcObject = null;
-            returnVideo.classList.remove('active');
-            connected = false;
-            setDot('');
-            hideSpinner();
-        }
-
-        // ---- main toggle ----
-        toggleBtn.addEventListener('click', function() {
-            if (connected) {
-                if (vdo && localStream) {
-                    try { vdo.stopPublishing(); } catch(e) {}
-                    try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
-                }
-                cleanup();
-                vdo = null;
-                toggleBtn.disabled = false;
-                setBtnText(false);
-                infoText.textContent = 'Ao conectar, sua câmera e áudio serão enviados para a transmissão ao vivo.';
-                return;
-            }
-
-            toggleBtn.disabled = true;
-            setBtnText(true);
-            showSpinner();
-            infoText.textContent = 'Carregando...';
-
-            // --- Step 0: load SDK (lazy) + getUserMedia ---
-            var p = loadSDK().then(function() {
-                infoText.textContent = 'Solicitando câmera e microfone...';
-                return getUserMediaWithFallback();
-            }).then(function(stream) {
+        loadSDK()
+            .then(function () {
+                mainBtn.innerHTML = '<span class="btn-spinner"></span>Acessando câmera...';
+                setInfo('Solicitando câmera e microfone...');
+                setStatus('Acessando câmera', 'connecting');
+                return getMediaStream();
+            })
+            .then(function (stream) {
                 localStream = stream;
                 localVideo.srcObject = stream;
-                showVideo();
-                toggleBtn.textContent = 'Conectando...';
-                infoText.textContent = 'Conectando ao servidor...';
+                showLocalCamera();
+                startVUMeter(stream);
 
-                vdo = new VDONinjaSDK({
-                    iceServers: [
-                        { urls: 'stun:stun.l.google.com:19302' },
-                        { urls: 'stun:stun1.l.google.com:19302' },
-                        { urls: 'stun:stun2.l.google.com:19302' },
-                        { urls: 'stun:stun3.l.google.com:19302' },
-                        { urls: 'stun:stun4.l.google.com:19302' },
-                    ],
-                    password: false,
-                    salt: 'vdo.ninja',
-                });
+                mainBtn.innerHTML = '<span class="btn-spinner"></span>Conectando...';
+                setInfo('Conectando ao servidor VDO.Ninja...');
+                setStatus('Conectando', 'connecting');
 
-                vdo.addEventListener('disconnected', function() {
-                    infoText.textContent = '⚠️ Conexão perdida. Clique em "Ativar Câmera" para reconectar.';
-                    setDot('off');
+                vdo = new VDONinjaSDK({ iceServers: ICE, password: false, salt: 'vdo.ninja' });
+
+                vdo.addEventListener('disconnected', function () {
                     if (connected) {
+                        setStatus('Desconectado', 'error');
+                        setInfo('⚠️ Conexão perdida. Clique "Ativar Câmera" para reconectar.', 'error');
                         connected = false;
-                        toggleBtn.textContent = 'Ativar Câmera';
-                        toggleBtn.className = 'btn btn-primary';
+                        mainBtn.className = 'main-btn start';
+                        mainBtn.textContent = 'Ativar Câmera';
+                        mainBtn.disabled = false;
+                        stopQualityMonitor();
                     }
                 });
 
                 return vdo.connect();
-            });
-
-            // --- Step 2: joinRoom ---
-            p = p.then(function() {
-                infoText.textContent = 'Entrando na sala...';
-                return vdo.joinRoom({ room: room, password: false });
-            });
-
-            // --- Step 3: publish ---
-            p = p.then(function() {
-                infoText.textContent = 'Publicando transmissão...';
+            })
+            .then(function () {
+                setInfo('Entrando na sala...');
+                return vdo.joinRoom({ room: ROOM, password: false });
+            })
+            .then(function () {
+                setInfo('Publicando transmissão...');
                 return vdo.publish(localStream, { streamID: streamID, password: false });
-            });
-
-            // --- Step 4: success ---
-            p = p.then(function() {
+            })
+            .then(function () {
                 connected = true;
-                setDot('on');
-                toggleBtn.disabled = false;
-                setBtnText(false);
-                hideSpinner();
-                infoText.textContent = 'Conectado à transmissão.';
-                setTimeout(function() { startVUMeter(localStream); }, 1000);
-                startViewReturn().then(function() {
-                    setTimeout(startQualityMonitor, 8000);
-                }, function() {
-                    setTimeout(startQualityMonitor, 8000);
-                });
-            });
-
-            // --- Error handler ---
-            p.catch(function(err) {
+                publishing = true;
+                mainBtn.disabled = false;
+                mainBtn.className = 'main-btn stop';
+                mainBtn.textContent = '⏹ Desativar Câmera';
+                setStatus('AO VIVO', 'online');
+                setInfo('✅ Transmitindo ao vivo!', 'success');
+                setTimeout(function () { startViewReturn(); }, 2000);
+                setTimeout(function () { startQualityMonitor(); }, 8000);
+            })
+            .catch(function (err) {
                 console.error('[Guest] Error:', err);
                 cleanup();
-                if (vdo) { try { vdo.disconnect(); } catch(e) {} }
-                vdo = null;
-                toggleBtn.disabled = false;
-                setBtnText(false);
-                hideSpinner();
-                var msg = err.message || 'Erro desconhecido';
-                if (err.name === 'NotAllowedError') {
-                    msg = '❌ Permissão de câmera negada. Permita o acesso nas configurações do navegador e tente novamente.';
-                } else if (err.name === 'NotFoundError') {
-                    msg = '❌ Nenhuma câmera encontrada neste dispositivo.';
-                } else if (err.name === 'NotReadableError') {
-                    msg = '❌ Câmera ocupada por outro aplicativo. Feche e tente novamente.';
-                } else if (err.name === 'OverconstrainedError') {
-                    msg = '❌ Câmera não suporta a resolução necessária.';
-                } else if (err.name === 'AbortError') {
-                    msg = '❌ Falha de rede ao acessar a câmera. Verifique sua conexão.';
-                } else if (err.name === 'SecurityError') {
-                    msg = '❌ Acesso bloqueado (HTTPS requerido).';
-                }
-                infoText.textContent = msg;
-                // Log detalhado para diagnóstico
-                console.log('[Guest] Detalhes do erro:', JSON.stringify({
-                    name: err.name,
-                    message: err.message,
-                    constraint: err.constraint,
-                    userAgent: navigator.userAgent,
-                }));
+                if (vdo) { try { vdo.disconnect(); } catch (e) {} vdo = null; }
+                mainBtn.disabled = false;
+                mainBtn.className = 'main-btn start';
+                mainBtn.textContent = 'Ativar Câmera';
+                setStatus('Erro', 'error');
+                var msg = '❌ ';
+                if (err.name === 'NotAllowedError') msg += 'Permissão de câmera negada. Verifique as configurações do navegador.';
+                else if (err.name === 'NotFoundError') msg += 'Nenhuma câmera encontrada.';
+                else if (err.name === 'NotReadableError') msg += 'Câmera em uso por outro app.';
+                else if (err.name === 'SecurityError') msg += 'Acesso bloqueado — HTTPS é necessário.';
+                else msg += (err.message || 'Erro desconhecido');
+                setInfo(msg, 'error');
             });
-        });
+    });
 
-        // ---- beforeunload ----
-        window.addEventListener('beforeunload', function(e) {
-            if (connected) { e.preventDefault(); e.returnValue = ''; }
-        });
-    })();
-    </script>
+    // ─── INIT ─────────────────────────────────────────────────────
+    setInfo('Clique em "Ativar Câmera" para começar a transmitir.');
+    setStatus('Pronto', '');
+
+    loadSDK().then(function () {
+        mainBtn.disabled = false;
+        mainBtn.textContent = 'Ativar Câmera';
+        setInfo('Pronto. Clique para iniciar sua câmera.');
+    }).catch(function () {
+        mainBtn.disabled = false;
+        mainBtn.textContent = 'Ativar Câmera';
+        setInfo('⚠️ SDK carregará ao conectar.');
+    });
+
+    window.addEventListener('beforeunload', function (e) {
+        if (connected) { e.preventDefault(); e.returnValue = ''; }
+    });
+})();
+</script>
 </body>
 </html>
