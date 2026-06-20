@@ -163,27 +163,27 @@
         });
     }
 
-    function doView() {
+    function viewCam() {
         if (!vdo || !connected) return;
+        setStatus('Aguardando transmissão...', 'connecting');
         spinner.style.display = 'block';
-        vdo.view(STREAM_ID, { audio: false, video: true }).then(function(stream) {
+        vdo.view(STREAM_ID, { audio: false, video: true, password: false }).then(function(stream) {
             spinner.style.display = 'none';
             if (stream && stream.active) {
                 viewing = true;
                 showPlayer(stream);
                 setStatus('Online', 'online');
                 startQualityMonitor();
+                retryCount = 0;
             } else {
-                setStatus('Aguardando transmissão...', 'connecting');
-                retryTimer = setTimeout(doView, 5000);
+                retryTimer = setTimeout(viewCam, 3000);
             }
         }).catch(function(err) {
             spinner.style.display = 'none';
             console.warn('[Monitor] View error:', err);
             retryCount++;
             var delay = Math.min(3000 * (1 << Math.min(retryCount, 5)), 30000);
-            setStatus('Reconectando...', 'connecting');
-            retryTimer = setTimeout(doView, delay);
+            retryTimer = setTimeout(viewCam, delay);
         });
     }
 
@@ -220,7 +220,7 @@
             connected = true;
             spinner.style.display = 'none';
             setStatus('Conectado — aguardando transmissão', 'connecting');
-            doView();
+            setTimeout(viewCam, 1000);
         }).catch(function(err) {
             spinner.style.display = 'none';
             setStatus('Erro: ' + (err.message || 'conexão'), 'error');
