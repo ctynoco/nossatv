@@ -1272,7 +1272,9 @@
         var dot = document.getElementById('program-dot');
         panel.classList.add('active');
         if (ph) ph.style.display = 'none';
-        iframe.src = 'https://vdo.ninja/?view=NossaTV_CAM&room=NossaTV&password=false';
+        var u = new URL('monitor.html', window.location.href);
+        u.searchParams.set('embed', '1');
+        iframe.src = u.href;
         dot.className = 'program-panel-dot online';
     }
 

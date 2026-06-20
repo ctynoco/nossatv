@@ -77,6 +77,8 @@
 
     var room = 'NossaTV';
 
+    var isEmbedded = window.location.search.indexOf('embed=1') !== -1;
+
     var STREAM_ID = 'NossaTV_CAM';
     var vdo = null;
     var connected = false;
@@ -84,6 +86,12 @@
     var retryTimer = null;
     var retryCount = 0;
     var qualityInterval = null;
+    if (isEmbedded) {
+        document.getElementById('container').querySelector('.status-bar').style.display = 'none';
+        document.getElementById('info-btn').style.display = 'none';
+        document.getElementById('overlay').style.display = 'none';
+        document.getElementById('quality').style.display = 'none';
+    }
     var dot = document.getElementById('status-dot');
     var statusText = document.getElementById('status-text');
     var player = document.getElementById('player');
