@@ -849,10 +849,11 @@
             aspect-ratio: 16/9;
             background: #000;
         }
-        .program-panel-video {
+        .program-panel-iframe {
             width: 100%; height: 100%;
-            object-fit: contain;
+            border: none;
             display: block;
+            background: #000;
         }
         .program-panel-placeholder {
             position: absolute;
@@ -863,6 +864,7 @@
             justify-content: center;
             gap: 8px;
             background: #05050a;
+            pointer-events: none;
         }
         .program-panel-placeholder .ph-icon { font-size: 28px; opacity: 0.3; }
         .program-panel-placeholder .ph-text { font-size: 11px; color: var(--text3); }
@@ -990,13 +992,10 @@
             </div>
         </div>
         <div class="program-panel-video-wrap">
-            <video class="program-panel-video" id="program-video" autoplay playsinline muted></video>
-            <div class="program-panel-placeholder">
+            <iframe class="program-panel-iframe" id="program-iframe" sandbox="allow-scripts allow-same-origin allow-forms" loading="lazy"></iframe>
+            <div class="program-panel-placeholder" id="program-ph">
                 <div class="ph-icon">📺</div>
                 <div class="ph-text">Clique em "📺 Programa" para ativar</div>
-            </div>
-            <div class="program-panel-spinner" id="program-spinner">
-                <div class="spinner active"></div>
             </div>
         </div>
     </div>
@@ -1108,8 +1107,6 @@
     var masterAudioCtx = null;
     var masterDestGain = null; // Web Audio master output
     var slotVolumes = {}; // { slotId: { input: 1.0, output: 1.0 } }
-    var camStream = null;
-    var camViewActive = false;
     var programActive = false;
     var programPinned = false;
     var programDragStart = null;
@@ -1183,8 +1180,6 @@
     // ─── CONNECT VDO ─────────────────────────────────────────────
     function connectVDO() {
         stopMainCam();
-        var btn = document.getElementById('btn-programa');
-        if (btn) { btn.textContent = '📺 Programa'; btn.className = 'btn-action primary'; }
         setGlobalStatus('Carregando SDK...', 'connecting');
         loadSDK().then(function() {
             setGlobalStatus('Conectando ao servidor...', 'connecting');
@@ -1195,22 +1190,6 @@
                     var streamID = event.detail && event.detail.streamID;
                     var track = event.detail && event.detail.track;
                     if (!streamID || !track) return;
-
-                    // NossaTV_CAM: adiciona track direto no video do programa
-                    if (streamID === 'NossaTV_CAM') {
-                        var video = document.getElementById('program-video');
-                        var stream = video.srcObject;
-                        if (!stream) { stream = new MediaStream(); video.srcObject = stream; }
-                        stream.addTrack(track);
-                        if (!stream.active) { /* stream fica active ao addTrack */ }
-                        var spinner = document.getElementById('program-spinner');
-                        if (spinner) spinner.classList.remove('active');
-                        var dot = document.getElementById('program-dot');
-                        if (dot) dot.className = 'program-panel-dot online';
-                        programActive = true;
-                        camStream = stream;
-                        return;
-                    }
 
                     var slot = slots.find(function(s) { return s.streamID === streamID; });
                     if (!slot) return;
@@ -1282,78 +1261,31 @@
                 });
             }
         });
-        viewMainCam();
     }
 
-    var camRetryTimer = null;
-    var camRetryCount = 0;
     function viewMainCam() {
-        if (!vdo || !vdoReady || destroyed) return;
-        if (camViewActive) return;
-        camViewActive = true;
+        if (programActive) return;
+        programActive = true;
         var panel = document.getElementById('program-panel');
-        var spinner = document.getElementById('program-spinner');
-        var video = document.getElementById('program-video');
+        var iframe = document.getElementById('program-iframe');
+        var ph = document.getElementById('program-ph');
         var dot = document.getElementById('program-dot');
-        var ph = panel.querySelector('.program-panel-placeholder');
         panel.classList.add('active');
-        spinner.classList.add('active');
         if (ph) ph.style.display = 'none';
-        // Cria stream vazio — tracks chegam pelo evento 'track'
-        var emptyStream = new MediaStream();
-        video.srcObject = emptyStream;
-        camStream = emptyStream;
-        vdo.view('NossaTV_CAM', { audio: false, video: true }).then(function(stream) {
-            // tracks já podem estar no stream — mescla se necessário
-            if (stream && stream.active) {
-                stream.getTracks().forEach(function(t) {
-                    if (emptyStream.getTracks().indexOf(t) === -1) {
-                        emptyStream.addTrack(t);
-                    }
-                });
-            }
-            spinner.classList.remove('active');
-            dot.className = 'program-panel-dot online';
-            programActive = true;
-            video.play().catch(function() {});
-        }).catch(function(err) {
-            console.warn('[Vereadores] Erro ao ver NossaTV_CAM:', err);
-            camViewActive = false;
-            programActive = false;
-            panel.classList.remove('active');
-            spinner.classList.remove('active');
-            if (ph) ph.style.display = 'flex';
-            camRetryCount++;
-            var delay = Math.min(3000 * (1 << Math.min(camRetryCount, 5)), 30000);
-            camRetryTimer = setTimeout(function() {
-                camRetryTimer = null;
-                camViewActive = false;
-                viewMainCam();
-            }, delay);
-        });
+        iframe.src = 'https://vdo.ninja/?view=NossaTV_CAM&room=NossaTV&password=false';
+        dot.className = 'program-panel-dot online';
     }
 
     function stopMainCam() {
-        var panel = document.getElementById('program-panel');
-        var spinner = document.getElementById('program-spinner');
-        var video = document.getElementById('program-video');
-        var dot = document.getElementById('program-dot');
-        var ph = panel.querySelector('.program-panel-placeholder');
-        panel.classList.remove('active');
-        spinner.classList.remove('active');
-        if (ph) ph.style.display = 'flex';
-        video.srcObject = null;
-        dot.className = 'program-panel-dot';
-        if (camStream) {
-            camStream.getTracks().forEach(function(t) { t.stop(); });
-            camStream = null;
-        }
-        if (vdo) {
-            try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
-        }
-        camViewActive = false;
         programActive = false;
-        if (camRetryTimer) { clearTimeout(camRetryTimer); camRetryTimer = null; }
+        var panel = document.getElementById('program-panel');
+        var iframe = document.getElementById('program-iframe');
+        var ph = document.getElementById('program-ph');
+        var dot = document.getElementById('program-dot');
+        panel.classList.remove('active');
+        if (ph) ph.style.display = 'flex';
+        iframe.src = '';
+        dot.className = 'program-panel-dot';
     }
 
     // ─── SLOT CONNECTED ──────────────────────────────────────────
@@ -1907,8 +1839,6 @@
 
     window.addEventListener('beforeunload', function() {
         destroyed = true;
-        if (camRetryTimer) { clearTimeout(camRetryTimer); }
-        if (camStream) { camStream.getTracks().forEach(function(t) { t.stop(); }); }
         if (vdo) { try { vdo.disconnect(); } catch(e) {} }
         if (masterAudioCtx) { try { masterAudioCtx.close(); } catch(e) {} }
     });
