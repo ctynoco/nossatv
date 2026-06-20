@@ -24,6 +24,7 @@ export class VereadorManager {
         this._reconnectTimer = null;
         this._reconnectAttempts = 0;
         this._destroyed = false;
+        this._camStream = null;
         this.init();
     }
 
@@ -81,11 +82,16 @@ export class VereadorManager {
             this.vdo.addEventListener('connected', () => {
                 this._vdoReady = true;
                 this._reconnectAttempts = 0;
+                if (this._streamingCam && this._camStream) {
+                    this.vdo.publish(this._camStream, {
+                        streamID: 'NossaTV_CAM',
+                        password: false,
+                    }).catch(() => {});
+                }
             });
 
             this.vdo.addEventListener('disconnected', () => {
                 this._vdoReady = false;
-                this._streamingCam = false;
                 this.obs?.showNotification('⚠️ VDO.Ninja desconectado — reconectando...');
                 this._scheduleReconnect();
             });
@@ -568,6 +574,7 @@ export class VereadorManager {
             throw new Error('VDO.Ninja não está conectado');
         }
         try {
+            this._camStream = stream;
             await this.vdo.publish(stream, {
                 streamID: 'NossaTV_CAM',
                 password: false,
@@ -584,6 +591,7 @@ export class VereadorManager {
         if (!this.vdo) return;
         try { this.vdo.stopPublishing(); } catch(e) {}
         this._streamingCam = false;
+        this._camStream = null;
         // Se o OBS ainda estiver transmitindo, restaura program_ALL
         if (this.obs?.isStreaming) {
             const stream = this.obs._getProgramStream();
