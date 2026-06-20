@@ -3594,7 +3594,7 @@ class OBSClone {
 
             this._addVcamBadge();
             this._showVirtualCamLink(link);
-            this.showNotification('📷 Câmera virtual ativa! Link copiado.');
+            this.showNotification('📷 Aba VDO.Ninja aberta! Clique em "Start" para transmitir.');
         } catch (e) {
             console.error('[OBS] Erro ao iniciar câmera virtual:', e);
             this.showNotification('⚠️ Erro: ' + (e.message || 'conexão VDO.Ninja'));
@@ -3635,7 +3635,11 @@ class OBSClone {
 
         input.value = link;
         if (status) {
-            status.innerHTML = '<span class="status-dot status-online"></span> Online — compartilhe o link abaixo';
+            status.innerHTML = '<span class="status-dot status-online"></span> 🟢 Transmitindo via VDO.Ninja';
+        }
+        var pushDisplay = document.getElementById('vcam-push-link-display');
+        if (pushDisplay) {
+            pushDisplay.textContent = 'https://vdo.ninja/?push=slot_CAM&room=NossaTV';
         }
 
         if (qrCanvas) {

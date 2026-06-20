@@ -578,53 +578,24 @@ export class VereadorManager {
     }
 
     // ─────────────────────────────────────────
-    //  CÂMERA VIRTUAL (conexão dedicada, igual guest)
+    //  CÂMERA VIRTUAL (abre VDO.Ninja Push)
     // ─────────────────────────────────────────
     async startVirtualCamera(stream) {
-        if (this._camVDO) {
-            try { this._camVDO.disconnect(); } catch(e) {}
-            this._camVDO = null;
+        this._camStream = stream;
+        this._streamingCam = true;
+        const pushURL = `https://vdo.ninja/?push=slot_CAM&room=${ROOM}`;
+        const viewURL = `https://vdo.ninja/?view=slot_CAM&room=${ROOM}&solo`;
+        navigator.clipboard.writeText(viewURL).catch(function(){});
+        var win = window.open(pushURL, 'vdopush');
+        if (win) {
+            win.focus();
         }
-        try {
-            this._camStream = stream;
-            const cam = new VDONinjaSDK({
-                iceServers: ICE_SERVERS,
-                password: false,
-                salt: 'vdo.ninja',
-            });
-            await cam.connect();
-            await cam.joinRoom({ room: ROOM, password: false });
-            await cam.publish(stream, { streamID: 'slot_CAM', password: false });
-            const annResult = await cam.announce({ streamID: 'slot_CAM' });
-            this._camVDO = cam;
-            this._streamingCam = true;
-            this.obs?.showNotification('📡 VCAM publicado: ' + (annResult?.url || ''));
-            return `https://vdo.ninja/?view=slot_CAM&room=${ROOM}&solo`;
-        } catch (e) {
-            if (this._camVDO) {
-                try { this._camVDO.disconnect(); } catch(ex) {}
-                this._camVDO = null;
-            }
-            this._camStream = null;
-            this._streamingCam = false;
-            this.obs?.showNotification('❌ VCAM erro: ' + (e.message || 'desconhecido'));
-            throw e;
-        }
+        return viewURL;
     }
 
     stopVirtualCamera() {
-        if (this._camVDO) {
-            try { this._camVDO.disconnect(); } catch(e) {}
-            this._camVDO = null;
-        }
         this._streamingCam = false;
         this._camStream = null;
-        if (this.obs?.isStreaming) {
-            const stream = this.obs._getProgramStream();
-            if (stream) {
-                setTimeout(() => this.publishProgram(stream), 300);
-            }
-        }
     }
 
     isVirtualCameraActive() {
