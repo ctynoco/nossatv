@@ -2201,14 +2201,15 @@ class OBSClone {
     _renderVereadorLinksList(list) {
         const mgr = this.vereadorManager;
         if (!mgr || !mgr.slots) { list.innerHTML = '<p>Nenhum vereador configurado</p>'; return; }
-        list.innerHTML = mgr.slots.map((s, i) => {
+        list.innerHTML = mgr.slots.map((s) => {
             const isOnline = s.peerId ? 'online' : '';
+            const link = escapeHtml(s.link);
             return `<div class="source-item vereador-link-item ${isOnline}" data-slot="${s.id}">
                 <span class="source-icon">👤</span>
-                <span class="source-name" title="${s.link}">${s.label}</span>
+                <span class="source-name" title="${link}">${s.label}</span>
                 <div class="source-actions">
-                    <button class="btn-copy-link" data-link="${s.link}" title="Copiar link">📋</button>
-                    <span class="vereador-link-status ${isOnline}" title="${isOnline ? 'Conectado' : 'Desconectado'}">${isOnline ? '🟢' : '⚪'}</span>
+                    <button class="btn-copy-link" data-link="${link}" title="Copiar link">📋</button>
+                    <span class="vereador-link-status ${isOnline}">${isOnline ? '🟢' : '⚪'}</span>
                 </div>
             </div>`;
         }).join('');
