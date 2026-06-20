@@ -15,11 +15,13 @@ self.addEventListener('activate', (e) => {
 
 self.addEventListener('fetch', (e) => {
   if (e.request.method !== 'GET') return;
+  const url = new URL(e.request.url);
+  if (url.protocol === 'chrome-extension:' || url.protocol === 'moz-extension:') return;
 
   e.respondWith(
     caches.match(e.request).then((cached) => {
       const fetchPromise = fetch(e.request).then((res) => {
-        if (res.ok) {
+        if (res.ok && url.protocol === 'https:') {
           const clone = res.clone();
           caches.open(CACHE).then((c) => c.put(e.request, clone));
         }
