@@ -849,12 +849,6 @@
             aspect-ratio: 16/9;
             background: #000;
         }
-        .program-panel-iframe {
-            width: 100%; height: 100%;
-            border: none;
-            display: block;
-            background: #000;
-        }
         .program-panel-placeholder {
             position: absolute;
             inset: 0;
@@ -992,10 +986,9 @@
             </div>
         </div>
         <div class="program-panel-video-wrap">
-            <iframe class="program-panel-iframe" id="program-iframe" sandbox="allow-scripts allow-same-origin allow-forms" loading="lazy"></iframe>
             <div class="program-panel-placeholder" id="program-ph">
                 <div class="ph-icon">📺</div>
-                <div class="ph-text">Clique em "📺 Programa" para ativar</div>
+                <div class="ph-text">Programa abre em janela separada</div>
             </div>
         </div>
     </div>
@@ -1109,7 +1102,6 @@
     var slotVolumes = {}; // { slotId: { input: 1.0, output: 1.0 } }
     var programActive = false;
     var programPinned = false;
-    var programDragStart = null;
     var programDragOffset = null;
 
     // ─── INICIALIZA SLOTS ────────────────────────────────────────
@@ -1263,30 +1255,37 @@
         });
     }
 
+    var programWindow = null;
+
     function viewMainCam() {
         if (programActive) return;
         programActive = true;
         var panel = document.getElementById('program-panel');
-        var iframe = document.getElementById('program-iframe');
         var ph = document.getElementById('program-ph');
         var dot = document.getElementById('program-dot');
         panel.classList.add('active');
         if (ph) ph.style.display = 'none';
+        dot.className = 'program-panel-dot online';
         var u = new URL('monitor.html', window.location.href);
         u.searchParams.set('embed', '1');
-        iframe.src = u.href;
-        dot.className = 'program-panel-dot online';
+        programWindow = window.open(u.href, '_blank', 'width=480,height=360,resizable=yes');
+        if (!programWindow) {
+            // popup bloqueado — abre em nova aba
+            programWindow = window.open(u.href, '_blank');
+        }
     }
 
     function stopMainCam() {
         programActive = false;
+        if (programWindow && !programWindow.closed) {
+            programWindow.close();
+        }
+        programWindow = null;
         var panel = document.getElementById('program-panel');
-        var iframe = document.getElementById('program-iframe');
         var ph = document.getElementById('program-ph');
         var dot = document.getElementById('program-dot');
         panel.classList.remove('active');
         if (ph) ph.style.display = 'flex';
-        iframe.src = '';
         dot.className = 'program-panel-dot';
     }
 
