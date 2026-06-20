@@ -85,7 +85,6 @@
         }
 
         var streamID = 'slot_' + slot;
-        var programID = 'program_' + slot;
         document.getElementById('slot-label').textContent = 'Convidado: ' + slot;
 
         var vdo = null;
@@ -300,7 +299,7 @@
             return new Promise(function(resolve) {
                 if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
                 if (!vdo || !connected) { resolve(); return; }
-                vdo.view(programID, { audio: false, video: true }).then(function(stream) {
+                vdo.view('program_ALL', { audio: false, video: true }).then(function(stream) {
                     if (stream && stream.active) {
                         returnVideo.srcObject = stream;
                         returnVideo.classList.add('active');
@@ -332,7 +331,7 @@
             stopVUMeter();
             if (vdo) {
                 try { vdo.stopPublishing(); } catch(e) {}
-                try { vdo.stopViewing(programID); } catch(e) {}
+                try { vdo.stopViewing('program_ALL'); } catch(e) {}
             }
             if (localStream) {
                 localStream.getTracks().forEach(function(t) { t.stop(); });
@@ -352,7 +351,7 @@
             if (connected) {
                 if (vdo && localStream) {
                     try { vdo.stopPublishing(); } catch(e) {}
-                    try { vdo.stopViewing(programID); } catch(e) {}
+                    try { vdo.stopViewing('program_ALL'); } catch(e) {}
                 }
                 cleanup();
                 vdo = null;

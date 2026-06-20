@@ -2660,10 +2660,7 @@ class OBSClone {
                 setTimeout(() => {
                     const progStream = this._getProgramStream();
                     if (progStream) {
-                        for (const s of this.vereadorManager.slots || []) {
-                            this.vereadorManager.publishProgram(progStream, s.label);
-                        }
-                        this.vereadorManager.publishMonitor(progStream);
+                        this.vereadorManager.publishProgram(progStream);
                     }
                 }, 500);
             }
@@ -3294,10 +3291,7 @@ class OBSClone {
 
         // Para publicação do programa no VDO.Ninja + monitor
         if (this.vereadorManager?.vdo) {
-            for (const s of this.vereadorManager.slots || []) {
-                this.vereadorManager.stopProgramPublish(s.label);
-            }
-            this.vereadorManager.stopMonitorPublish();
+            this.vereadorManager.stopProgramPublish();
         }
 
         this.showNotification('⬛ Transmissão parada.');

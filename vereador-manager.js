@@ -505,17 +505,16 @@ export class VereadorManager {
         });
     }
 
-    publishProgram(stream, slotLabel) {
+    publishProgram(stream) {
         if (!this.vdo || !stream) return;
         try {
-            const streamId = 'program_' + slotLabel;
-            this.vdo.publish(stream, { streamID: streamId });
+            this.vdo.publish(stream, { streamID: 'program_ALL' });
         } catch (e) {
             console.warn('[Vereador] Erro ao publicar programa:', e);
         }
     }
 
-    stopProgramPublish(slotLabel) {
+    stopProgramPublish() {
         if (!this.vdo) return;
         try {
             this.vdo.stopPublishing();
@@ -525,21 +524,11 @@ export class VereadorManager {
     }
 
     publishMonitor(stream) {
-        if (!this.vdo || !stream) return;
-        try {
-            this.vdo.publish(stream, { streamID: 'program_MONITOR' });
-        } catch (e) {
-            console.warn('[Vereador] Erro ao publicar monitor:', e);
-        }
+        this.publishProgram(stream);
     }
 
     stopMonitorPublish() {
-        if (!this.vdo) return;
-        try {
-            this.vdo.stopPublishing();
-        } catch (e) {
-            console.warn('[Vereador] Erro ao parar monitor:', e);
-        }
+        this.stopProgramPublish();
     }
 
     getMonitorLink() {
