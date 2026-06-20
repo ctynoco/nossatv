@@ -599,8 +599,10 @@ export class VereadorManager {
             });
             const result = await this.vdo.announce({ streamID: 'NossaTV_CAM' });
             this._streamingCam = true;
+            this.obs?.showNotification('📡 VCAM: ' + (result?.url ? 'OK → ' + result.url : 'announce sem URL'));
             return `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo`;
         } catch (e) {
+            this.obs?.showNotification('❌ VCAM erro: ' + (e.message || 'desconhecido'));
             this._camStream = null;
             this._streamingCam = false;
             throw e;
