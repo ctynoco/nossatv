@@ -194,18 +194,14 @@ class OBSClone {
         });
 
         // Virtual camera modal
-        const closeVcam = () => {
-            if (this.vereadorManager?.isVirtualCameraActive()) {
-                this.toggleVirtualCam();
-            } else {
-                document.getElementById('modal-vcam').style.display = 'none';
-            }
+        const closeVcamModal = () => {
+            document.getElementById('modal-vcam').style.display = 'none';
         };
-        document.getElementById('close-vcam-modal')?.addEventListener('click', closeVcam);
-        document.getElementById('close-vcam-btn')?.addEventListener('click', closeVcam);
+        document.getElementById('close-vcam-modal')?.addEventListener('click', closeVcamModal);
+        document.getElementById('close-vcam-btn')?.addEventListener('click', closeVcamModal);
         document.getElementById('vcam-stop-btn')?.addEventListener('click', () => this.toggleVirtualCam());
         document.getElementById('modal-vcam')?.addEventListener('click', (e) => {
-            if (e.target.id === 'modal-vcam') closeVcam();
+            if (e.target.id === 'modal-vcam') closeVcamModal();
         });
         document.getElementById('vcam-copy-btn')?.addEventListener('click', () => {
             const inp = document.getElementById('vcam-link-input');
@@ -3507,16 +3503,19 @@ class OBSClone {
         const btn = document.getElementById('virtual-cam-btn');
         if (!btn) return;
 
+        // Stop
         if (this.vereadorManager?.isVirtualCameraActive()) {
             this.vereadorManager.stopVirtualCamera();
             this.isVirtualCam = false;
             btn.classList.remove('active');
             btn.textContent = '📷 Câmera Virtual';
             document.getElementById('modal-vcam').style.display = 'none';
+            this._removeVcamBadge();
             this.showNotification('📷 Câmera virtual parada');
             return;
         }
 
+        // Start
         btn.textContent = '📷 Iniciando...';
         btn.disabled = true;
 
@@ -3535,6 +3534,7 @@ class OBSClone {
             btn.textContent = '📷 Cam. Virtual (Ativa)';
             btn.disabled = false;
 
+            this._addVcamBadge();
             this._showVirtualCamLink(link);
             this.showNotification('📷 Câmera virtual ativa! Link copiado.');
         } catch (e) {
@@ -3543,6 +3543,28 @@ class OBSClone {
             btn.textContent = '📷 Câmera Virtual';
             btn.disabled = false;
         }
+    }
+
+    _addVcamBadge() {
+        let badge = document.getElementById('vcam-badge');
+        if (badge) return;
+        badge = document.createElement('div');
+        badge.id = 'vcam-badge';
+        badge.className = 'vcam-badge';
+        badge.innerHTML = '<span class="status-dot status-online"></span> Câmera Virtual Ativa';
+        badge.title = 'Clique para ver o link';
+        badge.addEventListener('click', () => {
+            const input = document.getElementById('vcam-link-input');
+            if (input && input.value) {
+                document.getElementById('modal-vcam').style.display = 'flex';
+            }
+        });
+        document.body.appendChild(badge);
+    }
+
+    _removeVcamBadge() {
+        const badge = document.getElementById('vcam-badge');
+        if (badge) badge.remove();
     }
 
     _showVirtualCamLink(link) {
