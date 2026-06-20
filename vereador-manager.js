@@ -24,8 +24,6 @@ export class VereadorManager {
         this._reconnectTimer = null;
         this._reconnectAttempts = 0;
         this._destroyed = false;
-        this._camStream = null;
-        this._camVDO = null;
         this.init();
     }
 
@@ -80,13 +78,14 @@ export class VereadorManager {
                 }, 600);
             });
 
-            this.vdo.addEventListener('connected', async () => {
+            this.vdo.addEventListener('connected', () => {
                 this._vdoReady = true;
                 this._reconnectAttempts = 0;
             });
 
             this.vdo.addEventListener('disconnected', () => {
                 this._vdoReady = false;
+                this._streamingCam = false;
                 this.obs?.showNotification('⚠️ VDO.Ninja desconectado — reconectando...');
                 this._scheduleReconnect();
             });
@@ -293,10 +292,6 @@ export class VereadorManager {
         if (this._reconnectTimer) {
             clearTimeout(this._reconnectTimer);
             this._reconnectTimer = null;
-        }
-        if (this._camVDO) {
-            try { this._camVDO.disconnect(); } catch(e) {}
-            this._camVDO = null;
         }
         if (this.vdo) {
             try { this.vdo.disconnect(); } catch(e) {}
@@ -535,21 +530,9 @@ export class VereadorManager {
         });
     }
 
-    async _stopPublishingAndWait() {
-        if (!this.vdo) return;
-        if (!this.vdo.state?.publishing) return;
-        await new Promise((resolve) => {
-            const timer = setTimeout(resolve, 3000);
-            const onStopped = () => { clearTimeout(timer); this.vdo.removeEventListener('publishingStopped', onStopped); resolve(); };
-            this.vdo.addEventListener('publishingStopped', onStopped);
-            try { this.vdo.stopPublishing(); } catch(e) { clearTimeout(timer); this.vdo.removeEventListener('publishingStopped', onStopped); resolve(); }
-        });
-    }
-
-    async publishProgram(stream) {
+    publishProgram(stream) {
         if (!this.vdo || !stream) return;
         try {
-            await this._stopPublishingAndWait();
             this.vdo.publish(stream, { streamID: 'program_ALL' });
         } catch (e) {
             console.warn('[Vereador] Erro ao publicar programa:', e);
@@ -578,24 +561,36 @@ export class VereadorManager {
     }
 
     // ─────────────────────────────────────────
-    //  CÂMERA VIRTUAL (abre VDO.Ninja Push)
+    //  CÂMERA VIRTUAL (VDO.Ninja Direct Link)
     // ─────────────────────────────────────────
     async startVirtualCamera(stream) {
-        this._camStream = stream;
-        this._streamingCam = true;
-        const pushURL = `https://vdo.ninja/?push=slot_CAM&room=${ROOM}`;
-        const viewURL = `https://vdo.ninja/?view=slot_CAM&room=${ROOM}&solo`;
-        navigator.clipboard.writeText(viewURL).catch(function(){});
-        var win = window.open(pushURL, 'vdopush');
-        if (win) {
-            win.focus();
+        if (!this.vdo || !this._vdoReady) {
+            throw new Error('VDO.Ninja não está conectado');
         }
-        return viewURL;
+        try {
+            await this.vdo.publish(stream, {
+                streamID: 'NossaTV_CAM',
+                password: false,
+            });
+            this._streamingCam = true;
+            const link = `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo&password=false`;
+            return link;
+        } catch (e) {
+            throw e;
+        }
     }
 
     stopVirtualCamera() {
+        if (!this.vdo) return;
+        try { this.vdo.stopPublishing(); } catch(e) {}
         this._streamingCam = false;
-        this._camStream = null;
+        // Se o OBS ainda estiver transmitindo, restaura program_ALL
+        if (this.obs?.isStreaming) {
+            const stream = this.obs._getProgramStream();
+            if (stream) {
+                setTimeout(() => this.publishProgram(stream), 300);
+            }
+        }
     }
 
     isVirtualCameraActive() {

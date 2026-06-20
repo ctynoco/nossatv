@@ -3,20 +3,297 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+    <meta name="apple-mobile-web-app-capable" content="yes">
     <title>NossaTV - Monitor</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
-    <meta http-equiv="refresh" content="0; url=https://vdo.ninja/?view=slot_CAM&room=NossaTV&solo">
     <style>
-        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif}
-        html,body{width:100%;height:100%;background:#0f0f1a;color:#fff;display:flex;align-items:center;justify-content:center}
-        .msg{text-align:center;font-size:18px;color:#888}
-        .msg a{color:#1976d2;text-decoration:none}
+        *{margin:0;padding:0;box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+        html,body{width:100%;height:100%;background:#000;color:#fff;font-family:'Segoe UI',-apple-system,BlinkMacSystemFont,sans-serif;overflow:hidden}
+        #container{position:relative;width:100%;height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center}
+        .status-bar{position:fixed;top:0;left:0;right:0;background:rgba(0,0,0,.85);padding:8px 14px;display:flex;align-items:center;gap:10px;z-index:100;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);font-size:13px}
+        .status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;flex-shrink:0}
+        .status-dot.off{background:#555}
+        .status-dot.connecting{background:#ff9800;animation:pulse 1s infinite}
+        .status-dot.online{background:#4caf50;box-shadow:0 0 6px #4caf50}
+        .status-dot.error{background:#f44336}
+        @keyframes pulse{0%,100%{opacity:1}50%{opacity:.4}}
+        #status-text{color:#aaa;font-size:13px}
+        .info-btn{position:fixed;bottom:16px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.7);color:#888;border:1px solid #333;padding:8px 18px;border-radius:20px;font-size:12px;cursor:pointer;z-index:100;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:color .2s,border-color .2s;white-space:nowrap}
+        .info-btn:hover{color:#fff;border-color:#666}
+        #player{width:100%;height:100%;object-fit:contain;background:#000;display:none}
+        #player.active{display:block}
+        .no-stream{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:20px;text-align:center;z-index:1}
+        .no-stream .icon{font-size:48px;opacity:.3}
+        .no-stream .msg{font-size:16px;color:#666;max-width:280px;line-height:1.5}
+        .no-stream .sub-msg{font-size:13px;color:#444}
+        .quality{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:rgba(0,0,0,.6);padding:4px 12px;border-radius:12px;font-size:11px;color:#555;backdrop-filter:blur(4px);-webkit-backdrop-filter:blur(4px);z-index:90;display:none}
+        .quality .bar{width:60px;height:3px;border-radius:2px;background:#222;overflow:hidden}
+        .quality .bar span{display:block;height:100%;border-radius:2px;transition:width .5s,background .5s}
+        .quality .bar span.good{background:#4caf50;width:80%}
+        .quality .bar span.fair{background:#ff9800;width:45%}
+        .quality .bar span.poor{background:#f44336;width:20%}
+        .spinner{width:24px;height:24px;border:2px solid rgba(255,255,255,0.08);border-top-color:#1976d2;border-radius:50%;animation:spin .7s linear infinite;margin:0 auto}
+        @keyframes spin{to{transform:rotate(360deg)}}
+        .controls-overlay{position:fixed;bottom:0;left:0;right:0;background:linear-gradient(transparent,rgba(0,0,0,.8));padding:40px 16px 16px;display:flex;justify-content:center;gap:12px;z-index:90;opacity:0;transition:opacity .3s;pointer-events:none}
+        .controls-overlay.visible{opacity:1;pointer-events:auto}
+        .ctrl-btn{background:rgba(255,255,255,.1);border:none;color:#fff;padding:10px 16px;border-radius:10px;font-size:13px;cursor:pointer;backdrop-filter:blur(8px);-webkit-backdrop-filter:blur(8px);transition:background .2s}
+        .ctrl-btn:active{background:rgba(255,255,255,.2)}
+        @media(max-width:480px){.status-bar{font-size:12px;padding:6px 10px}.info-btn{font-size:11px;padding:6px 14px}}
     </style>
 </head>
 <body>
-    <div class="msg">
-        <p>Redirecionando para o monitor...</p>
-        <p><a href="https://vdo.ninja/?view=slot_CAM&room=NossaTV&solo">Clique aqui se não redirecionar</a></p>
+    <div id="container">
+        <div class="status-bar">
+            <span class="status-dot off" id="status-dot"></span>
+            <span id="status-text">Conectando...</span>
+            <span style="flex:1"></span>
+            <span style="font-size:11px;color:#555" id="slot-label">Monitor</span>
+        </div>
+
+        <video id="player" autoplay playsinline muted></video>
+
+        <div class="no-stream" id="no-stream">
+            <div class="spinner" id="spinner"></div>
+            <div class="icon">&#x1F4FA;</div>
+            <div class="msg">Aguardando transmissão ao vivo...</div>
+            <div class="sub-msg">Compartilhe o link do monitor com seu celular</div>
+        </div>
+
+        <div class="quality" id="quality">
+            <span>Qualidade</span>
+            <div class="bar"><span id="quality-bar"></span></div>
+        </div>
+
+        <button class="info-btn" id="info-btn">📋 Copiar link do monitor</button>
+
+        <div class="controls-overlay" id="overlay">
+            <button class="ctrl-btn" id="btn-fullscreen">⛶ Tela cheia</button>
+            <button class="ctrl-btn" id="btn-reconnect">⟳ Reconectar</button>
+        </div>
     </div>
+
+<script>
+(function(){
+    'use strict';
+
+    var room = 'NossaTV';
+
+    var STREAM_ID = 'NossaTV_CAM';
+    var vdo = null;
+    var connected = false;
+    var viewing = false;
+    var retryTimer = null;
+    var retryCount = 0;
+    var qualityInterval = null;
+    var dot = document.getElementById('status-dot');
+    var statusText = document.getElementById('status-text');
+    var player = document.getElementById('player');
+    var noStream = document.getElementById('no-stream');
+    var spinner = document.getElementById('spinner');
+    var qualityEl = document.getElementById('quality');
+    var qualityBar = document.getElementById('quality-bar');
+
+    var SDK_URLS = [
+        'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js',
+        'https://unpkg.com/@vdoninja/sdk@1.3.18/dist/vdoninja-sdk.min.js',
+        'https://cdnjs.cloudflare.com/ajax/libs/vdo-ninja-sdk/1.3.18/vdoninja-sdk.min.js',
+    ];
+
+    function setStatus(text, cls) {
+        statusText.textContent = text;
+        dot.className = 'status-dot ' + (cls || 'off');
+    }
+
+    function showPlayer(stream) {
+        player.srcObject = stream;
+        player.classList.add('active');
+        noStream.style.display = 'none';
+        player.play().catch(function(e) { console.warn('[Monitor] Play error:', e); });
+    }
+
+    function hidePlayer() {
+        player.srcObject = null;
+        player.classList.remove('active');
+        noStream.style.display = 'flex';
+    }
+
+    function startQualityMonitor() {
+        qualityEl.style.display = 'flex';
+        qualityInterval = setInterval(function() {
+            if (!vdo || !viewing) return;
+            try {
+                var pc = vdo._pc || null;
+                if (!pc) return;
+                pc.getStats(null).then(function(stats) {
+                    stats.forEach(function(report) {
+                        if (report.type === 'candidate-pair' && report.state === 'succeeded') {
+                            var rtt = report.currentRoundTripTime;
+                            var quality = 'good';
+                            var pct = 80;
+                            if (rtt > 0.3) { quality = 'fair'; pct = 45; }
+                            if (rtt > 0.6) { quality = 'poor'; pct = 20; }
+                            qualityBar.className = quality;
+                            qualityBar.style.width = pct + '%';
+                        }
+                    });
+                }).catch(function() {});
+            } catch(e) {}
+        }, 3000);
+    }
+
+    function stopQualityMonitor() {
+        if (qualityInterval) { clearInterval(qualityInterval); qualityInterval = null; }
+        qualityEl.style.display = 'none';
+    }
+
+    function loadSDK() {
+        return new Promise(function(resolve, reject) {
+            if (typeof VDONinjaSDK !== 'undefined') { resolve(); return; }
+            var idx = 0;
+            function tryLoad() {
+                if (idx >= SDK_URLS.length) { reject(new Error('SDK indisponível')); return; }
+                var s = document.createElement('script');
+                s.src = SDK_URLS[idx++];
+                s.crossOrigin = 'anonymous';
+                s.onload = function() { resolve(); };
+                s.onerror = function() { tryLoad(); };
+                document.body.appendChild(s);
+            }
+            tryLoad();
+        });
+    }
+
+    function viewCam() {
+        if (!vdo || !connected) return;
+        setStatus('Aguardando transmissão...', 'connecting');
+        spinner.style.display = 'block';
+        vdo.view(STREAM_ID, { audio: false, video: true, password: false }).then(function(stream) {
+            spinner.style.display = 'none';
+            if (stream && stream.active) {
+                viewing = true;
+                showPlayer(stream);
+                setStatus('Online', 'online');
+                startQualityMonitor();
+                retryCount = 0;
+            } else {
+                retryTimer = setTimeout(viewCam, 3000);
+            }
+        }).catch(function(err) {
+            spinner.style.display = 'none';
+            console.warn('[Monitor] View error:', err);
+            retryCount++;
+            var delay = Math.min(3000 * (1 << Math.min(retryCount, 5)), 30000);
+            retryTimer = setTimeout(viewCam, delay);
+        });
+    }
+
+    function connect() {
+        setStatus('Conectando ao servidor...', 'connecting');
+        spinner.style.display = 'block';
+
+        loadSDK().then(function() {
+            vdo = new VDONinjaSDK({
+                iceServers: [
+                    { urls: 'stun:stun.l.google.com:19302' },
+                    { urls: 'stun:stun1.l.google.com:19302' },
+                    { urls: 'stun:stun2.l.google.com:19302' },
+                    { urls: 'stun:stun3.l.google.com:19302' },
+                    { urls: 'stun:stun4.l.google.com:19302' },
+                ],
+                password: false,
+                salt: 'vdo.ninja',
+            });
+
+            vdo.addEventListener('disconnected', function() {
+                connected = false;
+                viewing = false;
+                stopQualityMonitor();
+                setStatus('Desconectado', 'offline');
+                hidePlayer();
+                setTimeout(connect, 3000);
+            });
+
+            return vdo.connect();
+        }).then(function() {
+            return vdo.joinRoom({ room: room, password: false });
+        }).then(function() {
+            connected = true;
+            spinner.style.display = 'none';
+            setStatus('Conectado — aguardando transmissão', 'connecting');
+            setTimeout(viewCam, 1000);
+        }).catch(function(err) {
+            spinner.style.display = 'none';
+            setStatus('Erro: ' + (err.message || 'conexão'), 'error');
+            setTimeout(connect, 5000);
+        });
+    }
+
+    function disconnect() {
+        if (retryTimer) { clearTimeout(retryTimer); retryTimer = null; }
+        stopQualityMonitor();
+        viewing = false;
+        hidePlayer();
+        if (vdo) {
+            try { vdo.stopViewing(STREAM_ID); } catch(e) {}
+            try { vdo.disconnect(); } catch(e) {}
+            vdo = null;
+        }
+        connected = false;
+    }
+
+    // Botão copiar link
+    document.getElementById('info-btn').addEventListener('click', function() {
+        var link = window.location.href;
+        navigator.clipboard.writeText(link).then(function() {
+            var btn = document.getElementById('info-btn');
+            btn.textContent = '✅ Link copiado!';
+            setTimeout(function() { btn.textContent = '📋 Copiar link do monitor'; }, 2000);
+        }).catch(function() {
+            var ta = document.createElement('textarea');
+            ta.value = link;
+            document.body.appendChild(ta);
+            ta.select();
+            document.execCommand('copy');
+            ta.remove();
+        });
+    });
+
+    // Botão fullscreen
+    document.getElementById('btn-fullscreen').addEventListener('click', function() {
+        var el = player;
+        if (el.webkitEnterFullscreen) {
+            el.webkitEnterFullscreen();
+        } else if (el.requestFullscreen) {
+            el.requestFullscreen();
+        } else if (document.documentElement.requestFullscreen) {
+            document.documentElement.requestFullscreen();
+        }
+    });
+
+    // Botão reconectar
+    document.getElementById('btn-reconnect').addEventListener('click', function() {
+        disconnect();
+        connect();
+    });
+
+    // Mostrar/esconder controles ao tocar
+    var overlay = document.getElementById('overlay');
+    var tapTimer = null;
+    document.addEventListener('click', function() {
+        overlay.classList.toggle('visible');
+        clearTimeout(tapTimer);
+        if (overlay.classList.contains('visible')) {
+            tapTimer = setTimeout(function() { overlay.classList.remove('visible'); }, 4000);
+        }
+    });
+
+    // Iniciar
+    connect();
+
+    window.addEventListener('beforeunload', function() {
+        disconnect();
+    });
+})();
+</script>
 </body>
 </html>
