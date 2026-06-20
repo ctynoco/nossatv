@@ -250,8 +250,8 @@ export const SOURCE_FORMS = {
             <input type="text" id="src-vereador-name" value="Vereador" />
         </div>
         <div class="form-group">
-            <label>Links dos Vereadores</label>
-            <div id="vereador-links-list"></div>
+            <label>Partido</label>
+            <input type="text" id="src-vereador-partido" value="PARTIDO" />
         </div>
         <div class="form-group">
             <label>Foto do Vereador</label>

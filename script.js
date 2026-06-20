@@ -2199,7 +2199,8 @@ class OBSClone {
     }
 
     _renderVereadorLinksList(list) {
-        const mgr = this.vereadorManager;
+        let mgr = this.vereadorManager;
+        if (!mgr || !mgr.slots) mgr = window.obsClone?.vereadorManager;
         if (!mgr || !mgr.slots) { list.innerHTML = '<p>Nenhum vereador configurado</p>'; return; }
         list.innerHTML = mgr.slots.map((s) => {
             const isOnline = s.peerId ? 'online' : '';
