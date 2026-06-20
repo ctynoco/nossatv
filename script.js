@@ -798,7 +798,7 @@ class OBSClone {
                 bg: this._validateColor(g('src-vereador-bg')),
             };
             case 'vdoninja': return {
-                streamID: g('src-vdo-streamid') || 'NossaTV_CAM',
+                streamID: g('src-vdo-streamid') || 'slot_CAM',
                 room: g('src-vdo-room') || 'NossaTV',
                 audio: g('src-vdo-audio') !== 'false',
                 video: g('src-vdo-video') !== 'false',
@@ -1055,7 +1055,7 @@ class OBSClone {
             }
 
             case 'vdoninja': {
-                const streamID = source.config.streamID || 'NossaTV_CAM';
+                const streamID = source.config.streamID || 'slot_CAM';
                 const mgr = this.vereadorManager || window.obsClone?.vereadorManager;
                 if (!mgr || !mgr.vdo) {
                     throw new Error('VDO.Ninja não está disponível');

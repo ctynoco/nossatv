@@ -594,12 +594,12 @@ export class VereadorManager {
             });
             await cam.connect();
             await cam.joinRoom({ room: ROOM, password: false });
-            await cam.publish(stream, { streamID: 'NossaTV_CAM', password: false });
-            const annResult = await cam.announce({ streamID: 'NossaTV_CAM' });
+            await cam.publish(stream, { streamID: 'slot_CAM', password: false });
+            const annResult = await cam.announce({ streamID: 'slot_CAM' });
             this._camVDO = cam;
             this._streamingCam = true;
             this.obs?.showNotification('📡 VCAM publicado: ' + (annResult?.url || ''));
-            return `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo`;
+            return `https://vdo.ninja/?view=slot_CAM&room=${ROOM}&solo`;
         } catch (e) {
             if (this._camVDO) {
                 try { this._camVDO.disconnect(); } catch(ex) {}

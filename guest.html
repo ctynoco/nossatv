@@ -299,7 +299,7 @@
             return new Promise(function(resolve) {
                 if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
                 if (!vdo || !connected) { resolve(); return; }
-                vdo.view('NossaTV_CAM', { audio: false, video: true }).then(function(stream) {
+                vdo.view('slot_CAM', { audio: false, video: true }).then(function(stream) {
                     if (stream && stream.active) {
                         returnVideo.srcObject = stream;
                         returnVideo.classList.add('active');
@@ -331,7 +331,7 @@
             stopVUMeter();
             if (vdo) {
                 try { vdo.stopPublishing(); } catch(e) {}
-                try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
+                try { vdo.stopViewing('slot_CAM'); } catch(e) {}
             }
             if (localStream) {
                 localStream.getTracks().forEach(function(t) { t.stop(); });
@@ -351,7 +351,7 @@
             if (connected) {
                 if (vdo && localStream) {
                     try { vdo.stopPublishing(); } catch(e) {}
-                    try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
+                    try { vdo.stopViewing('slot_CAM'); } catch(e) {}
                 }
                 cleanup();
                 vdo = null;
@@ -433,7 +433,7 @@
                     setTimeout(function() {
                         if (!returnVideo.srcObject) {
                             var fb = document.createElement('a');
-                            fb.href = 'https://vdo.ninja/?view=NossaTV_CAM&room=NossaTV';
+                            fb.href = 'https://vdo.ninja/?view=slot_CAM&room=NossaTV';
                             fb.target = '_blank';
                             fb.textContent = '📺 Retorno não apareceu? Abrir no VDO.Ninja';
                             fb.style.cssText = 'display:block;text-align:center;color:#1976d2;font-size:0.82em;margin-top:6px;text-decoration:none';

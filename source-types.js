@@ -276,7 +276,7 @@ export const SOURCE_FORMS = {
         </div>
         <div class="form-group">
             <label>Stream ID</label>
-            <input type="text" id="src-vdo-streamid" value="NossaTV_CAM" placeholder="ex: NossaTV_CAM" />
+            <input type="text" id="src-vdo-streamid" value="slot_CAM" placeholder="ex: slot_CAM" />
         </div>
         <div class="form-group">
             <label>Sala</label>
