@@ -597,10 +597,25 @@ export class VereadorManager {
                 streamID: 'NossaTV_CAM',
                 password: false,
             });
-            const result = await this.vdo.announce({ streamID: 'NossaTV_CAM' });
+            const result = await this.vdo.announce({ streamID: 'NossaTV_CAM', room: ROOM });
             this._streamingCam = true;
-            this.obs?.showNotification('📡 VCAM: ' + (result?.url ? 'OK → ' + result.url : 'announce sem URL'));
-            return `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo`;
+            // Auto-teste: tenta ver o próprio stream
+            try {
+                const selfTest = await this.vdo.view('NossaTV_CAM', { audio: false, video: true });
+                if (selfTest && selfTest.active) {
+                    this.obs?.showNotification('📡 VCAM OK + auto-view funcionou');
+                } else {
+                    this.obs?.showNotification('⚠️ VCAM: auto-view sem stream');
+                }
+                if (typeof this.vdo.stopViewing === 'function') {
+                    this.vdo.stopViewing('NossaTV_CAM');
+                }
+            } catch (e2) {
+                this.obs?.showNotification('⚠️ VCAM: auto-view falhou: ' + (e2.message || 'erro'));
+            }
+            const viewURL = `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo`;
+            this.obs?.showNotification('📡 VCAM link: ' + viewURL);
+            return viewURL;
         } catch (e) {
             this.obs?.showNotification('❌ VCAM erro: ' + (e.message || 'desconhecido'));
             this._camStream = null;
