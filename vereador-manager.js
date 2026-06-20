@@ -558,11 +558,18 @@ export class VereadorManager {
             iceServers: ICE_SERVERS,
             password: false,
             salt: 'vdo.ninja',
-            iceTransportPolicy: 'all',
             debug: false,
         });
 
         this._virtualCamVdo = vdo;
+
+        let hashedStreamID = 'NossaTV_CAM';
+
+        vdo.addEventListener('publishing', (event) => {
+            if (event.detail?.hashedStreamID) {
+                hashedStreamID = event.detail.hashedStreamID;
+            }
+        });
 
         try {
             await vdo.connect();
@@ -572,7 +579,7 @@ export class VereadorManager {
                 password: false,
             });
 
-            const link = `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo&password=false`;
+            const link = `https://vdo.ninja/?view=${hashedStreamID}&room=${ROOM}&solo&password=false`;
             return link;
         } catch (e) {
             this.stopVirtualCamera();
