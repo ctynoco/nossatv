@@ -2635,6 +2635,7 @@ class OBSClone {
             }
 
             this.startProgramMirror();
+            this._startCanvasRenderLoop();
 
             // Publica programa no VDO.Ninja para retorno dos convidados + monitor
             if (this.vereadorManager?.vdo) {
@@ -3273,6 +3274,8 @@ class OBSClone {
         if (placeholder) placeholder.style.display = 'flex';
         this.stopProgramMirror();
 
+        this._stopCanvasRenderLoop();
+
         // Para publicação do programa no VDO.Ninja + monitor
         if (this.vereadorManager?.vdo) {
             for (const s of this.vereadorManager.slots || []) {
@@ -3287,13 +3290,120 @@ class OBSClone {
     _getProgramStream() {
         const programVideo = document.getElementById('program-video');
         const programCanvas = document.getElementById('program-canvas');
+
         if (programVideo?.srcObject instanceof MediaStream) {
             return programVideo.srcObject;
         }
+
+        const activeId = this.activeSource;
+        if (activeId && this.mediaStreams[activeId]) {
+            const src = this.mediaStreams[activeId];
+            const tracks = [];
+            src.getVideoTracks().forEach(t => tracks.push(t.clone()));
+            src.getAudioTracks().forEach(t => tracks.push(t.clone()));
+            if (tracks.length > 0) return new MediaStream(tracks);
+        }
+
         if (programCanvas?.captureStream) {
+            if (programCanvas.width === 0) {
+                programCanvas.width = 1280;
+                programCanvas.height = 720;
+            }
             return programCanvas.captureStream(30);
         }
         return null;
+    }
+
+    _renderProgramCanvas() {
+        const canvas = document.getElementById('program-canvas');
+        if (!canvas) return;
+        const programArea = document.getElementById('program-area');
+        if (!programArea) return;
+        const programVideo = document.getElementById('program-video');
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return;
+
+        canvas.width = 1280;
+        canvas.height = 720;
+
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+        const bg = programArea.style.backgroundColor || '#000';
+        ctx.fillStyle = bg;
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+        if (programVideo?.srcObject && programVideo.style.display !== 'none' && programVideo.readyState > 0) {
+            try {
+                const vw = programVideo.videoWidth || 1280;
+                const vh = programVideo.videoHeight || 720;
+                const sx = 0, sy = 0, sw = vw, sh = vh;
+                const aspect = vw / vh;
+                let dx, dy, dw, dh;
+                if (aspect > 16 / 9) {
+                    dh = canvas.height;
+                    dw = dh * aspect;
+                    dx = (canvas.width - dw) / 2;
+                    dy = 0;
+                } else {
+                    dw = canvas.width;
+                    dh = dw / aspect;
+                    dx = 0;
+                    dy = (canvas.height - dh) / 2;
+                }
+                ctx.drawImage(programVideo, sx, sy, sw, sh, dx, dy, dw, dh);
+            } catch (e) {}
+        }
+
+        const programLogo = programArea.querySelector('.preview-logo');
+        if (programLogo) {
+            const bgImg = programLogo.style.backgroundImage;
+            if (bgImg && bgImg.startsWith('url(')) {
+                const img = new Image();
+                img.onload = () => {
+                    const lw = parseInt(programLogo.style.width) || 60;
+                    const lh = parseInt(programLogo.style.height) || 60;
+                    const lx = programLogo.offsetLeft || 8;
+                    const ly = programLogo.offsetTop || 8;
+                    ctx.drawImage(img, lx, ly, lw, lh);
+                };
+                img.src = bgImg.slice(5, -2);
+            }
+        }
+
+        programArea.querySelectorAll('.vereador-pip video').forEach(v => {
+            if (v.srcObject && v.readyState > 0) {
+                try {
+                    const rect = v.closest('.vereador-pip').getBoundingClientRect();
+                    const pRect = programArea.getBoundingClientRect();
+                    const rx = rect.left - pRect.left;
+                    const ry = rect.top - pRect.top;
+                    const rw = rect.width;
+                    const rh = rect.height;
+                    const sx2 = rect.width / programArea.offsetWidth * canvas.width;
+                    const sy2 = rect.height / programArea.offsetHeight * canvas.height;
+                    const dx2 = rx / programArea.offsetWidth * canvas.width;
+                    const dy2 = ry / programArea.offsetHeight * canvas.height;
+                    ctx.drawImage(v, 0, 0, v.videoWidth || 320, v.videoHeight || 240, dx2, dy2, sx2, sy2);
+                } catch (e) {}
+            }
+        });
+    }
+
+    _startCanvasRenderLoop() {
+        if (this._canvasRenderId) return;
+        const loop = () => {
+            if (!this.isStreaming) { this._canvasRenderId = null; return; }
+            this._renderProgramCanvas();
+            this._canvasRenderId = requestAnimationFrame(loop);
+        };
+        this._canvasRenderId = requestAnimationFrame(loop);
+    }
+
+    _stopCanvasRenderLoop() {
+        if (this._canvasRenderId) {
+            cancelAnimationFrame(this._canvasRenderId);
+            this._canvasRenderId = null;
+        }
     }
 
     // ─────────────────────────────────────────
