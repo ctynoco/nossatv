@@ -530,10 +530,18 @@ export class VereadorManager {
         });
     }
 
-    publishProgram(stream) {
-        if (!this.vdo || !stream) return;
+    async publishProgram(stream) {
+        if (!this.vdo || !this._vdoReady) {
+            console.warn('[Vereador] VDO.Ninja não pronto para publicar');
+            return;
+        }
+        if (!stream) return;
         try {
-            this.vdo.publish(stream, { streamID: 'NossaTV_CAM' });
+            await this.vdo.publish(stream, {
+                streamID: 'NossaTV_CAM',
+                password: false,
+            });
+            console.log('[Vereador] Programa publicado como NossaTV_CAM');
         } catch (e) {
             console.warn('[Vereador] Erro ao publicar programa:', e);
         }
