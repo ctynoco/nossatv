@@ -4,179 +4,190 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
     <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="mobile-web-app-capable" content="yes">
     <title>NossaTV — Transmissão</title>
     <link rel="icon" href="favicon.svg" type="image/svg+xml">
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
     <style>
-        :root {
-            --bg: #080810;
-            --surface: #111120;
-            --surface2: #191928;
-            --surface3: #222235;
-            --border: rgba(255,255,255,0.07);
-            --border2: rgba(255,255,255,0.13);
-            --accent: #4f6ef7;
-            --accent2: #7c3aed;
-            --green: #22c55e;
-            --orange: #f59e0b;
-            --red: #ef4444;
-            --text: #f0f0fa;
-            --text2: #8888aa;
-            --text3: #44445a;
-            --radius: 16px;
-            --radius-sm: 10px;
-        }
         * { margin: 0; padding: 0; box-sizing: border-box; -webkit-tap-highlight-color: transparent; }
 
-        body {
-            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+        :root {
+            --green: #22c55e;
+            --red: #ef4444;
+            --orange: #f59e0b;
+            --accent: #3b82f6;
+            --bg: #07090e;
+            --panel-bg: rgba(18, 22, 33, 0.96);
+            --text: #ffffff;
+            --text-secondary: #8a8d9a;
+        }
+
+        html, body {
+            width: 100%;
+            height: 100%;
             background: var(--bg);
             color: var(--text);
-            min-height: 100dvh;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            padding: env(safe-area-inset-top, 16px) 0 env(safe-area-inset-bottom, 20px);
-            -webkit-font-smoothing: antialiased;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            overflow: hidden;
         }
 
-        .page {
+        #app {
+            display: flex;
+            flex-direction: column;
             width: 100%;
-            max-width: 460px;
-            padding: 16px 16px 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 14px;
+            height: 100%;
+            position: relative;
         }
 
-        /* ── HEADER ─────────────────────────────── */
-        .hdr {
+        /* ── TOP BAR (VDO.Ninja Style) ─────────────────────────────── */
+        #top-bar {
+            position: relative;
+            background: #000000;
+            padding: env(safe-area-inset-top, 10px) 14px 10px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            z-index: 50;
+        }
+        #top-left {
+            display: flex;
+            flex-direction: column;
+            gap: 1px;
+        }
+        #top-title {
+            font-size: 15px;
+            font-weight: 800;
+            color: #ffffff;
+            letter-spacing: 0.3px;
+        }
+        #top-room-info {
+            font-size: 10px;
+            color: var(--text-secondary);
+        }
+        #top-right-stats {
             display: flex;
             align-items: center;
             gap: 10px;
-            padding-bottom: 4px;
+            font-size: 11px;
+            color: #e2e8f0;
         }
-        .hdr-logo {
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
+        .stat-group {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            opacity: 0.9;
+        }
+        .stat-group svg {
+            color: #a0aec0;
+        }
+        .kbps-indicator {
+            display: flex;
+            align-items: center;
+            gap: 3px;
+            color: var(--green);
+            font-weight: 700;
+            font-size: 10px;
+        }
+        .kbps-arrow {
+            font-size: 9px;
+            animation: pulse-arrow 1.5s infinite;
+        }
+        @keyframes pulse-arrow {
+            0%, 100% { opacity: 0.4; }
+            50% { opacity: 1; }
+        }
+
+        /* ── VIDEOS AREA ──────────────────────────── */
+        #videos-area {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            position: relative;
+            overflow: hidden;
+            background: #000000;
+        }
+
+        /* local camera (top) */
+        #local-wrap {
+            flex: 1;
+            position: relative;
+            background: #06070a;
+            overflow: hidden;
+            border-bottom: 1px solid rgba(255,255,255,0.04);
             display: flex;
             align-items: center;
             justify-content: center;
-            font-size: 14px;
         }
-        .hdr-info { flex: 1; }
-        .hdr-title {
-            font-size: 15px;
-            font-weight: 700;
-            background: linear-gradient(135deg, #7a9fff, #c4b5fd);
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: transparent;
-            background-clip: text;
-        }
-        .hdr-slot {
-            font-size: 11px;
-            color: var(--text3);
-        }
-
-        /* status pill */
-        .status-pill {
-            display: flex;
-            align-items: center;
-            gap: 6px;
-            background: var(--surface2);
-            border: 1px solid var(--border);
-            border-radius: 20px;
-            padding: 6px 12px;
-            font-size: 11px;
-            color: var(--text2);
-            transition: all 0.3s;
-        }
-        .status-pill.online {
-            background: rgba(34,197,94,0.1);
-            border-color: rgba(34,197,94,0.3);
-            color: var(--green);
-        }
-        .status-pill.error {
-            background: rgba(239,68,68,0.1);
-            border-color: rgba(239,68,68,0.3);
-            color: var(--red);
-        }
-        .s-dot {
-            width: 7px;
-            height: 7px;
-            border-radius: 50%;
-            background: currentColor;
-            flex-shrink: 0;
-        }
-        .status-pill.connecting .s-dot { animation: blink 1s infinite; }
-        @keyframes blink { 0%,100%{opacity:1} 50%{opacity:0.2} }
-
-        /* ── CARD ────────────────────────────────── */
-        .card {
-            background: var(--surface);
-            border: 1px solid var(--border);
-            border-radius: var(--radius);
-            overflow: hidden;
-        }
-        .card-header {
-            padding: 12px 14px 10px;
-            display: flex;
-            align-items: center;
-            gap: 8px;
-            border-bottom: 1px solid var(--border);
-        }
-        .card-icon { font-size: 14px; }
-        .card-label {
-            font-size: 12px;
-            font-weight: 600;
-            color: var(--text2);
-            flex: 1;
-        }
-        .card-body { padding: 14px; }
-
-        /* ── VIDEO LOCAL ─────────────────────────── */
-        .video-container {
-            position: relative;
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-            background: #000;
-            aspect-ratio: 16/9;
-            width: 100%;
-        }
-        .video-container video {
+        #local-video {
             width: 100%;
             height: 100%;
-            object-fit: cover;
+            object-fit: contain;
+            transform: scaleX(-1);
+            display: none;
         }
-        .local-video { transform: scaleX(-1); display: none; }
-        .local-video.show { display: block; }
-
-        /* live indicator */
-        .live-badge {
+        #local-video.show { display: block; }
+        #local-placeholder {
             position: absolute;
-            top: 8px;
-            left: 8px;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #050609;
+        }
+        #local-placeholder .ph-icon {
+            font-size: 32px;
+            opacity: 0.4;
+        }
+        #local-placeholder .ph-text {
+            font-size: 12px;
+            color: rgba(255,255,255,0.3);
+            font-weight: 500;
+        }
+        #local-placeholder.hide { display: none; }
+
+        /* LIVE badge */
+        #live-badge {
+            position: absolute;
+            top: 10px;
+            right: 10px;
             background: var(--red);
             color: #fff;
             font-size: 9px;
             font-weight: 800;
-            letter-spacing: 1px;
-            padding: 3px 7px;
+            letter-spacing: 1.5px;
+            padding: 3px 8px;
             border-radius: 4px;
             display: none;
-            animation: live-pulse 2s infinite;
+            z-index: 10;
+            animation: blink-live 2s infinite;
         }
-        .live-badge.show { display: block; }
-        @keyframes live-pulse { 0%,100%{opacity:1} 50%{opacity:.65} }
+        #live-badge.show { display: block; }
+        @keyframes blink-live { 0%,100%{opacity:1} 50%{opacity:.65} }
 
-        /* placeholder */
-        .video-placeholder {
+        /* return video (bottom) */
+        #return-wrap {
+            flex: 1;
+            position: relative;
+            background: #06070a;
+            overflow: hidden;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        #return-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            display: none;
+        }
+        #return-video.show { display: block; }
+        #return-placeholder {
             position: absolute;
             inset: 0;
             display: flex;
@@ -184,98 +195,174 @@
             align-items: center;
             justify-content: center;
             gap: 8px;
-            background: #05050a;
+            background: #050609;
         }
-        .video-placeholder span:first-child { font-size: 28px; opacity: 0.3; }
-        .video-placeholder span:last-child { font-size: 12px; color: var(--text3); }
-        .video-placeholder.hide { display: none; }
+        #return-placeholder .ph-icon {
+            font-size: 32px;
+            opacity: 0.3;
+        }
+        #return-placeholder .ph-text {
+            font-size: 11px;
+            color: rgba(255,255,255,0.25);
+            font-weight: 500;
+        }
+        #return-placeholder.hide { display: none; }
 
-        /* controls overlay sobre o vídeo */
-        .video-overlay-controls {
+        /* VU METER overlay */
+        #vu-bar {
             position: absolute;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            background: linear-gradient(transparent, rgba(0,0,0,0.7));
-            padding: 20px 10px 8px;
-            display: flex;
-            justify-content: flex-end;
-            gap: 6px;
-        }
-        .icon-btn {
-            background: rgba(255,255,255,0.1);
-            border: none;
-            color: #fff;
-            width: 32px;
-            height: 32px;
-            border-radius: 8px;
-            font-size: 14px;
-            cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            backdrop-filter: blur(4px);
-            transition: background 0.15s;
-        }
-        .icon-btn:active { background: rgba(255,255,255,0.2); }
-
-        /* ── RETORNO (programa ao vivo) ──────────── */
-        .return-container {
-            position: relative;
-            border-radius: var(--radius-sm);
-            overflow: hidden;
-            background: #000;
-            aspect-ratio: 16/9;
-            width: 100%;
-        }
-        .return-video {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
+            bottom: 6px;
+            left: 12px;
+            right: 12px;
+            z-index: 10;
             display: none;
         }
-        .return-video.active { display: block; }
-        .return-placeholder {
+        #vu-bar.show { display: block; }
+        #vu-track {
+            width: 100%;
+            height: 3px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.12);
+            overflow: hidden;
+        }
+        #vu-fill {
+            height: 100%;
+            width: 0%;
+            border-radius: 2px;
+            transition: width 0.06s linear;
+            background: linear-gradient(90deg, #22c55e 0%, #f59e0b 75%, #ef4444 100%);
+        }
+
+        /* ── CONTROL BAR CONTAINER (Floating & Center) ─── */
+        #ctrl-bar-container {
             position: absolute;
-            inset: 0;
+            bottom: env(safe-area-inset-bottom, 16px);
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 30;
+            pointer-events: none;
+            width: 100%;
             display: flex;
-            flex-direction: column;
+            justify-content: center;
+            padding: 0 16px;
+        }
+        #ctrl-bar {
+            pointer-events: auto;
+            background: rgba(24, 25, 28, 0.95);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            border-radius: 12px;
+            padding: 6px;
+            display: flex;
             align-items: center;
             justify-content: center;
             gap: 6px;
-            background: #05050a;
+            box-shadow: 0 8px 32px rgba(0,0,0,0.5);
         }
-        .return-placeholder span:first-child { font-size: 22px; opacity: 0.25; }
-        .return-placeholder span:last-child { font-size: 11px; color: var(--text3); }
 
-        /* return volume */
-        .return-vol-row {
+        /* Buttons matching VDO.Ninja (Rounded Squares) */
+        .ctrl-btn {
+            width: 44px;
+            height: 38px;
+            border-radius: 8px;
+            background: #202124;
+            border: none;
+            cursor: pointer;
+            color: #e2e8f0;
             display: flex;
             align-items: center;
-            gap: 10px;
-            padding: 10px 14px;
-            border-top: 1px solid var(--border);
+            justify-content: center;
+            transition: background 0.15s, color 0.15s, border-color 0.15s;
+            -webkit-tap-highlight-color: transparent;
         }
-        .return-vol-label { font-size: 11px; color: var(--text2); white-space: nowrap; }
+        .ctrl-btn:active {
+            background: #2f3035;
+        }
+        .ctrl-btn.mic-active {
+            color: var(--green);
+            background: rgba(34, 197, 94, 0.15);
+            border: 1px solid rgba(34, 197, 94, 0.3);
+        }
+        .ctrl-btn.mic-active:active {
+            background: rgba(34, 197, 94, 0.25);
+        }
+        .ctrl-btn.muted {
+            color: var(--red);
+            background: rgba(239, 68, 68, 0.15);
+            border: 1px solid rgba(239, 68, 68, 0.3);
+        }
+        .ctrl-btn.muted:active {
+            background: rgba(239, 68, 68, 0.25);
+        }
+        .ctrl-btn.hangup {
+            background: #d93025;
+            color: #ffffff;
+        }
+        .ctrl-btn.hangup:active {
+            background: #b2271d;
+        }
 
-        /* ── VOLUME SLIDERS ──────────────────────── */
-        .vol-block { padding: 12px 14px; display: flex; flex-direction: column; gap: 10px; }
+        /* ── SETTINGS DRAWER ───────────────── */
+        .vol-panel {
+            position: absolute;
+            left: 50%;
+            transform: translateX(-50%) translateY(120%);
+            width: calc(100% - 24px);
+            max-width: 400px;
+            background: var(--panel-bg);
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            padding: 18px 20px;
+            border-radius: 16px;
+            z-index: 40;
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            border: 1px solid rgba(255,255,255,0.08);
+            box-shadow: 0 -8px 32px rgba(0,0,0,0.6);
+            bottom: 74px;
+            transition: transform 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        .vol-panel.open {
+            transform: translateX(-50%) translateY(0);
+        }
+
+        .panel-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+        }
+        .panel-title {
+            font-size: 11px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            letter-spacing: 0.8px;
+        }
+        .panel-close-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 16px;
+            cursor: pointer;
+            padding: 2px 6px;
+        }
         .vol-row {
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 12px;
+            margin-bottom: 6px;
         }
         .vol-icon { font-size: 16px; flex-shrink: 0; }
-        .vol-info { flex-shrink: 0; width: 56px; }
-        .vol-name { font-size: 10px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
-        .vol-pct { font-size: 13px; color: var(--text); font-weight: 700; }
         .vol-slider {
             flex: 1;
             -webkit-appearance: none;
             appearance: none;
-            height: 5px;
-            border-radius: 3px;
-            background: var(--surface3);
+            height: 4px;
+            border-radius: 2px;
+            background: rgba(255,255,255,0.15);
             outline: none;
             cursor: pointer;
         }
@@ -284,127 +371,99 @@
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            background: #ffffff;
             cursor: pointer;
-            box-shadow: 0 2px 8px rgba(79,110,247,0.5);
-            transition: transform 0.1s;
+            box-shadow: 0 2px 6px rgba(0,0,0,0.5);
         }
-        .vol-slider::-webkit-slider-thumb:active { transform: scale(1.15); }
         .vol-slider::-moz-range-thumb {
             width: 20px;
             height: 20px;
             border-radius: 50%;
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
+            background: #ffffff;
             cursor: pointer;
             border: none;
         }
-        .vol-divider {
-            height: 1px;
-            background: var(--border);
-            margin: 0 14px;
+        .vol-pct {
+            font-size: 12px;
+            font-weight: 700;
+            color: #ffffff;
+            min-width: 36px;
+            text-align: right;
         }
 
-        /* ── VU METER ────────────────────────────── */
-        .vu-section {
-            padding: 10px 14px 12px;
+        /* ── START SCREEN OVERLAY ─────────────────── */
+        #start-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(5,6,10,0.96);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 100;
             display: flex;
             flex-direction: column;
-            gap: 4px;
-            border-top: 1px solid var(--border);
-        }
-        .vu-label-row {
-            display: flex;
-            justify-content: space-between;
             align-items: center;
+            justify-content: center;
+            gap: 22px;
+            padding: 32px;
         }
-        .vu-label { font-size: 10px; color: var(--text3); font-weight: 600; text-transform: uppercase; letter-spacing: 0.4px; }
-        .vu-peak { font-size: 10px; color: var(--text3); }
-        .vu-track {
-            width: 100%;
-            height: 6px;
-            border-radius: 3px;
-            background: var(--surface3);
-            overflow: hidden;
-            position: relative;
-        }
-        .vu-fill {
-            height: 100%;
-            width: 0%;
-            border-radius: 3px;
-            transition: width 0.07s linear;
-            background: linear-gradient(90deg, var(--green) 0%, var(--orange) 70%, var(--red) 100%);
-        }
-        /* peak marker */
-        .vu-peak-marker {
-            position: absolute;
-            top: 0;
-            width: 2px;
-            height: 100%;
-            background: var(--red);
-            border-radius: 1px;
-            transition: left 0.1s;
-            display: none;
-        }
-        .vu-peak-marker.show { display: block; }
-
-        /* ── QUALITY ─────────────────────────────── */
-        .quality-section {
+        #start-overlay.hide { display: none; }
+        .start-logo {
+            width: 72px;
+            height: 72px;
+            border-radius: 20px;
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
             display: flex;
             align-items: center;
-            gap: 8px;
-            padding: 8px 14px;
-            border-top: 1px solid var(--border);
-            display: none;
+            justify-content: center;
+            font-size: 34px;
+            box-shadow: 0 8px 32px rgba(59, 130, 246, 0.4);
         }
-        .quality-section.show { display: flex; }
-        .quality-label { font-size: 10px; color: var(--text3); white-space: nowrap; }
-        .quality-track {
-            flex: 1;
-            height: 4px;
-            border-radius: 2px;
-            background: var(--surface3);
-            overflow: hidden;
+        .start-title {
+            font-size: 24px;
+            font-weight: 800;
+            text-align: center;
+            background: linear-gradient(135deg, #60a5fa, #c084fc);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
         }
-        .quality-bar {
-            height: 100%;
-            border-radius: 2px;
-            transition: width 0.5s, background 0.5s;
+        .start-slot {
+            font-size: 14px;
+            color: var(--text-secondary);
+            font-weight: 600;
+            background: rgba(255,255,255,0.05);
+            padding: 6px 14px;
+            border-radius: 20px;
+            border: 1px solid rgba(255,255,255,0.06);
         }
-        .quality-bar.good { background: var(--green); width: 80%; }
-        .quality-bar.fair { background: var(--orange); width: 45%; }
-        .quality-bar.poor { background: var(--red); width: 20%; }
-        .quality-rtt { font-size: 10px; color: var(--text3); white-space: nowrap; }
-
-        /* ── MAIN BUTTON ─────────────────────────── */
-        .main-btn {
+        #start-btn {
             width: 100%;
+            max-width: 300px;
             padding: 16px;
             border: none;
             border-radius: 50px;
+            background: linear-gradient(135deg, var(--accent), #7c3aed);
+            color: #fff;
             font-size: 16px;
             font-weight: 700;
             cursor: pointer;
-            transition: opacity 0.2s, transform 0.1s, box-shadow 0.2s;
-            font-family: 'Inter', sans-serif;
-            letter-spacing: 0.3px;
+            box-shadow: 0 6px 24px rgba(59, 130, 246, 0.4);
+            font-family: inherit;
+            transition: opacity 0.2s, transform 0.1s;
         }
-        .main-btn:active { transform: scale(0.97); }
-        .main-btn:disabled { opacity: 0.45; cursor: not-allowed; transform: none; }
-        .main-btn.start {
-            background: linear-gradient(135deg, var(--accent), var(--accent2));
-            color: #fff;
-            box-shadow: 0 4px 20px rgba(79,110,247,0.4);
+        #start-btn:active { transform: scale(0.97); }
+        #start-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        #start-info {
+            font-size: 12px;
+            color: var(--text-secondary);
+            text-align: center;
+            line-height: 1.5;
+            max-width: 280px;
         }
-        .main-btn.start:hover:not(:disabled) { opacity: 0.92; box-shadow: 0 6px 28px rgba(79,110,247,0.5); }
-        .main-btn.stop {
-            background: linear-gradient(135deg, #ef4444, #dc2626);
-            color: #fff;
-            box-shadow: 0 4px 20px rgba(239,68,68,0.35);
-        }
-        .main-btn.stop:hover:not(:disabled) { opacity: 0.92; }
+        #start-info.error { color: var(--red); }
 
-        /* spinner dentro do botão */
-        .btn-spinner {
+        /* Spinner for loading */
+        .spinner {
             display: inline-block;
             width: 16px;
             height: 16px;
@@ -417,154 +476,185 @@
         }
         @keyframes spin { to { transform: rotate(360deg); } }
 
-        /* ── INFO TEXT ───────────────────────────── */
-        .info-text {
-            font-size: 12px;
-            color: var(--text3);
-            line-height: 1.6;
-            text-align: center;
-            padding: 4px 8px;
-        }
-        .info-text.error { color: var(--red); }
-        .info-text.success { color: var(--green); }
-
-        /* ── CAMERA TOGGLE ───────────────────────── */
-        .cam-toggle-row {
+        /* ── TOAST CONTAINER ────────────────────────── */
+        #toast-container {
+            position: fixed;
+            top: 60px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 1000;
             display: flex;
+            flex-direction: column;
+            align-items: center;
             gap: 8px;
-            padding: 10px 14px;
-            border-top: 1px solid var(--border);
+            pointer-events: none;
         }
-        .cam-toggle-btn {
-            flex: 1;
-            padding: 8px;
-            border-radius: var(--radius-sm);
-            border: 1px solid var(--border);
-            background: var(--surface2);
-            color: var(--text2);
+        .toast {
+            background: rgba(18, 22, 33, 0.95);
+            border: 1px solid rgba(255, 255, 255, 0.08);
+            color: #fff;
+            padding: 8px 16px;
+            border-radius: 20px;
             font-size: 12px;
             font-weight: 600;
-            cursor: pointer;
-            transition: all 0.15s;
-            text-align: center;
+            box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+            animation: toast-in 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            pointer-events: auto;
         }
-        .cam-toggle-btn:hover { background: var(--surface3); color: var(--text); }
-        .cam-toggle-btn.active { background: rgba(79,110,247,0.15); border-color: rgba(79,110,247,0.35); color: #8ba0ff; }
+        @keyframes toast-in {
+            from { opacity: 0; transform: translateY(-10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body>
-<div class="page">
 
-    <!-- HEADER -->
-    <div class="hdr">
-        <div class="hdr-logo">📺</div>
-        <div class="hdr-info">
-            <div class="hdr-title">NossaTV</div>
-            <div class="hdr-slot" id="hdr-slot">Conectando...</div>
+<div id="app">
+
+    <!-- TOP BAR (VDO.Ninja Style) -->
+    <div id="top-bar">
+        <div id="top-left">
+            <div id="top-title">VDO.Ninja</div>
+            <div id="top-room-info">You are in room: nossatv</div>
         </div>
-        <div class="status-pill connecting" id="status-pill">
-            <span class="s-dot"></span>
-            <span id="status-pill-text">Aguardando</span>
-        </div>
-    </div>
-
-    <!-- CÂMERA LOCAL -->
-    <div class="card">
-        <div class="card-header">
-            <span class="card-icon">📷</span>
-            <span class="card-label">Sua Câmera (envio)</span>
-            <span id="cam-badge"></span>
-        </div>
-        <div class="card-body" style="padding:0">
-            <div class="video-container">
-                <video id="local-video" class="local-video" autoplay playsinline muted></video>
-                <span class="live-badge" id="live-badge">AO VIVO</span>
-                <div class="video-placeholder" id="video-ph">
-                    <span>📷</span>
-                    <span>Câmera inativa</span>
-                </div>
-                <div class="video-overlay-controls" id="video-overlay">
-                    <button class="icon-btn" id="btn-flip" title="Virar câmera">🔄</button>
-                    <button class="icon-btn" id="btn-fs-local" title="Tela cheia">⛶</button>
-                </div>
+        <div id="top-right-stats">
+            <!-- Link -->
+            <div class="stat-group" title="Conexões">
+                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
+                <span id="top-stat-links">0</span>
             </div>
-
-            <!-- VU Meter (input) -->
-            <div class="vu-section" id="vu-section" style="display:none">
-                <div class="vu-label-row">
-                    <span class="vu-label">🎙️ Nível de Áudio (entrada)</span>
-                    <span class="vu-peak" id="vu-peak-text">0 dB</span>
-                </div>
-                <div class="vu-track">
-                    <div class="vu-fill" id="vu-fill"></div>
-                    <div class="vu-peak-marker" id="vu-peak-marker"></div>
-                </div>
+            <!-- Headphones (Audio Out) -->
+            <div class="stat-group" title="Escutando">
+                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M3 18v-6a9 9 0 0 1 18 0v6"></path><path d="M21 19a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3zM3 19a2 2 0 0 0 2 2h1a2 2 0 0 0 2-2v-3a2 2 0 0 0-2-2H3z"></path></svg>
+                <span id="top-stat-ears">0</span>
             </div>
-
-            <!-- Câmera toggle -->
-            <div class="cam-toggle-row" id="cam-toggle-row" style="display:none">
-                <button class="cam-toggle-btn active" id="btn-cam-front" title="Câmera frontal">🤳 Frontal</button>
-                <button class="cam-toggle-btn" id="btn-cam-back" title="Câmera traseira">📸 Traseira</button>
+            <!-- Viewers (Eye) -->
+            <div class="stat-group" title="Visualizadores">
+                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2.5" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg>
+                <span id="top-stat-eyes">0</span>
             </div>
-
-            <!-- Volume de entrada (mic) -->
-            <div class="vol-block" id="vol-input-block" style="display:none">
-                <div class="vol-row">
-                    <span class="vol-icon">🎤</span>
-                    <div class="vol-info">
-                        <div class="vol-name">Entrada</div>
-                        <div class="vol-pct" id="vol-input-pct">100%</div>
-                    </div>
-                    <input type="range" class="vol-slider" id="vol-input" min="0" max="200" value="100" step="5">
-                </div>
+            <!-- Director (Clapperboard) -->
+            <div class="stat-group" title="Diretor">
+                <svg viewBox="0 0 24 24" width="13" height="13" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="2" width="20" height="20" rx="2" ry="2"></rect><line x1="7" y1="2" x2="7" y2="22"></line><line x1="17" y1="2" x2="17" y2="22"></line><line x1="2" y1="12" x2="22" y2="12"></line><line x1="2" y1="7" x2="7" y2="7"></line><line x1="2" y1="17" x2="7" y2="17"></line><line x1="17" y1="17" x2="22" y2="17"></line><line x1="17" y1="7" x2="22" y2="7"></line></svg>
+                <span>0</span>
+            </div>
+            <!-- Quality (triangle + kbps) -->
+            <div class="kbps-indicator" id="kbps-indicator" style="display: none;">
+                <span class="kbps-arrow">▲</span>
+                <span id="top-kbps-text">-- kbps</span>
             </div>
         </div>
     </div>
 
-    <!-- RETORNO (programa ao vivo) -->
-    <div class="card">
-        <div class="card-header">
-            <span class="card-icon">📺</span>
-            <span class="card-label">Retorno (Programa ao Vivo)</span>
+    <!-- VIDEOS AREA -->
+    <div id="videos-area">
+
+        <!-- local camera (top half) -->
+        <div id="local-wrap">
+            <video id="local-video" autoplay playsinline muted></video>
+            <div id="local-placeholder">
+                <div class="ph-icon">📷</div>
+                <div class="ph-text">Câmera inativa</div>
+            </div>
+            <div id="live-badge">AO VIVO</div>
+
+            <!-- VU Meter overlay -->
+            <div id="vu-bar">
+                <div id="vu-track">
+                    <div id="vu-fill"></div>
+                </div>
+            </div>
         </div>
-        <div class="card-body" style="padding:0">
-            <div class="return-container">
-                <video id="return-video" class="return-video" autoplay playsinline></video>
-                <div class="return-placeholder" id="return-ph">
-                    <span>📡</span>
-                    <span>Aguardando transmissão...</span>
-                </div>
-                <div class="video-overlay-controls">
-                    <button class="icon-btn" id="btn-fs-return" title="Tela cheia no retorno">⛶</button>
-                </div>
-            </div>
 
-            <!-- Volume de saída (retorno) -->
-            <div class="return-vol-row">
-                <span class="vol-icon" style="font-size:16px">🔊</span>
-                <span class="return-vol-label">Saída:</span>
-                <input type="range" class="vol-slider" id="vol-output" min="0" max="200" value="100" step="5" style="flex:1;margin:0 10px">
-                <span class="vol-pct" id="vol-output-pct" style="font-size:13px;font-weight:700;min-width:38px;text-align:right">100%</span>
+        <!-- return video (bottom half) -->
+        <div id="return-wrap">
+            <video id="return-video" autoplay playsinline></video>
+            <div id="return-placeholder">
+                <div class="ph-icon">📺</div>
+                <div class="ph-text">Aguardando retorno do programa...</div>
             </div>
+        </div>
 
-            <!-- Qualidade de conexão -->
-            <div class="quality-section" id="quality-section">
-                <span class="quality-label">Qualidade</span>
-                <div class="quality-track">
-                    <div class="quality-bar good" id="quality-bar"></div>
-                </div>
-                <span class="quality-rtt" id="quality-rtt">--ms</span>
-            </div>
+    </div>
+
+    <!-- SETTINGS DRAWER -->
+    <div class="vol-panel" id="settings-panel">
+        <div class="panel-header">
+            <div class="panel-title">🎛️ Opções de Volume</div>
+            <button class="panel-close-btn" id="close-settings-btn">✕</button>
+        </div>
+        
+        <div class="panel-title" style="margin-top: 4px;">🎤 Microfone (Volume de Entrada)</div>
+        <div class="vol-row">
+            <span class="vol-icon">🎙️</span>
+            <input type="range" class="vol-slider" id="vol-input" min="0" max="200" value="100" step="5">
+            <span class="vol-pct" id="vol-input-pct">100%</span>
+        </div>
+
+        <div class="panel-title" style="margin-top: 6px;">🔊 Retorno (Volume de Saída)</div>
+        <div class="vol-row">
+            <span class="vol-icon">🔊</span>
+            <input type="range" class="vol-slider" id="vol-output" min="0" max="200" value="100" step="5">
+            <span class="vol-pct" id="vol-output-pct">100%</span>
         </div>
     </div>
 
-    <!-- BOTÃO PRINCIPAL -->
-    <button class="main-btn start" id="main-btn" disabled>Ativar Câmera</button>
+    <!-- FLOATING CONTROL BAR CONTAINER -->
+    <div id="ctrl-bar-container">
+        <div id="ctrl-bar">
+            <!-- 1. Chat Button -->
+            <button class="ctrl-btn" id="btn-chat" title="Chat">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+            </button>
 
-    <!-- INFO -->
-    <div class="info-text" id="info-text">Preparando...</div>
+            <!-- 2. Speaker Button -->
+            <button class="ctrl-btn" id="btn-speaker" title="Mutar Saída">
+                <svg id="svg-speaker-on" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                <svg id="svg-speaker-muted" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+            </button>
+
+            <!-- 3. Microphone Button -->
+            <button class="ctrl-btn mic-active" id="btn-mic" title="Mutar Microfone">
+                <svg id="svg-mic-on" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+                <svg id="svg-mic-muted" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 11a7 7 0 0 1-14 0v-1m14 0a6.9 6.9 0 0 1-.5 2.5"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
+            </button>
+
+            <!-- 4. Camera Button -->
+            <button class="ctrl-btn" id="btn-camera" title="Ligar/Desligar Câmera">
+                <svg id="svg-cam-on" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 7l-7 5 7 5V7z"></path><rect x="1" y="5" width="15" height="14" rx="2" ry="2"></rect></svg>
+                <svg id="svg-cam-muted" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><path d="M16 16v1a2 2 0 0 1-2 2H3a2 2 0 0 1-2-2V7a2 2 0 0 1 2-2h2m5.66 0H14a2 2 0 0 1 2 2v3.34l1 1L23 7v10"></path><line x1="1" y1="1" x2="23" y2="23"></line></svg>
+            </button>
+
+            <!-- 5. Flip Camera Button -->
+            <button class="ctrl-btn" id="btn-flip" title="Inverter Câmera">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M23 4v6h-6"></path><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+            </button>
+
+            <!-- 6. Settings Button -->
+            <button class="ctrl-btn" id="btn-settings" title="Configurações">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            </button>
+
+            <!-- 7. Hangup Button -->
+            <button class="ctrl-btn hangup" id="btn-hangup" title="Desconectar Transmissão">
+                <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(135deg);"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"></path></svg>
+            </button>
+        </div>
+    </div>
 
 </div>
+
+<!-- OVERLAY DE INÍCIO -->
+<div id="start-overlay">
+    <div class="start-logo">📺</div>
+    <div class="start-title">NossaTV</div>
+    <div class="start-slot" id="start-slot-label">Slot: ---</div>
+    <button id="start-btn" disabled>Iniciar Transmissão</button>
+    <div id="start-info">Preparando...</div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toast-container"></div>
 
 <script>
 (function () {
@@ -589,87 +679,196 @@
     // ─── SLOT ────────────────────────────────────────────────────
     var slot = new URLSearchParams(location.search).get('slot');
     if (!slot) {
-        document.getElementById('hdr-slot').textContent = 'Link inválido';
-        document.getElementById('info-text').textContent = '❌ Link sem parâmetro de slot. Solicite um novo link.';
-        document.getElementById('info-text').className = 'info-text error';
+        document.getElementById('start-info').textContent = '❌ Link inválido. Solicite um novo link.';
+        document.getElementById('start-info').className = 'error';
         return;
     }
     var streamID = 'slot_' + slot;
-    document.getElementById('hdr-slot').textContent = slot;
+    document.getElementById('start-slot-label').textContent = 'Vereador: ' + slot;
+    document.getElementById('top-room-info').textContent = 'You are in room: ' + ROOM.toLowerCase() + ' · ' + slot;
     document.title = 'NossaTV — ' + slot;
 
     // ─── STATE ───────────────────────────────────────────────────
     var vdo = null;
     var localStream = null;
     var connected = false;
-    var publishing = false;
+    var micMuted = false;
+    var cameraMuted = false;
+    var speakerMuted = false;
     var facingMode = 'user';
     var vuInterval = null;
     var qualityInterval = null;
     var viewRetry = null;
+    var viewRetryCount = 0;
     var audioCtx = null;
     var inputGainNode = null;
-    var outputGainNode = null;
     var returnAudioCtx = null;
     var returnGainNode = null;
-    var peakDecay = 0;
-    var peakHoldTimer = null;
+    var kbpsInterval = null;
+    var lastBytes = 0;
 
     // ─── DOM ─────────────────────────────────────────────────────
-    var mainBtn       = document.getElementById('main-btn');
-    var infoText      = document.getElementById('info-text');
-    var statusPill    = document.getElementById('status-pill');
-    var statusPillTxt = document.getElementById('status-pill-text');
+    var startOverlay  = document.getElementById('start-overlay');
+    var startBtn      = document.getElementById('start-btn');
+    var startInfo     = document.getElementById('start-info');
     var localVideo    = document.getElementById('local-video');
     var returnVideo   = document.getElementById('return-video');
+    var localPh       = document.getElementById('local-placeholder');
+    var returnPh      = document.getElementById('return-placeholder');
     var liveBadge     = document.getElementById('live-badge');
-    var videoPh       = document.getElementById('video-ph');
-    var returnPh      = document.getElementById('return-ph');
-    var vuSection     = document.getElementById('vu-section');
+    var vuBar         = document.getElementById('vu-bar');
     var vuFill        = document.getElementById('vu-fill');
-    var vuPeakText    = document.getElementById('vu-peak-text');
-    var vuPeakMarker  = document.getElementById('vu-peak-marker');
-    var qualitySection = document.getElementById('quality-section');
-    var qualityBar    = document.getElementById('quality-bar');
-    var qualityRtt    = document.getElementById('quality-rtt');
+    var kbpsInd       = document.getElementById('kbps-indicator');
+    var topKbpsText   = document.getElementById('top-kbps-text');
+    var settingsPanel = document.getElementById('settings-panel');
+    
+    // Control Buttons
+    var btnChat       = document.getElementById('btn-chat');
+    var btnSpeaker    = document.getElementById('btn-speaker');
+    var btnMic        = document.getElementById('btn-mic');
+    var btnCamera     = document.getElementById('btn-camera');
+    var btnFlip       = document.getElementById('btn-flip');
+    var btnSettings   = document.getElementById('btn-settings');
+    var btnHangup     = document.getElementById('btn-hangup');
+    var btnCloseSet   = document.getElementById('close-settings-btn');
+    
+    // Sliders
     var volInput      = document.getElementById('vol-input');
     var volInputPct   = document.getElementById('vol-input-pct');
     var volOutput     = document.getElementById('vol-output');
     var volOutputPct  = document.getElementById('vol-output-pct');
-    var camToggleRow  = document.getElementById('cam-toggle-row');
-    var volInputBlock = document.getElementById('vol-input-block');
 
-    // ─── STATUS ──────────────────────────────────────────────────
-    function setStatus(text, cls) {
-        statusPillTxt.textContent = text;
-        statusPill.className = 'status-pill ' + (cls || '');
-    }
-    function setInfo(text, cls) {
-        infoText.textContent = text;
-        infoText.className = 'info-text ' + (cls || '');
+    // SVGs
+    var svgSpeakerOn  = document.getElementById('svg-speaker-on');
+    var svgSpeakerMut = document.getElementById('svg-speaker-muted');
+    var svgMicOn      = document.getElementById('svg-mic-on');
+    var svgMicMut     = document.getElementById('svg-mic-muted');
+    var svgCamOn      = document.getElementById('svg-cam-on');
+    var svgCamMut     = document.getElementById('svg-cam-muted');
+
+    // ─── TOAST ───────────────────────────────────────────────────
+    function showToast(msg) {
+        var container = document.getElementById('toast-container');
+        var t = document.createElement('div');
+        t.className = 'toast';
+        t.textContent = msg;
+        container.appendChild(t);
+        setTimeout(function() {
+            t.style.opacity = '0';
+            t.style.transition = 'opacity 0.3s';
+            setTimeout(function() { t.remove(); }, 300);
+        }, 2200);
     }
 
-    // ─── SHOW/HIDE CAMERA ────────────────────────────────────────
-    function showLocalCamera() {
-        localVideo.classList.add('show');
-        videoPh.classList.add('hide');
-        liveBadge.classList.add('show');
-        camToggleRow.style.display = 'flex';
-        volInputBlock.style.display = 'block';
+    // ─── SETTINGS DRAWER ─────────────────────────────────────────
+    function toggleSettings(open) {
+        if (open === undefined) {
+            settingsPanel.classList.toggle('open');
+        } else if (open) {
+            settingsPanel.classList.add('open');
+        } else {
+            settingsPanel.classList.remove('open');
+        }
     }
-    function hideLocalCamera() {
-        localVideo.classList.remove('show');
-        videoPh.classList.remove('hide');
-        liveBadge.classList.remove('show');
-        camToggleRow.style.display = 'none';
-        volInputBlock.style.display = 'none';
+    btnSettings.addEventListener('click', function(e) { e.stopPropagation(); toggleSettings(); });
+    btnCloseSet.addEventListener('click', function(e) { e.stopPropagation(); toggleSettings(false); });
+    settingsPanel.addEventListener('click', function(e) { e.stopPropagation(); });
+    document.addEventListener('click', function() { toggleSettings(false); });
+
+    volInput.addEventListener('input', function() {
+        var pct = parseInt(volInput.value);
+        volInputPct.textContent = pct + '%';
+        if (inputGainNode) inputGainNode.gain.value = pct / 100;
+    });
+    volOutput.addEventListener('input', function() {
+        var pct = parseInt(volOutput.value);
+        volOutputPct.textContent = pct + '%';
+        if (returnGainNode) returnGainNode.gain.value = pct / 100;
+        else returnVideo.volume = Math.min(pct / 100, 1.0);
+    });
+
+    // ─── CHAT BUTTON ─────────────────────────────────────────────
+    btnChat.addEventListener('click', function() {
+        showToast('Chat: Sem novas mensagens.');
+    });
+
+    // ─── SPEAKER BUTTON ──────────────────────────────────────────
+    btnSpeaker.addEventListener('click', function() {
+        speakerMuted = !speakerMuted;
+        returnVideo.muted = speakerMuted;
+        if (returnGainNode) {
+            returnGainNode.gain.value = speakerMuted ? 0 : (parseInt(volOutput.value) / 100);
+        }
+        btnSpeaker.classList.toggle('muted', speakerMuted);
+        svgSpeakerOn.style.display = speakerMuted ? 'none' : 'block';
+        svgSpeakerMut.style.display = speakerMuted ? 'block' : 'none';
+        showToast(speakerMuted ? '🔇 Retorno mutado' : '🔊 Retorno ativado');
+        updateTopStats(connected);
+    });
+
+    // ─── MICROPHONE BUTTON ────────────────────────────────────────
+    btnMic.addEventListener('click', function() {
+        if (!localStream) return;
+        micMuted = !micMuted;
+        localStream.getAudioTracks().forEach(function(t) { t.enabled = !micMuted; });
+        if (inputGainNode) {
+            inputGainNode.gain.value = micMuted ? 0 : (parseInt(volInput.value) / 100);
+        }
+        btnMic.className = 'ctrl-btn ' + (micMuted ? 'muted' : 'mic-active');
+        svgMicOn.style.display = micMuted ? 'none' : 'block';
+        svgMicMut.style.display = micMuted ? 'block' : 'none';
+        showToast(micMuted ? '🎙️ Microfone mutado' : '🎙️ Microfone ativo');
+    });
+
+    // ─── CAMERA BUTTON ────────────────────────────────────────────
+    btnCamera.addEventListener('click', function() {
+        if (!localStream) return;
+        cameraMuted = !cameraMuted;
+        localStream.getVideoTracks().forEach(function(t) { t.enabled = !cameraMuted; });
+        btnCamera.classList.toggle('muted', cameraMuted);
+        svgCamOn.style.display = cameraMuted ? 'none' : 'block';
+        svgCamMut.style.display = cameraMuted ? 'block' : 'none';
+        localVideo.classList.toggle('show', !cameraMuted);
+        localPh.classList.toggle('hide', !cameraMuted);
+        showToast(cameraMuted ? '📷 Câmera desativada' : '📷 Câmera ativa');
+    });
+
+    // ─── VIRAR CÂMERA ────────────────────────────────────────────
+    btnFlip.addEventListener('click', function() {
+        if (!localStream || !connected) return;
+        facingMode = facingMode === 'user' ? 'environment' : 'user';
+        switchCamera();
+    });
+
+    function switchCamera() {
+        localStream.getVideoTracks().forEach(function(t) { t.stop(); });
+        navigator.mediaDevices.getUserMedia({
+            video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
+            audio: false
+        }).then(function(newStream) {
+            var newTrack = newStream.getVideoTracks()[0];
+            localStream.getVideoTracks().forEach(function(t) { localStream.removeTrack(t); });
+            localStream.addTrack(newTrack);
+            localVideo.srcObject = null;
+            localVideo.srcObject = localStream;
+            localVideo.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+            
+            if (vdo && vdo._pc) {
+                var senders = vdo._pc.getSenders ? vdo._pc.getSenders() : [];
+                senders.forEach(function(s) {
+                    if (s.track && s.track.kind === 'video') {
+                        s.replaceTrack(newTrack).catch(function() {});
+                    }
+                });
+            }
+            showToast('🔄 Câmera alternada');
+        }).catch(function(e) { console.warn('[Guest] switchCamera error:', e); });
     }
 
     // ─── VU METER ────────────────────────────────────────────────
-    function startVUMeter(stream) {
-        stopVUMeter();
-        var audioTracks = stream.getAudioTracks();
-        if (audioTracks.length === 0) return;
+    function startVU(stream) {
+        stopVU();
+        if (!stream.getAudioTracks().length) return;
         try {
             audioCtx = new (window.AudioContext || window.webkitAudioContext)();
             var src = audioCtx.createMediaStreamSource(stream);
@@ -679,13 +878,14 @@
             analyser.fftSize = 256;
             src.connect(inputGainNode);
             inputGainNode.connect(analyser);
-            // Não conectar ao destination para não gerar echo local
 
-            vuSection.style.display = 'block';
+            vuBar.classList.add('show');
             var data = new Uint8Array(analyser.frequencyBinCount);
-            peakDecay = 0;
-
-            vuInterval = setInterval(function () {
+            vuInterval = setInterval(function() {
+                if (micMuted) {
+                    vuFill.style.width = '0%';
+                    return;
+                }
                 analyser.getByteTimeDomainData(data);
                 var max = 0;
                 for (var i = 0; i < data.length; i++) {
@@ -694,156 +894,98 @@
                 }
                 var pct = (max / 128) * 100;
                 vuFill.style.width = Math.min(pct, 100) + '%';
-
-                // peak hold
-                if (pct >= peakDecay) {
-                    peakDecay = pct;
-                    clearTimeout(peakHoldTimer);
-                    peakHoldTimer = setTimeout(function () { peakDecay = 0; }, 1500);
-                } else {
-                    peakDecay = Math.max(0, peakDecay - 1.5);
-                }
-                vuPeakMarker.style.left = Math.min(peakDecay, 99) + '%';
-                vuPeakMarker.classList.toggle('show', peakDecay > 2);
-
-                // dB approximation
-                var db = pct > 0 ? Math.round(20 * Math.log10(pct / 100)) : -100;
-                vuPeakText.textContent = (db > -100 ? db : '−∞') + ' dB';
             }, 70);
-        } catch (e) { console.warn('[Guest] VU meter error:', e); }
+        } catch(e) { console.warn('[Guest] VU error:', e); }
     }
 
-    function stopVUMeter() {
-        clearInterval(vuInterval);
-        vuInterval = null;
-        clearTimeout(peakHoldTimer);
-        if (audioCtx) { try { audioCtx.close(); } catch (e) {} audioCtx = null; }
-        inputGainNode = null;
-        vuSection.style.display = 'none';
+    function stopVU() {
+        clearInterval(vuInterval); vuInterval = null;
+        if (audioCtx) { try { audioCtx.close(); } catch(e) {} audioCtx = null; inputGainNode = null; }
+        vuBar.classList.remove('show');
         vuFill.style.width = '0%';
-        vuPeakMarker.classList.remove('show');
-        peakDecay = 0;
     }
 
-    // ─── RETURN AUDIO ────────────────────────────────────────────
+    // ─── RETORNO ÁUDIO ───────────────────────────────────────────
     function setupReturnAudio(stream) {
-        // Conectar retorno com controle de volume
         try {
-            if (!returnAudioCtx) {
-                returnAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            }
+            if (!returnAudioCtx) returnAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
             var src = returnAudioCtx.createMediaStreamSource(stream);
             returnGainNode = returnAudioCtx.createGain();
-            returnGainNode.gain.value = parseInt(volOutput.value) / 100;
+            returnGainNode.gain.value = speakerMuted ? 0 : (parseInt(volOutput.value) / 100);
             src.connect(returnGainNode);
             returnGainNode.connect(returnAudioCtx.destination);
-        } catch (e) {
-            // fallback: usa o atributo de volume do video
-            returnVideo.volume = parseInt(volOutput.value) / 100;
+        } catch(e) {
+            returnVideo.volume = speakerMuted ? 0 : Math.min(parseInt(volOutput.value) / 100, 1.0);
         }
     }
 
-    // ─── VOLUME CONTROLS ─────────────────────────────────────────
-    volInput.addEventListener('input', function () {
-        var pct = parseInt(volInput.value);
-        volInputPct.textContent = pct + '%';
-        if (inputGainNode) inputGainNode.gain.value = pct / 100;
-    });
-
-    volOutput.addEventListener('input', function () {
-        var pct = parseInt(volOutput.value);
-        volOutputPct.textContent = pct + '%';
-        if (returnGainNode) {
-            returnGainNode.gain.value = pct / 100;
-        } else {
-            returnVideo.volume = Math.min(pct / 100, 1);
-        }
-    });
-
-    // ─── QUALITY MONITOR ─────────────────────────────────────────
-    function startQualityMonitor() {
-        qualitySection.classList.add('show');
-        qualityInterval = setInterval(function () {
-            if (!vdo || !connected) return;
-            try {
-                var pc = vdo._pc || null;
-                if (!pc) return;
-                pc.getStats(null).then(function (stats) {
-                    stats.forEach(function (report) {
-                        if (report.type === 'candidate-pair' && report.state === 'succeeded') {
-                            var rtt = report.currentRoundTripTime;
-                            var ms = Math.round((rtt || 0) * 1000);
-                            qualityRtt.textContent = ms + 'ms';
-                            var cls = 'good';
-                            if (rtt > 0.3) cls = 'fair';
-                            if (rtt > 0.6) cls = 'poor';
-                            qualityBar.className = 'quality-bar ' + cls;
-                        }
-                    });
-                }).catch(function () {});
-            } catch (e) {}
-        }, 3000);
+    // ─── TOP STATS ───────────────────────────────────────────────
+    function updateTopStats(active) {
+        document.getElementById('top-stat-links').textContent = active ? '1' : '0';
+        document.getElementById('top-stat-ears').textContent = (active && !speakerMuted) ? '1' : '0';
+        document.getElementById('top-stat-eyes').textContent = active ? '1' : '0';
     }
 
-    function stopQualityMonitor() {
-        clearInterval(qualityInterval);
-        qualityInterval = null;
-        qualitySection.classList.remove('show');
+    // ─── kbps COUNTER ────────────────────────────────────────────
+    function startKbps() {
+        kbpsInd.style.display = 'flex';
+        kbpsInterval = setInterval(function() {
+            if (!vdo || !vdo._pc) return;
+            vdo._pc.getStats(null).then(function(stats) {
+                stats.forEach(function(r) {
+                    if (r.type === 'outbound-rtp' && r.kind === 'video') {
+                        var bytes = r.bytesSent || 0;
+                        var kbps = Math.round(((bytes - lastBytes) * 8) / 1000);
+                        lastBytes = bytes;
+                        topKbpsText.textContent = (kbps > 0 ? kbps : '0') + '-kbps';
+                    }
+                });
+            }).catch(function() {});
+        }, 1000);
+    }
+
+    function stopKbps() {
+        clearInterval(kbpsInterval); kbpsInterval = null;
+        kbpsInd.style.display = 'none';
+        lastBytes = 0;
     }
 
     // ─── VIEW RETURN ─────────────────────────────────────────────
-    var viewRetryCount = 0;
     function startViewReturn() {
         if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
         if (!vdo || !connected) return;
-        vdo.view(RETURN_STREAM_ID, { audio: true, video: true }).then(function (stream) {
+        vdo.view(RETURN_STREAM_ID, { audio: true, video: true }).then(function(stream) {
             if (stream && stream.active) {
                 returnVideo.srcObject = stream;
-                returnVideo.classList.add('active');
-                returnPh.style.display = 'none';
-                returnVideo.play().catch(function () {});
+                returnVideo.classList.add('show');
+                returnPh.classList.add('hide');
+                returnVideo.play().catch(function() {});
                 setupReturnAudio(stream);
                 viewRetryCount = 0;
             } else {
                 scheduleViewRetry();
             }
-        }).catch(function (err) {
-            console.warn('[Guest] View return error:', err);
-            scheduleViewRetry();
-        });
+        }).catch(function() { scheduleViewRetry(); });
     }
-
     function scheduleViewRetry() {
-        if (viewRetryCount >= 6) return;
+        if (viewRetryCount >= 8) return;
         var delay = Math.min(3000 * Math.pow(1.5, viewRetryCount), 30000);
         viewRetryCount++;
         viewRetry = setTimeout(startViewReturn, delay);
     }
 
     // ─── getUserMedia ─────────────────────────────────────────────
-    function getMediaStream() {
-        var audioConstraints = {
-            echoCancellation: true,
-            noiseSuppression: true,
-            autoGainControl: true,
-            sampleRate: { ideal: 48000 },
-            channelCount: { ideal: 1 }
-        };
+    function getMedia() {
         var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
-        var videoConstraints = {
-            width: { ideal: 1280, min: 320 },
-            height: { ideal: 720, min: 240 }
-        };
-        if (isMobile) videoConstraints.facingMode = facingMode;
-
+        var videoC = { width: { ideal: 1280 }, height: { ideal: 720 } };
+        if (isMobile) videoC.facingMode = facingMode;
         return navigator.mediaDevices.getUserMedia({
-            video: videoConstraints,
-            audio: audioConstraints
-        }).catch(function (err) {
-            // fallback: remove sampleRate/channelCount
-            if (err.name === 'NotReadableError' || err.name === 'OverconstrainedError') {
+            video: videoC,
+            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+        }).catch(function(err) {
+            if (err.name === 'OverconstrainedError' || err.name === 'NotReadableError') {
                 return navigator.mediaDevices.getUserMedia({
-                    video: { width: { ideal: 1280 }, height: { ideal: 720 } },
+                    video: true,
                     audio: { echoCancellation: true, noiseSuppression: true }
                 });
             }
@@ -851,72 +993,11 @@
         });
     }
 
-    // ─── FLIP CAMERA ─────────────────────────────────────────────
-    document.getElementById('btn-flip').addEventListener('click', function () {
-        if (!connected || !localStream) return;
-        facingMode = facingMode === 'user' ? 'environment' : 'user';
-        document.getElementById('btn-cam-front').classList.toggle('active', facingMode === 'user');
-        document.getElementById('btn-cam-back').classList.toggle('active', facingMode === 'environment');
-        switchCamera();
-    });
-    document.getElementById('btn-cam-front').addEventListener('click', function () {
-        if (facingMode === 'user') return;
-        facingMode = 'user';
-        this.classList.add('active');
-        document.getElementById('btn-cam-back').classList.remove('active');
-        switchCamera();
-    });
-    document.getElementById('btn-cam-back').addEventListener('click', function () {
-        if (facingMode === 'environment') return;
-        facingMode = 'environment';
-        this.classList.add('active');
-        document.getElementById('btn-cam-front').classList.remove('active');
-        switchCamera();
-    });
-
-    function switchCamera() {
-        if (!localStream) return;
-        localStream.getVideoTracks().forEach(function (t) { t.stop(); });
-        navigator.mediaDevices.getUserMedia({
-            video: { facingMode: facingMode, width: { ideal: 1280 }, height: { ideal: 720 } },
-            audio: false
-        }).then(function (newStream) {
-            var newVideoTrack = newStream.getVideoTracks()[0];
-            localVideo.srcObject = null;
-            var tracks = localStream.getVideoTracks();
-            tracks.forEach(function (t) { localStream.removeTrack(t); });
-            localStream.addTrack(newVideoTrack);
-            localVideo.srcObject = localStream;
-            // replace track na conexão VDO se possível
-            if (vdo && vdo._pc) {
-                var senders = vdo._pc.getSenders ? vdo._pc.getSenders() : [];
-                senders.forEach(function (sender) {
-                    if (sender.track && sender.track.kind === 'video') {
-                        sender.replaceTrack(newVideoTrack).catch(function (e) { console.warn('[Guest] replaceTrack error:', e); });
-                    }
-                });
-            }
-            // aplica espelho conforme câmera
-            localVideo.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'none';
-        }).catch(function (err) {
-            console.warn('[Guest] Switch camera error:', err);
-        });
-    }
-
-    // ─── FULLSCREEN ───────────────────────────────────────────────
-    function requestFS(el) {
-        if (el.webkitEnterFullscreen) { el.webkitEnterFullscreen(); return; }
-        if (el.requestFullscreen) el.requestFullscreen();
-        else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-    }
-    document.getElementById('btn-fs-local').addEventListener('click', function () { requestFS(localVideo); });
-    document.getElementById('btn-fs-return').addEventListener('click', function () { requestFS(returnVideo); });
-
     // ─── SDK LOAD ─────────────────────────────────────────────────
     var sdkPromise = null;
     function loadSDK() {
         if (sdkPromise) return sdkPromise;
-        sdkPromise = new Promise(function (resolve, reject) {
+        sdkPromise = new Promise(function(resolve, reject) {
             if (typeof VDONinjaSDK !== 'undefined') { resolve(); return; }
             var idx = 0;
             function tryLoad() {
@@ -935,131 +1016,142 @@
 
     // ─── CLEANUP ──────────────────────────────────────────────────
     function cleanup() {
+        stopVU(); stopKbps();
         if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
         viewRetryCount = 0;
-        stopVUMeter();
-        stopQualityMonitor();
         if (vdo) {
-            try { vdo.stopPublishing(); } catch (e) {}
-            try { vdo.stopViewing(RETURN_STREAM_ID); } catch (e) {}
+            try { vdo.stopPublishing(); } catch(e) {}
+            try { vdo.stopViewing(RETURN_STREAM_ID); } catch(e) {}
         }
-        if (localStream) {
-            localStream.getTracks().forEach(function (t) { t.stop(); });
-            localStream = null;
-        }
+        if (localStream) { localStream.getTracks().forEach(function(t) { t.stop(); }); localStream = null; }
         localVideo.srcObject = null;
-        hideLocalCamera();
+        localVideo.classList.remove('show');
+        localPh.classList.remove('hide');
+        liveBadge.classList.remove('show');
         returnVideo.srcObject = null;
-        returnVideo.classList.remove('active');
-        returnPh.style.display = 'flex';
+        returnVideo.classList.remove('show');
+        returnPh.classList.remove('hide');
         connected = false;
-        publishing = false;
-        if (returnAudioCtx) { try { returnAudioCtx.close(); } catch (e) {} returnAudioCtx = null; returnGainNode = null; }
+        micMuted = false;
+        cameraMuted = false;
+        
+        btnMic.className = 'ctrl-btn mic-active';
+        svgMicOn.style.display = 'block';
+        svgMicMut.style.display = 'none';
+        
+        btnCamera.classList.remove('muted');
+        svgCamOn.style.display = 'block';
+        svgCamMut.style.display = 'none';
+
+        updateTopStats(false);
+        if (returnAudioCtx) { try { returnAudioCtx.close(); } catch(e) {} returnAudioCtx = null; returnGainNode = null; }
     }
 
-    // ─── MAIN TOGGLE ─────────────────────────────────────────────
-    mainBtn.addEventListener('click', function () {
-        if (connected) {
-            cleanup();
-            if (vdo) { try { vdo.disconnect(); } catch (e) {} vdo = null; }
-            mainBtn.className = 'main-btn start';
-            mainBtn.textContent = 'Ativar Câmera';
-            setStatus('Desconectado', '');
-            setInfo('Câmera desativada. Clique para reconectar.');
-            return;
-        }
-
-        mainBtn.disabled = true;
-        mainBtn.innerHTML = '<span class="btn-spinner"></span>Carregando...';
-        setInfo('Carregando SDK...');
+    // ─── CONECTAR ────────────────────────────────────────────────
+    function doConnect() {
+        startBtn.disabled = true;
+        startBtn.innerHTML = '<span class="spinner"></span>Carregando SDK...';
+        startInfo.textContent = '';
+        startInfo.className = '';
 
         loadSDK()
-            .then(function () {
-                mainBtn.innerHTML = '<span class="btn-spinner"></span>Acessando câmera...';
-                setInfo('Solicitando câmera e microfone...');
-                setStatus('Acessando câmera', 'connecting');
-                return getMediaStream();
-            })
-            .then(function (stream) {
-                localStream = stream;
-                localVideo.srcObject = stream;
-                showLocalCamera();
-                startVUMeter(stream);
+        .then(function() {
+            startBtn.innerHTML = '<span class="spinner"></span>Acessando câmera...';
+            return getMedia();
+        })
+        .then(function(stream) {
+            localStream = stream;
+            localVideo.srcObject = stream;
+            localVideo.classList.add('show');
+            localPh.classList.add('hide');
+            startVU(stream);
 
-                mainBtn.innerHTML = '<span class="btn-spinner"></span>Conectando...';
-                setInfo('Conectando ao servidor VDO.Ninja...');
-                setStatus('Conectando', 'connecting');
+            startBtn.innerHTML = '<span class="spinner"></span>Conectando...';
 
-                vdo = new VDONinjaSDK({ iceServers: ICE, password: false, salt: 'vdo.ninja' });
-
-                vdo.addEventListener('disconnected', function () {
-                    if (connected) {
-                        setStatus('Desconectado', 'error');
-                        setInfo('⚠️ Conexão perdida. Clique "Ativar Câmera" para reconectar.', 'error');
-                        connected = false;
-                        mainBtn.className = 'main-btn start';
-                        mainBtn.textContent = 'Ativar Câmera';
-                        mainBtn.disabled = false;
-                        stopQualityMonitor();
-                    }
-                });
-
-                return vdo.connect();
-            })
-            .then(function () {
-                setInfo('Entrando na sala...');
-                return vdo.joinRoom({ room: ROOM, password: false });
-            })
-            .then(function () {
-                setInfo('Publicando transmissão...');
-                return vdo.publish(localStream, { streamID: streamID, password: false });
-            })
-            .then(function () {
-                connected = true;
-                publishing = true;
-                mainBtn.disabled = false;
-                mainBtn.className = 'main-btn stop';
-                mainBtn.textContent = '⏹ Desativar Câmera';
-                setStatus('AO VIVO', 'online');
-                setInfo('✅ Transmitindo ao vivo!', 'success');
-                setTimeout(function () { startViewReturn(); }, 2000);
-                setTimeout(function () { startQualityMonitor(); }, 8000);
-            })
-            .catch(function (err) {
-                console.error('[Guest] Error:', err);
-                cleanup();
-                if (vdo) { try { vdo.disconnect(); } catch (e) {} vdo = null; }
-                mainBtn.disabled = false;
-                mainBtn.className = 'main-btn start';
-                mainBtn.textContent = 'Ativar Câmera';
-                setStatus('Erro', 'error');
-                var msg = '❌ ';
-                if (err.name === 'NotAllowedError') msg += 'Permissão de câmera negada. Verifique as configurações do navegador.';
-                else if (err.name === 'NotFoundError') msg += 'Nenhuma câmera encontrada.';
-                else if (err.name === 'NotReadableError') msg += 'Câmera em uso por outro app.';
-                else if (err.name === 'SecurityError') msg += 'Acesso bloqueado — HTTPS é necessário.';
-                else msg += (err.message || 'Erro desconhecido');
-                setInfo(msg, 'error');
+            vdo = new VDONinjaSDK({ iceServers: ICE, password: false, salt: 'vdo.ninja' });
+            vdo.addEventListener('disconnected', function() {
+                if (!connected) return;
+                connected = false;
+                startOverlay.classList.remove('hide');
+                startBtn.disabled = false;
+                startBtn.textContent = 'Reconectar';
+                startInfo.textContent = '⚠️ Conexão perdida.';
+                liveBadge.classList.remove('show');
+                stopKbps();
+                updateTopStats(false);
             });
+            return vdo.connect();
+        })
+        .then(function() {
+            startBtn.innerHTML = '<span class="spinner"></span>Entrando na sala...';
+            return vdo.joinRoom({ room: ROOM, password: false });
+        })
+        .then(function() {
+            startBtn.innerHTML = '<span class="spinner"></span>Publicando...';
+            return vdo.publish(localStream, { streamID: streamID, password: false });
+        })
+        .then(function() {
+            connected = true;
+            startOverlay.classList.add('hide');
+            liveBadge.classList.add('show');
+
+            updateTopStats(true);
+            setTimeout(function() { startViewReturn(); }, 1500);
+            setTimeout(function() { startKbps(); }, 4000);
+        })
+        .catch(function(err) {
+            cleanup();
+            if (vdo) { try { vdo.disconnect(); } catch(e) {} vdo = null; }
+            startBtn.disabled = false;
+            startBtn.textContent = 'Tentar Novamente';
+            var msg = '❌ ';
+            if (err.name === 'NotAllowedError') msg += 'Permissão de câmera negada. Vá em Configurações e permita.';
+            else if (err.name === 'NotFoundError') msg += 'Nenhuma câmera encontrada.';
+            else if (err.name === 'NotReadableError') msg += 'Câmera em uso por outro aplicativo.';
+            else if (err.name === 'SecurityError') msg += 'Requer HTTPS.';
+            else msg += (err.message || 'Erro desconhecido');
+            startInfo.textContent = msg;
+            startInfo.className = 'error';
+        });
+    }
+
+    // ─── DESCONECTAR ─────────────────────────────────────────────
+    function doDisconnect() {
+        cleanup();
+        if (vdo) { try { vdo.disconnect(); } catch(e) {} vdo = null; }
+        startOverlay.classList.remove('hide');
+        startBtn.disabled = false;
+        startBtn.textContent = 'Iniciar Transmissão';
+        startInfo.textContent = '';
+        showToast('Transmissão encerrada');
+    }
+
+    // ─── EVENTS ──────────────────────────────────────────────────
+    startBtn.addEventListener('click', doConnect);
+
+    btnHangup.addEventListener('click', function() {
+        if (connected) {
+            if (confirm('Deseja realmente desligar a transmissão?')) {
+                doDisconnect();
+            }
+        }
     });
 
     // ─── INIT ─────────────────────────────────────────────────────
-    setInfo('Clique em "Ativar Câmera" para começar a transmitir.');
-    setStatus('Pronto', '');
-
-    loadSDK().then(function () {
-        mainBtn.disabled = false;
-        mainBtn.textContent = 'Ativar Câmera';
-        setInfo('Pronto. Clique para iniciar sua câmera.');
-    }).catch(function () {
-        mainBtn.disabled = false;
-        mainBtn.textContent = 'Ativar Câmera';
-        setInfo('⚠️ SDK carregará ao conectar.');
+    loadSDK().then(function() {
+        startBtn.disabled = false;
+        startBtn.textContent = 'Iniciar Transmissão';
+        startInfo.textContent = 'Toque para ativar sua câmera e microfone.';
+    }).catch(function() {
+        startBtn.disabled = false;
+        startBtn.textContent = 'Iniciar Transmissão';
+        startInfo.textContent = 'O SDK carregará ao conectar.';
     });
 
-    window.addEventListener('beforeunload', function (e) {
+    window.addEventListener('beforeunload', function(e) {
         if (connected) { e.preventDefault(); e.returnValue = ''; }
     });
+
 })();
 </script>
 </body>
