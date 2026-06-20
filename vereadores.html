@@ -883,6 +883,15 @@
         .program-panel-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border2); }
         .program-panel-btn.pin-btn.active { color: var(--accent); border-color: var(--accent); }
         .program-panel-btn.close-btn:hover { background: var(--red); color:#fff; border-color:var(--red); }
+        .program-panel iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+        }
+        .program-panel iframe.active { display: block; }
         .program-panel-spinner {
             position: absolute;
             inset: 0;
@@ -986,9 +995,10 @@
             </div>
         </div>
         <div class="program-panel-video-wrap">
+            <iframe id="program-iframe" style="width:100%;height:100%;border:none" allow="autoplay;microphone;camera" loading="lazy"></iframe>
             <div class="program-panel-placeholder" id="program-ph">
                 <div class="ph-icon">📺</div>
-                <div class="ph-text">Programa abre em janela separada</div>
+                <div class="ph-text">Preview do Programa</div>
             </div>
         </div>
     </div>
@@ -1266,26 +1276,22 @@
         panel.classList.add('active');
         if (ph) ph.style.display = 'none';
         dot.className = 'program-panel-dot online';
-        var u = new URL('monitor.html', window.location.href);
-        u.searchParams.set('embed', '1');
-        programWindow = window.open(u.href, '_blank', 'width=480,height=360,resizable=yes');
-        if (!programWindow) {
-            // popup bloqueado — abre em nova aba
-            programWindow = window.open(u.href, '_blank');
-        }
+        var iframe = document.getElementById('program-iframe');
+        var u = 'https://vdo.ninja/?view=NossaTV_CAM&room=NossaTV&password=false&cleanviewer&cleanoutput&solo&noseek&nohangupbutton&hideheader&nocontrols';
+        iframe.src = u;
+        iframe.classList.add('active');
     }
 
     function stopMainCam() {
         programActive = false;
-        if (programWindow && !programWindow.closed) {
-            programWindow.close();
-        }
-        programWindow = null;
         var panel = document.getElementById('program-panel');
+        var iframe = document.getElementById('program-iframe');
         var ph = document.getElementById('program-ph');
         var dot = document.getElementById('program-dot');
         panel.classList.remove('active');
         if (ph) ph.style.display = 'flex';
+        iframe.classList.remove('active');
+        iframe.src = '';
         dot.className = 'program-panel-dot';
     }
 
