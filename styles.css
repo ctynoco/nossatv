@@ -715,6 +715,9 @@ section h2 {
 .source-item .source-actions button:hover { background: #cc0000; color: #fff; }
 .source-item .source-actions .btn-eye:hover { background: #0066cc; color: #fff; }
 
+.vereador-link-item.online { border-left-color: #44cc44; background-color: #1a2a1a; }
+.vereador-link-item .vereador-link-status { font-size: 0.85em; flex-shrink: 0; }
+
 /* =============================================
    MIXER DE ÁUDIO
    ============================================= */

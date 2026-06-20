@@ -2189,6 +2189,14 @@ class OBSClone {
         const list = document.getElementById('sources-list');
         if (!list) return;
 
+        const addRow = document.querySelector('.add-source-row');
+        if (addRow) addRow.style.display = this._vereadoresActive ? 'none' : '';
+
+        if (this._vereadoresActive) {
+            this._renderVereadorLinksList(list);
+            return;
+        }
+
         const sources = this.currentSources;
 
         if (sources.length === 0) {
@@ -2211,6 +2219,31 @@ class OBSClone {
         }).join('');
 
         this._setupDragDrop(list, 'source');
+    }
+
+    _renderVereadorLinksList(list) {
+        const mgr = window.vereadorManager;
+        if (!mgr || !mgr.slots) { list.innerHTML = '<p>Nenhum vereador configurado</p>'; return; }
+        list.innerHTML = mgr.slots.map((s, i) => {
+            const isOnline = s.peerId ? 'online' : '';
+            return `<div class="source-item vereador-link-item ${isOnline}" data-slot="${s.id}">
+                <span class="source-icon">👤</span>
+                <span class="source-name" title="${s.link}">${s.label}</span>
+                <div class="source-actions">
+                    <button class="btn-copy-link" data-link="${s.link}" title="Copiar link">📋</button>
+                    <span class="vereador-link-status ${isOnline}" title="${isOnline ? 'Conectado' : 'Desconectado'}">${isOnline ? '🟢' : '⚪'}</span>
+                </div>
+            </div>`;
+        }).join('');
+        list.querySelectorAll('.btn-copy-link').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                navigator.clipboard.writeText(btn.dataset.link).then(() => {
+                    btn.textContent = '✅';
+                    setTimeout(() => { btn.textContent = '📋'; }, 1500);
+                });
+            });
+        });
     }
 
     // ─────────────────────────────────────────

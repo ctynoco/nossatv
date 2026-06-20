@@ -326,6 +326,7 @@ export class VereadorManager {
         this.connections[slotId] = stream;
         this.obs?.setupVereadorAudio(slotId, stream, slot.label);
         this.renderGrid();
+        this.obs?.renderSources();
         this._setModalStatus('online', `✅ ${slot.label} conectado`);
         this.obs?.showNotification(`📹 ${slot.label} conectado`);
     }
@@ -481,6 +482,7 @@ export class VereadorManager {
         }
         slot.connected = false;
         this.renderGrid();
+        this.obs?.renderSources();
     }
 
     setupEvents() {
