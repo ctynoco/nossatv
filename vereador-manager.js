@@ -85,6 +85,7 @@ export class VereadorManager {
 
             this.vdo.addEventListener('disconnected', () => {
                 this._vdoReady = false;
+                this._streamingCam = false;
                 this.obs?.showNotification('⚠️ VDO.Ninja desconectado — reconectando...');
                 this._scheduleReconnect();
             });
@@ -540,51 +541,36 @@ export class VereadorManager {
     //  CÂMERA VIRTUAL (VDO.Ninja Direct Link)
     // ─────────────────────────────────────────
     async startVirtualCamera(stream) {
-        if (this._virtualCamVdo) {
-            this.stopVirtualCamera();
+        if (!this.vdo || !this._vdoReady) {
+            throw new Error('VDO.Ninja não está conectado');
         }
-
-        const vdo = new VDONinjaSDK({
-            iceServers: ICE_SERVERS,
-            password: false,
-            salt: 'vdo.ninja',
-            debug: false,
-        });
-
-        this._virtualCamVdo = vdo;
-
-        let hashedStreamID = 'NossaTV_CAM';
-
-        vdo.addEventListener('publishing', (event) => {
-            if (event.detail?.hashedStreamID) {
-                hashedStreamID = event.detail.hashedStreamID;
-            }
-        });
-
         try {
-            await vdo.connect();
-            await vdo.joinRoom({ room: ROOM, password: false });
-            await vdo.publish(stream, {
+            await this.vdo.publish(stream, {
                 streamID: 'NossaTV_CAM',
                 password: false,
             });
-
-            const link = `https://vdo.ninja/?view=${hashedStreamID}&room=${ROOM}&solo&password=false`;
+            this._streamingCam = true;
+            const link = `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo&password=false`;
             return link;
         } catch (e) {
-            this.stopVirtualCamera();
             throw e;
         }
     }
 
     stopVirtualCamera() {
-        if (!this._virtualCamVdo) return;
-        try { this._virtualCamVdo.stopPublishing(); } catch(e) {}
-        try { this._virtualCamVdo.disconnect(); } catch(e) {}
-        this._virtualCamVdo = null;
+        if (!this.vdo) return;
+        try { this.vdo.stopPublishing(); } catch(e) {}
+        this._streamingCam = false;
+        // Se o OBS ainda estiver transmitindo, restaura program_ALL
+        if (this.obs?.isStreaming) {
+            const stream = this.obs._getProgramStream();
+            if (stream) {
+                setTimeout(() => this.publishProgram(stream), 300);
+            }
+        }
     }
 
     isVirtualCameraActive() {
-        return !!this._virtualCamVdo;
+        return !!this._streamingCam;
     }
 }
