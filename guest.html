@@ -412,6 +412,10 @@
             p = p.then(function() {
                 infoText.textContent = 'Publicando transmissão...';
                 return vdo.publish(localStream, { streamID: streamID, password: false });
+            }).then(function() {
+                if (typeof vdo.announce === 'function') {
+                    vdo.announce({ streamID: streamID }).catch(function() {});
+                }
             });
 
             // --- Step 4: success ---

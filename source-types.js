@@ -13,6 +13,7 @@ export const SOURCE_TYPES = {
     videoCaptureDevice: { label: 'Dispositivo Captura Vídeo', icon: '📹' },
     media:              { label: 'Mídia',                   icon: '🎬' },
     vereador:           { label: 'Vereador',                icon: '👤' },
+    vdoninja:           { label: 'VDO.Ninja',               icon: '📡' },
 };
 
 export const SOURCE_FORMS = {
@@ -267,8 +268,38 @@ export const SOURCE_FORMS = {
                 <input type="color" id="src-vereador-bg" value="#1a1a2e" />
             </div>
         </div>`,
+
+    vdoninja: () => `
+        <div class="form-group">
+            <label>Nome da fonte</label>
+            <input type="text" id="src-name" value="VDO.Ninja" />
+        </div>
+        <div class="form-group">
+            <label>Stream ID</label>
+            <input type="text" id="src-vdo-streamid" value="NossaTV_CAM" placeholder="ex: NossaTV_CAM" />
+        </div>
+        <div class="form-group">
+            <label>Sala</label>
+            <input type="text" id="src-vdo-room" value="NossaTV" />
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Áudio</label>
+                <select id="src-vdo-audio">
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Vídeo</label>
+                <select id="src-vdo-video">
+                    <option value="true">Sim</option>
+                    <option value="false">Não</option>
+                </select>
+            </div>
+        </div>`,
 };
 
-export const VIDEO_SOURCE_TYPES = ['camera', 'screen', 'window', 'videoCaptureDevice', 'media', 'gameCapture'];
+export const VIDEO_SOURCE_TYPES = ['camera', 'screen', 'window', 'videoCaptureDevice', 'media', 'gameCapture', 'vdoninja'];
 
 export const AUDIO_SOURCE_TYPES = ['camera', 'screen', 'window', 'audio'];

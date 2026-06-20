@@ -79,14 +79,21 @@ export class VereadorManager {
                 }, 600);
             });
 
-            this.vdo.addEventListener('connected', () => {
+            this.vdo.addEventListener('connected', async () => {
                 this._vdoReady = true;
                 this._reconnectAttempts = 0;
                 if (this._streamingCam && this._camStream) {
-                    this.vdo.publish(this._camStream, {
-                        streamID: 'NossaTV_CAM',
-                        password: false,
-                    }).catch(() => {});
+                    try {
+                        await this.vdo.publish(this._camStream, {
+                            streamID: 'NossaTV_CAM',
+                            password: false,
+                        });
+                        if (typeof this.vdo.announce === 'function') {
+                            this.vdo.announce({ streamID: 'NossaTV_CAM' }).catch(() => {});
+                        }
+                    } catch (e) {
+                        console.warn('[Vereador] VCAM: erro ao republicar após reconexão:', e);
+                    }
                 }
             });
 
@@ -536,9 +543,23 @@ export class VereadorManager {
         });
     }
 
-    publishProgram(stream) {
+    async _stopPublishingAndWait() {
+        if (!this.vdo) return;
+        const needsStop = this._streamingCam || this.vdo.state?.publishing;
+        if (!needsStop) return;
+        await new Promise((resolve) => {
+            const timer = setTimeout(resolve, 3000);
+            const onStopped = () => { clearTimeout(timer); this.vdo.removeEventListener('publishingStopped', onStopped); resolve(); };
+            this.vdo.addEventListener('publishingStopped', onStopped);
+            try { this.vdo.stopPublishing(); } catch(e) { clearTimeout(timer); this.vdo.removeEventListener('publishingStopped', onStopped); resolve(); }
+        });
+    }
+
+    async publishProgram(stream) {
         if (!this.vdo || !stream) return;
         try {
+            await this._stopPublishingAndWait();
+            this._streamingCam = false;
             this.vdo.publish(stream, { streamID: 'program_ALL' });
         } catch (e) {
             console.warn('[Vereador] Erro ao publicar programa:', e);
@@ -574,11 +595,15 @@ export class VereadorManager {
             throw new Error('VDO.Ninja não está conectado');
         }
         try {
+            await this._stopPublishingAndWait();
             this._camStream = stream;
             await this.vdo.publish(stream, {
                 streamID: 'NossaTV_CAM',
                 password: false,
             });
+            if (typeof this.vdo.announce === 'function') {
+                this.vdo.announce({ streamID: 'NossaTV_CAM' }).catch(() => {});
+            }
             this._streamingCam = true;
             const link = `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo&password=false`;
             return link;

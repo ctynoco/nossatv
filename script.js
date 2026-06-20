@@ -797,6 +797,12 @@ class OBSClone {
                 color: this._validateColor(g('src-vereador-color')),
                 bg: this._validateColor(g('src-vereador-bg')),
             };
+            case 'vdoninja': return {
+                streamID: g('src-vdo-streamid') || 'NossaTV_CAM',
+                room: g('src-vdo-room') || 'NossaTV',
+                audio: g('src-vdo-audio') !== 'false',
+                video: g('src-vdo-video') !== 'false',
+            };
             default:        return {};
         }
     }
@@ -1048,6 +1054,26 @@ class OBSClone {
                 break;
             }
 
+            case 'vdoninja': {
+                const streamID = source.config.streamID || 'NossaTV_CAM';
+                const mgr = this.vereadorManager || window.obsClone?.vereadorManager;
+                if (!mgr || !mgr.vdo) {
+                    throw new Error('VDO.Ninja não está disponível');
+                }
+                const stream = await mgr.vdo.view(streamID, {
+                    audio: source.config.audio !== false,
+                    video: source.config.video !== false,
+                });
+                if (!stream || !stream.active) {
+                    throw new Error(`Stream "${streamID}" não disponível`);
+                }
+                this.mediaStreams[source.id] = stream;
+                const video = this.createVideoEl('preview-video', stream, false, false);
+                previewArea.appendChild(video);
+                this.setupAudioChain(source.id, stream);
+                break;
+            }
+
             case 'vereador': {
                 const container = document.createElement('div');
                 container.style.cssText = `
@@ -1221,6 +1247,15 @@ class OBSClone {
             delete this.mediaStreams[id];
         }
 
+        // Cleanup VDO.Ninja view
+        var src = scene.sources.find(function(s) { return s.id === id; });
+        if (src && src.type === 'vdoninja') {
+            var mgr = window.obsClone?.vereadorManager || window.vereadorManager;
+            if (mgr && mgr.vdo && src.config?.streamID) {
+                try { mgr.vdo.stopViewing(src.config.streamID); } catch(e) {}
+            }
+        }
+
         this.cleanupAudioChain(id);
         this._stopChromaCanvas(id);
         // limpa intervalo do slideshow
@@ -1296,7 +1331,7 @@ class OBSClone {
         const similarity = (source.chromaKey?.similarity ?? 80) / 100;
         const smoothness = (source.chromaKey?.smoothness ?? 50) / 100;
         const opacity = (source.chromaKey?.opacity ?? 100) / 100;
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         canvas.width = 320;
         canvas.height = 180;
         let anim;
@@ -1389,7 +1424,7 @@ class OBSClone {
         canvas.className = 'chroma-canvas';
         canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
         container.appendChild(canvas);
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true });
         const ck = source.chromaKey || {};
         const color = ck.color || '#00ff00';
         const similarity = (ck.similarity ?? 80) / 100;
@@ -1526,7 +1561,10 @@ class OBSClone {
         var va = this._vereadorAudio[slotId];
         if (!va) return;
         try {
-            if (va.context && va.context.state !== 'closed') va.context.close();
+            if (va.source) va.source.disconnect();
+            if (va.gain) va.gain.disconnect();
+            if (va.panner) va.panner.disconnect();
+            if (va.analyser) va.analyser.disconnect();
         } catch(e) {}
         delete this._vereadorAudio[slotId];
         this.renderAudioMixer();
