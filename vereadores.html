@@ -800,6 +800,67 @@
         }
         .link-whatsapp-mini:hover { background: rgba(37,211,102,0.2); }
 
+        /* ── PIP (Preview da Câmera Principal) ──────── */
+        .pip-container {
+            position: fixed;
+            bottom: 24px;
+            right: 24px;
+            width: 240px;
+            aspect-ratio: 16/9;
+            background: #000;
+            border: 2px solid var(--border2);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+            z-index: 999;
+            box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+            display: none;
+            transition: opacity 0.3s;
+        }
+        .pip-container.active { display: block; }
+        .pip-container:hover { border-color: var(--accent); }
+        .pip-video { width:100%; height:100%; object-fit:contain; display:block; }
+        .pip-header {
+            position: absolute;
+            top: 0; left: 0; right: 0;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 4px 6px;
+            background: linear-gradient(rgba(0,0,0,0.7), transparent);
+            pointer-events: none;
+        }
+        .pip-label {
+            font-size: 9px;
+            font-weight: 700;
+            color: var(--text2);
+            letter-spacing: 0.5px;
+            text-transform: uppercase;
+        }
+        .pip-close {
+            pointer-events: auto;
+            width: 18px; height: 18px;
+            border-radius: 50%;
+            background: rgba(0,0,0,0.6);
+            border: 1px solid var(--border);
+            color: var(--text2);
+            font-size: 10px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s;
+        }
+        .pip-close:hover { background: var(--red); color:#fff; border-color:var(--red); }
+        .pip-spinner {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            background: rgba(0,0,0,0.6);
+        }
+        .pip-spinner .spinner { width:20px; height:20px; }
+
         @media (max-width: 600px) {
             .header { padding: 12px 16px; }
             .main { padding: 16px 12px 32px; }
@@ -904,6 +965,18 @@
 
 </main>
 
+<!-- PIP: Preview da Câmera Principal -->
+<div class="pip-container" id="pip-container">
+    <video class="pip-video" id="pip-video" autoplay playsinline muted></video>
+    <div class="pip-header">
+        <span class="pip-label">📺 PROGRAMA</span>
+        <button class="pip-close" id="pip-close">✕</button>
+    </div>
+    <div class="pip-spinner" id="pip-spinner">
+        <div class="spinner active"></div>
+    </div>
+</div>
+
 <!-- MODAL: VEREADOR -->
 <div class="modal-overlay" id="modal-slot">
     <div class="modal">
@@ -986,6 +1059,8 @@
     var masterAudioCtx = null;
     var masterDestGain = null; // Web Audio master output
     var slotVolumes = {}; // { slotId: { input: 1.0, output: 1.0 } }
+    var camStream = null;
+    var camViewActive = false;
 
     // ─── INICIALIZA SLOTS ────────────────────────────────────────
     function initSlots() {
@@ -1133,6 +1208,39 @@
                     viewActive[slot.id] = false;
                 });
             }
+        });
+        viewMainCam();
+    }
+
+    var camRetryTimer = null;
+    var camRetryCount = 0;
+    function viewMainCam() {
+        if (!vdo || !vdoReady || destroyed) return;
+        if (camViewActive) return;
+        camViewActive = true;
+        var pipContainer = document.getElementById('pip-container');
+        var pipSpinner = document.getElementById('pip-spinner');
+        var pipVideo = document.getElementById('pip-video');
+        pipContainer.classList.add('active');
+        pipSpinner.style.display = 'flex';
+        vdo.view('NossaTV_CAM', { audio: false, video: true }).then(function(stream) {
+            pipSpinner.style.display = 'none';
+            if (stream && stream.active) {
+                camStream = stream;
+                pipVideo.srcObject = stream;
+                pipVideo.play().catch(function() {});
+            }
+        }).catch(function(err) {
+            console.warn('[Vereadores] Erro ao ver NossaTV_CAM:', err);
+            camViewActive = false;
+            pipContainer.classList.remove('active');
+            camRetryCount++;
+            var delay = Math.min(3000 * (1 << Math.min(camRetryCount, 5)), 30000);
+            camRetryTimer = setTimeout(function() {
+                camRetryTimer = null;
+                camViewActive = false;
+                viewMainCam();
+            }, delay);
         });
     }
 
@@ -1569,6 +1677,21 @@
         if (e.key === 'Escape') closeModal();
     });
 
+    // ─── PIP EVENTS ─────────────────────────────────────────────
+    document.getElementById('pip-close').addEventListener('click', function() {
+        var pipContainer = document.getElementById('pip-container');
+        pipContainer.classList.remove('active');
+        if (camStream) {
+            camStream.getTracks().forEach(function(t) { t.stop(); });
+            camStream = null;
+        }
+        if (vdo) {
+            try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
+        }
+        camViewActive = false;
+        if (camRetryTimer) { clearTimeout(camRetryTimer); camRetryTimer = null; }
+    });
+
     // ─── MASTER VOLUME CONTROLS ──────────────────────────────────
     document.getElementById('master-input-vol').addEventListener('input', function() {
         var pct = parseInt(this.value);
@@ -1629,6 +1752,8 @@
 
     window.addEventListener('beforeunload', function() {
         destroyed = true;
+        if (camRetryTimer) { clearTimeout(camRetryTimer); }
+        if (camStream) { camStream.getTracks().forEach(function(t) { t.stop(); }); }
         if (vdo) { try { vdo.disconnect(); } catch(e) {} }
         if (masterAudioCtx) { try { masterAudioCtx.close(); } catch(e) {} }
     });
