@@ -179,11 +179,6 @@
             align-items: center;
             justify-content: center;
         }
-        #return-video {
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
-        }
         #return-placeholder {
             position: absolute;
             inset: 0;
@@ -205,6 +200,22 @@
             font-weight: 500;
         }
         #return-placeholder.hide { display: none; }
+        #return-iframe {
+            position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            border: none;
+            display: none;
+            background: #000;
+        }
+        #return-iframe.active { display: block; }
+
+        /* landscape: camera left, program right */
+        @media (orientation: landscape) {
+            #videos-area { flex-direction: row; }
+            #local-wrap { border-bottom: none; border-right: 1px solid rgba(255,255,255,0.04); }
+        }
 
         /* VU METER overlay */
         #vu-bar {
@@ -564,9 +575,9 @@
             </div>
         </div>
 
-        <!-- return video (bottom half) -->
+        <!-- return video (bottom half) — iframe com cleanviewer -->
         <div id="return-wrap">
-            <video id="return-video" autoplay playsinline></video>
+            <iframe id="return-iframe" allow="autoplay" loading="lazy"></iframe>
             <div id="return-placeholder">
                 <div class="ph-icon">📺</div>
                 <div class="ph-text">Aguardando retorno do programa...</div>
@@ -661,6 +672,7 @@
     // ─── CONFIG ──────────────────────────────────────────────────
     var ROOM = 'NossaTV';
     var RETURN_STREAM_ID = 'NossaTV_CAM';
+    var RETURN_VIEW_URL = 'https://vdo.ninja/?view=NossaTV_CAM&room=NossaTV&password=false&cleanviewer&cleanoutput&solo&noseek&nohangupbutton&hideheader&nocontrols';
     var SDK_URLS = [
         'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js',
         'https://unpkg.com/@vdoninja/sdk@1.3.18/dist/vdoninja-sdk.min.js',
@@ -696,12 +708,8 @@
     var facingMode = 'user';
     var vuInterval = null;
     var qualityInterval = null;
-    var viewRetry = null;
-    var viewRetryCount = 0;
     var audioCtx = null;
     var inputGainNode = null;
-    var returnAudioCtx = null;
-    var returnGainNode = null;
     var kbpsInterval = null;
     var lastBytes = 0;
 
@@ -710,7 +718,7 @@
     var startBtn      = document.getElementById('start-btn');
     var startInfo     = document.getElementById('start-info');
     var localVideo    = document.getElementById('local-video');
-    var returnVideo   = document.getElementById('return-video');
+    var returnIframe  = document.getElementById('return-iframe');
     var localPh       = document.getElementById('local-placeholder');
     var returnPh      = document.getElementById('return-placeholder');
     var liveBadge     = document.getElementById('live-badge');
@@ -781,8 +789,6 @@
     volOutput.addEventListener('input', function() {
         var pct = parseInt(volOutput.value);
         volOutputPct.textContent = pct + '%';
-        if (returnGainNode) returnGainNode.gain.value = pct / 100;
-        else returnVideo.volume = Math.min(pct / 100, 1.0);
     });
 
     // ─── CHAT BUTTON ─────────────────────────────────────────────
@@ -793,10 +799,6 @@
     // ─── SPEAKER BUTTON ──────────────────────────────────────────
     btnSpeaker.addEventListener('click', function() {
         speakerMuted = !speakerMuted;
-        returnVideo.muted = speakerMuted;
-        if (returnGainNode) {
-            returnGainNode.gain.value = speakerMuted ? 0 : (parseInt(volOutput.value) / 100);
-        }
         btnSpeaker.classList.toggle('muted', speakerMuted);
         svgSpeakerOn.style.display = speakerMuted ? 'none' : 'block';
         svgSpeakerMut.style.display = speakerMuted ? 'block' : 'none';
@@ -903,19 +905,7 @@
         vuFill.style.width = '0%';
     }
 
-    // ─── RETORNO ÁUDIO ───────────────────────────────────────────
-    function setupReturnAudio(stream) {
-        try {
-            if (!returnAudioCtx) returnAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
-            var src = returnAudioCtx.createMediaStreamSource(stream);
-            returnGainNode = returnAudioCtx.createGain();
-            returnGainNode.gain.value = speakerMuted ? 0 : (parseInt(volOutput.value) / 100);
-            src.connect(returnGainNode);
-            returnGainNode.connect(returnAudioCtx.destination);
-        } catch(e) {
-            returnVideo.volume = speakerMuted ? 0 : Math.min(parseInt(volOutput.value) / 100, 1.0);
-        }
-    }
+
 
     // ─── TOP STATS ───────────────────────────────────────────────
     function updateTopStats(active) {
@@ -950,26 +940,10 @@
 
     // ─── VIEW RETURN ─────────────────────────────────────────────
     function startViewReturn() {
-        if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
-        if (!vdo || !connected) return;
-        vdo.view(RETURN_STREAM_ID, { audio: true, video: true }).then(function(stream) {
-            if (stream && stream.active) {
-                returnVideo.srcObject = stream;
-                returnVideo.classList.add('show');
-                returnPh.classList.add('hide');
-                returnVideo.play().catch(function() {});
-                setupReturnAudio(stream);
-                viewRetryCount = 0;
-            } else {
-                scheduleViewRetry();
-            }
-        }).catch(function() { scheduleViewRetry(); });
-    }
-    function scheduleViewRetry() {
-        if (viewRetryCount >= 8) return;
-        var delay = Math.min(3000 * Math.pow(1.5, viewRetryCount), 30000);
-        viewRetryCount++;
-        viewRetry = setTimeout(startViewReturn, delay);
+        if (!connected) return;
+        returnIframe.src = RETURN_VIEW_URL;
+        returnIframe.classList.add('active');
+        returnPh.classList.add('hide');
     }
 
     // ─── getUserMedia ─────────────────────────────────────────────
@@ -1015,8 +989,6 @@
     // ─── CLEANUP ──────────────────────────────────────────────────
     function cleanup() {
         stopVU(); stopKbps();
-        if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
-        viewRetryCount = 0;
         if (vdo) {
             try { vdo.stopPublishing(); } catch(e) {}
             try { vdo.stopViewing(RETURN_STREAM_ID); } catch(e) {}
@@ -1026,8 +998,8 @@
         localVideo.classList.remove('show');
         localPh.classList.remove('hide');
         liveBadge.classList.remove('show');
-        returnVideo.srcObject = null;
-        returnVideo.classList.remove('show');
+        returnIframe.src = '';
+        returnIframe.classList.remove('active');
         returnPh.classList.remove('hide');
         connected = false;
         micMuted = false;
@@ -1042,7 +1014,6 @@
         svgCamMut.style.display = 'none';
 
         updateTopStats(false);
-        if (returnAudioCtx) { try { returnAudioCtx.close(); } catch(e) {} returnAudioCtx = null; returnGainNode = null; }
     }
 
     // ─── CONECTAR ────────────────────────────────────────────────
