@@ -54,7 +54,8 @@ export class VereadorManager {
         try {
             this.vdo = new VDONinjaSDK({
                 iceServers: ICE_SERVERS,
-                iceTransportPolicy: 'all',
+                password: false,
+                salt: 'vdo.ninja',
             });
 
             this.vdo.addEventListener('track', (event) => {
@@ -89,7 +90,7 @@ export class VereadorManager {
             });
 
             this.vdo.connect().then(() => {
-                return this.vdo.joinRoom({ room: ROOM });
+                return this.vdo.joinRoom({ room: ROOM, password: false });
             }).then(() => {
                 this._startViewing();
             }).catch((err) => {

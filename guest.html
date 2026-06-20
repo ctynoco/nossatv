@@ -299,7 +299,7 @@
             return new Promise(function(resolve) {
                 if (viewRetry) { clearTimeout(viewRetry); viewRetry = null; }
                 if (!vdo || !connected) { resolve(); return; }
-                vdo.view('program_ALL', { audio: false, video: true }).then(function(stream) {
+                vdo.view('NossaTV_CAM', { audio: false, video: true }).then(function(stream) {
                     if (stream && stream.active) {
                         returnVideo.srcObject = stream;
                         returnVideo.classList.add('active');
@@ -331,7 +331,7 @@
             stopVUMeter();
             if (vdo) {
                 try { vdo.stopPublishing(); } catch(e) {}
-                try { vdo.stopViewing('program_ALL'); } catch(e) {}
+                try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
             }
             if (localStream) {
                 localStream.getTracks().forEach(function(t) { t.stop(); });
@@ -351,7 +351,7 @@
             if (connected) {
                 if (vdo && localStream) {
                     try { vdo.stopPublishing(); } catch(e) {}
-                    try { vdo.stopViewing('program_ALL'); } catch(e) {}
+                    try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
                 }
                 cleanup();
                 vdo = null;
@@ -385,7 +385,8 @@
                         { urls: 'stun:stun3.l.google.com:19302' },
                         { urls: 'stun:stun4.l.google.com:19302' },
                     ],
-                    iceTransportPolicy: 'all',
+                    password: false,
+                    salt: 'vdo.ninja',
                 });
 
                 vdo.addEventListener('disconnected', function() {
@@ -404,13 +405,13 @@
             // --- Step 2: joinRoom ---
             p = p.then(function() {
                 infoText.textContent = 'Entrando na sala...';
-                return vdo.joinRoom({ room: room });
+                return vdo.joinRoom({ room: room, password: false });
             });
 
             // --- Step 3: publish ---
             p = p.then(function() {
                 infoText.textContent = 'Publicando transmissão...';
-                return vdo.publish(localStream, { streamID: streamID });
+                return vdo.publish(localStream, { streamID: streamID, password: false });
             });
 
             // --- Step 4: success ---
@@ -440,19 +441,26 @@
                 hideSpinner();
                 var msg = err.message || 'Erro desconhecido';
                 if (err.name === 'NotAllowedError') {
-                    msg = 'Permissão de câmera negada. Permita o acesso e tente novamente.';
+                    msg = '❌ Permissão de câmera negada. Permita o acesso nas configurações do navegador e tente novamente.';
                 } else if (err.name === 'NotFoundError') {
-                    msg = 'Nenhuma câmera encontrada neste dispositivo.';
+                    msg = '❌ Nenhuma câmera encontrada neste dispositivo.';
                 } else if (err.name === 'NotReadableError') {
-                    msg = 'Câmera ocupada por outro aplicativo. Feche e tente novamente.';
+                    msg = '❌ Câmera ocupada por outro aplicativo. Feche e tente novamente.';
                 } else if (err.name === 'OverconstrainedError') {
-                    msg = 'Câmera não suporta a resolução necessária.';
+                    msg = '❌ Câmera não suporta a resolução necessária.';
                 } else if (err.name === 'AbortError') {
-                    msg = 'Falha de rede ao acessar a câmera. Verifique sua conexão.';
+                    msg = '❌ Falha de rede ao acessar a câmera. Verifique sua conexão.';
                 } else if (err.name === 'SecurityError') {
-                    msg = 'Acesso bloqueado por política de segurança (HTTPS requerido).';
+                    msg = '❌ Acesso bloqueado (HTTPS requerido).';
                 }
                 infoText.textContent = msg;
+                // Log detalhado para diagnóstico
+                console.log('[Guest] Detalhes do erro:', JSON.stringify({
+                    name: err.name,
+                    message: err.message,
+                    constraint: err.constraint,
+                    userAgent: navigator.userAgent,
+                }));
             });
         });
 

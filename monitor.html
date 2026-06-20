@@ -78,7 +78,7 @@
 
     var room = 'NossaTV';
 
-    var STREAM_ID = 'program_ALL';
+    var STREAM_ID = 'NossaTV_CAM';
     var vdo = null;
     var connected = false;
     var viewing = false;
@@ -200,7 +200,8 @@
                     { urls: 'stun:stun3.l.google.com:19302' },
                     { urls: 'stun:stun4.l.google.com:19302' },
                 ],
-                iceTransportPolicy: 'all',
+                password: false,
+                salt: 'vdo.ninja',
             });
 
             vdo.addEventListener('disconnected', function() {
@@ -214,7 +215,7 @@
 
             return vdo.connect();
         }).then(function() {
-            return vdo.joinRoom({ room: room });
+            return vdo.joinRoom({ room: room, password: false });
         }).then(function() {
             connected = true;
             spinner.style.display = 'none';

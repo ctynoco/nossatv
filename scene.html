@@ -260,7 +260,8 @@
                 { urls: 'stun:stun3.l.google.com:19302' },
                 { urls: 'stun:stun4.l.google.com:19302' },
             ],
-            iceTransportPolicy: 'all',
+            password: false,
+            salt: 'vdo.ninja',
         });
         vdo.addEventListener('track', function(e){
             if(e.detail && e.detail.streamID) _markLive(e.detail.streamID);
@@ -272,7 +273,7 @@
             setTimeout(connect, 3000);
         });
         vdo.connect().then(function(){
-            return vdo.joinRoom({ room: room });
+            return vdo.joinRoom({ room: room, password: false });
         }).then(function(){
             connected = true;
             setStatus('Online', 'online');
