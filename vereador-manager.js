@@ -533,7 +533,7 @@ export class VereadorManager {
     publishProgram(stream) {
         if (!this.vdo || !stream) return;
         try {
-            this.vdo.publish(stream, { streamID: 'program_ALL' });
+            this.vdo.publish(stream, { streamID: 'NossaTV_CAM' });
         } catch (e) {
             console.warn('[Vereador] Erro ao publicar programa:', e);
         }
@@ -584,7 +584,7 @@ export class VereadorManager {
         if (!this.vdo) return;
         try { this.vdo.stopPublishing(); } catch(e) {}
         this._streamingCam = false;
-        // Se o OBS ainda estiver transmitindo, restaura program_ALL
+        // Se o OBS ainda estiver transmitindo, restaura NossaTV_CAM
         if (this.obs?.isStreaming) {
             const stream = this.obs._getProgramStream();
             if (stream) {
