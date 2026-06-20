@@ -1195,6 +1195,23 @@
                     var streamID = event.detail && event.detail.streamID;
                     var track = event.detail && event.detail.track;
                     if (!streamID || !track) return;
+
+                    // NossaTV_CAM: adiciona track direto no video do programa
+                    if (streamID === 'NossaTV_CAM') {
+                        var video = document.getElementById('program-video');
+                        var stream = video.srcObject;
+                        if (!stream) { stream = new MediaStream(); video.srcObject = stream; }
+                        stream.addTrack(track);
+                        if (!stream.active) { /* stream fica active ao addTrack */ }
+                        var spinner = document.getElementById('program-spinner');
+                        if (spinner) spinner.classList.remove('active');
+                        var dot = document.getElementById('program-dot');
+                        if (dot) dot.className = 'program-panel-dot online';
+                        programActive = true;
+                        camStream = stream;
+                        return;
+                    }
+
                     var slot = slots.find(function(s) { return s.streamID === streamID; });
                     if (!slot) return;
                     if (!pendingStreams[slot.id]) pendingStreams[slot.id] = new MediaStream();
@@ -1282,15 +1299,23 @@
         panel.classList.add('active');
         spinner.classList.add('active');
         if (ph) ph.style.display = 'none';
+        // Cria stream vazio — tracks chegam pelo evento 'track'
+        var emptyStream = new MediaStream();
+        video.srcObject = emptyStream;
+        camStream = emptyStream;
         vdo.view('NossaTV_CAM', { audio: false, video: true }).then(function(stream) {
-            spinner.classList.remove('active');
+            // tracks já podem estar no stream — mescla se necessário
             if (stream && stream.active) {
-                camStream = stream;
-                video.srcObject = stream;
-                video.play().catch(function() {});
-                dot.className = 'program-panel-dot online';
-                programActive = true;
+                stream.getTracks().forEach(function(t) {
+                    if (emptyStream.getTracks().indexOf(t) === -1) {
+                        emptyStream.addTrack(t);
+                    }
+                });
             }
+            spinner.classList.remove('active');
+            dot.className = 'program-panel-dot online';
+            programActive = true;
+            video.play().catch(function() {});
         }).catch(function(err) {
             console.warn('[Vereadores] Erro ao ver NossaTV_CAM:', err);
             camViewActive = false;
