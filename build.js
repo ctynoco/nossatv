@@ -16,6 +16,7 @@ const files = [
   { name: 'guest.html', minify: 'html' },
   { name: 'scene.html', minify: 'html' },
   { name: 'monitor.html', minify: 'html' },
+  { name: 'vereadores.html', minify: 'html' },
   { name: 'manifest.json' },
   { name: 'favicon.svg' },
   { name: 'service-worker.js' },
