@@ -82,6 +82,17 @@ export class VereadorManager {
             this.vdo.addEventListener('connected', async () => {
                 this._vdoReady = true;
                 this._reconnectAttempts = 0;
+                if (this._streamingCam && this._camStream) {
+                    try {
+                        await this.vdo.publish(this._camStream, {
+                            streamID: 'NossaTV_CAM',
+                            password: false,
+                        });
+                        await this.vdo.announce({ streamID: 'NossaTV_CAM' });
+                    } catch (e) {
+                        console.warn('[Vereador] VCAM: erro ao republicar após reconexão:', e);
+                    }
+                }
             });
 
             this.vdo.addEventListener('disconnected', () => {
@@ -573,24 +584,40 @@ export class VereadorManager {
     }
 
     // ─────────────────────────────────────────
-    //  CÂMERA VIRTUAL (VDO.Ninja Push Directo)
+    //  CÂMERA VIRTUAL (publica programa + announce)
     // ─────────────────────────────────────────
     async startVirtualCamera(stream) {
-        this._camStream = stream;
-        this._streamingCam = true;
-        const pushLink = `https://vdo.ninja/?push=NossaTV_CAM&room=${ROOM}`;
-        const viewLink = `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo`;
-        var win = window.open(pushLink, '_blank');
-        if (!win) {
-            navigator.clipboard.writeText(pushLink).catch(function(){});
-            this.obs?.showNotification('📋 Link de transmissão copiado! Abra em uma nova aba.');
+        if (!this.vdo || !this._vdoReady) {
+            throw new Error('VDO.Ninja não está conectado');
         }
-        return viewLink;
+        try {
+            await this._stopPublishingAndWait();
+            this._camStream = stream;
+            await this.vdo.publish(stream, {
+                streamID: 'NossaTV_CAM',
+                password: false,
+            });
+            const result = await this.vdo.announce({ streamID: 'NossaTV_CAM' });
+            this._streamingCam = true;
+            return `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo`;
+        } catch (e) {
+            this._camStream = null;
+            this._streamingCam = false;
+            throw e;
+        }
     }
 
     stopVirtualCamera() {
+        if (!this.vdo) return;
+        try { this.vdo.stopPublishing(); } catch(e) {}
         this._streamingCam = false;
         this._camStream = null;
+        if (this.obs?.isStreaming) {
+            const stream = this.obs._getProgramStream();
+            if (stream) {
+                setTimeout(() => this.publishProgram(stream), 300);
+            }
+        }
     }
 
     isVirtualCameraActive() {
