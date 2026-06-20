@@ -429,6 +429,17 @@
                 setTimeout(function() { startVUMeter(localStream); }, 1000);
                 startViewReturn().then(function() {
                     setTimeout(startQualityMonitor, 8000);
+                    // fallback: se depois de 8s o retorno não carregou, mostra link externo
+                    setTimeout(function() {
+                        if (!returnVideo.srcObject) {
+                            var fb = document.createElement('a');
+                            fb.href = 'https://vdo.ninja/?view=NossaTV_CAM&room=NossaTV';
+                            fb.target = '_blank';
+                            fb.textContent = '📺 Retorno não apareceu? Abrir no VDO.Ninja';
+                            fb.style.cssText = 'display:block;text-align:center;color:#1976d2;font-size:0.82em;margin-top:6px;text-decoration:none';
+                            returnVideo.parentNode.appendChild(fb);
+                        }
+                    }, 8000);
                 }, function() {
                     setTimeout(startQualityMonitor, 8000);
                 });
