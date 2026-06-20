@@ -154,6 +154,26 @@ export class VereadorManager {
         grid.querySelectorAll('.vereador-slot-conectar').forEach(b => {
             b.addEventListener('click', (e) => { e.stopPropagation(); this.openConnectionModal(parseInt(b.dataset.slot)); });
         });
+        grid.querySelectorAll('.vereador-slot-copiar').forEach(b => {
+            b.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const slot = this.slots.find(s => s.id === parseInt(b.dataset.slot));
+                if (!slot) return;
+                navigator.clipboard.writeText(slot.link).then(() => {
+                    b.textContent = '✅ Copiado!';
+                    setTimeout(() => { b.textContent = '📋 Link'; }, 1500);
+                }).catch(() => {
+                    const ta = document.createElement('textarea');
+                    ta.value = slot.link;
+                    document.body.appendChild(ta);
+                    ta.select();
+                    document.execCommand('copy');
+                    ta.remove();
+                    b.textContent = '✅ Copiado!';
+                    setTimeout(() => { b.textContent = '📋 Link'; }, 1500);
+                });
+            });
+        });
         grid.querySelectorAll('.vereador-slot-desconectar').forEach(b => {
             b.addEventListener('click', (e) => { e.stopPropagation(); this.disconnectSlot(parseInt(b.dataset.slot)); });
         });
@@ -205,6 +225,7 @@ export class VereadorManager {
             <div class="vereador-slot-empty">${slot.label}</div>
             <div class="vereador-slot-actions">
                 <button class="vereador-slot-conectar" data-slot="${slot.id}">📱 Conectar</button>
+                <button class="vereador-slot-copiar" data-slot="${slot.id}" title="Copiar link individual">📋 Link</button>
                 <button class="vereador-slot-rename" data-slot="${slot.id}" title="Renomear">✏️</button>
                 <button class="vereador-slot-excluir" data-slot="${slot.id}" title="Excluir">🗑️</button>
             </div>
