@@ -25,6 +25,7 @@ export class VereadorManager {
         this._reconnectAttempts = 0;
         this._destroyed = false;
         this._camStream = null;
+        this._camVDO = null;
         this.init();
     }
 
@@ -82,17 +83,6 @@ export class VereadorManager {
             this.vdo.addEventListener('connected', async () => {
                 this._vdoReady = true;
                 this._reconnectAttempts = 0;
-                if (this._streamingCam && this._camStream) {
-                    try {
-                        await this.vdo.publish(this._camStream, {
-                            streamID: 'NossaTV_CAM',
-                            password: false,
-                        });
-                        await this.vdo.announce({ streamID: 'NossaTV_CAM' });
-                    } catch (e) {
-                        console.warn('[Vereador] VCAM: erro ao republicar após reconexão:', e);
-                    }
-                }
             });
 
             this.vdo.addEventListener('disconnected', () => {
@@ -303,6 +293,10 @@ export class VereadorManager {
         if (this._reconnectTimer) {
             clearTimeout(this._reconnectTimer);
             this._reconnectTimer = null;
+        }
+        if (this._camVDO) {
+            try { this._camVDO.disconnect(); } catch(e) {}
+            this._camVDO = null;
         }
         if (this.vdo) {
             try { this.vdo.disconnect(); } catch(e) {}
@@ -584,49 +578,45 @@ export class VereadorManager {
     }
 
     // ─────────────────────────────────────────
-    //  CÂMERA VIRTUAL (publica programa + announce)
+    //  CÂMERA VIRTUAL (conexão dedicada, igual guest)
     // ─────────────────────────────────────────
     async startVirtualCamera(stream) {
-        if (!this.vdo || !this._vdoReady) {
-            throw new Error('VDO.Ninja não está conectado');
+        if (this._camVDO) {
+            try { this._camVDO.disconnect(); } catch(e) {}
+            this._camVDO = null;
         }
         try {
-            await this._stopPublishingAndWait();
             this._camStream = stream;
-            await this.vdo.publish(stream, {
-                streamID: 'NossaTV_CAM',
+            const cam = new VDONinjaSDK({
+                iceServers: ICE_SERVERS,
                 password: false,
+                salt: 'vdo.ninja',
             });
-            const result = await this.vdo.announce({ streamID: 'NossaTV_CAM', room: ROOM });
+            await cam.connect();
+            await cam.joinRoom({ room: ROOM, password: false });
+            await cam.publish(stream, { streamID: 'NossaTV_CAM', password: false });
+            const annResult = await cam.announce({ streamID: 'NossaTV_CAM' });
+            this._camVDO = cam;
             this._streamingCam = true;
-            // Auto-teste: tenta ver o próprio stream
-            try {
-                const selfTest = await this.vdo.view('NossaTV_CAM', { audio: false, video: true });
-                if (selfTest && selfTest.active) {
-                    this.obs?.showNotification('📡 VCAM OK + auto-view funcionou');
-                } else {
-                    this.obs?.showNotification('⚠️ VCAM: auto-view sem stream');
-                }
-                if (typeof this.vdo.stopViewing === 'function') {
-                    this.vdo.stopViewing('NossaTV_CAM');
-                }
-            } catch (e2) {
-                this.obs?.showNotification('⚠️ VCAM: auto-view falhou: ' + (e2.message || 'erro'));
-            }
-            const viewURL = `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo`;
-            this.obs?.showNotification('📡 VCAM link: ' + viewURL);
-            return viewURL;
+            this.obs?.showNotification('📡 VCAM publicado: ' + (annResult?.url || ''));
+            return `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo`;
         } catch (e) {
-            this.obs?.showNotification('❌ VCAM erro: ' + (e.message || 'desconhecido'));
+            if (this._camVDO) {
+                try { this._camVDO.disconnect(); } catch(ex) {}
+                this._camVDO = null;
+            }
             this._camStream = null;
             this._streamingCam = false;
+            this.obs?.showNotification('❌ VCAM erro: ' + (e.message || 'desconhecido'));
             throw e;
         }
     }
 
     stopVirtualCamera() {
-        if (!this.vdo) return;
-        try { this.vdo.stopPublishing(); } catch(e) {}
+        if (this._camVDO) {
+            try { this._camVDO.disconnect(); } catch(e) {}
+            this._camVDO = null;
+        }
         this._streamingCam = false;
         this._camStream = null;
         if (this.obs?.isStreaming) {
