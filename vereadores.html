@@ -800,71 +800,109 @@
         }
         .link-whatsapp-mini:hover { background: rgba(37,211,102,0.2); }
 
-        /* ── PIP (Preview da Câmera Principal) ──────── */
-        .pip-container {
+        /* ── PROGRAMA PANEL (Preview flutuante) ──── */
+        .program-panel {
             position: fixed;
-            bottom: 24px;
-            right: 24px;
-            width: 240px;
-            aspect-ratio: 16/9;
-            background: #000;
-            border: 2px solid var(--border2);
-            border-radius: var(--radius-sm);
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 400px;
+            background: var(--surface);
+            border: 1px solid var(--border2);
+            border-radius: var(--radius);
             overflow: hidden;
             z-index: 999;
-            box-shadow: 0 4px 24px rgba(0,0,0,0.6);
+            box-shadow: 0 8px 40px rgba(0,0,0,0.7);
             display: none;
-            transition: opacity 0.3s;
+            transition: opacity 0.25s;
         }
-        .pip-container.active { display: block; }
-        .pip-container:hover { border-color: var(--accent); }
-        .pip-video { width:100%; height:100%; object-fit:contain; display:block; }
-        .pip-header {
-            position: absolute;
-            top: 0; left: 0; right: 0;
+        .program-panel.active { display: block; }
+        .program-panel.dragging { transition: none; }
+        .program-panel-header {
             display: flex;
             align-items: center;
-            justify-content: space-between;
-            padding: 4px 6px;
-            background: linear-gradient(rgba(0,0,0,0.7), transparent);
-            pointer-events: none;
+            gap: 8px;
+            padding: 8px 10px;
+            background: var(--surface2);
+            border-bottom: 1px solid var(--border);
+            cursor: grab;
+            user-select: none;
         }
-        .pip-label {
-            font-size: 9px;
+        .program-panel-header:active { cursor: grabbing; }
+        .program-panel-label {
+            font-size: 11px;
             font-weight: 700;
             color: var(--text2);
             letter-spacing: 0.5px;
             text-transform: uppercase;
+            flex: 1;
         }
-        .pip-close {
-            pointer-events: auto;
-            width: 18px; height: 18px;
+        .program-panel-dot {
+            width: 6px; height: 6px;
             border-radius: 50%;
-            background: rgba(0,0,0,0.6);
+            background: var(--text3);
+            flex-shrink: 0;
+        }
+        .program-panel-dot.online { background: var(--green); box-shadow: var(--glow-green); }
+        .program-panel-video-wrap {
+            position: relative;
+            aspect-ratio: 16/9;
+            background: #000;
+        }
+        .program-panel-video {
+            width: 100%; height: 100%;
+            object-fit: contain;
+            display: block;
+        }
+        .program-panel-placeholder {
+            position: absolute;
+            inset: 0;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            background: #05050a;
+        }
+        .program-panel-placeholder .ph-icon { font-size: 28px; opacity: 0.3; }
+        .program-panel-placeholder .ph-text { font-size: 11px; color: var(--text3); }
+        .program-panel-actions {
+            display: flex;
+            gap: 4px;
+            flex-shrink: 0;
+        }
+        .program-panel-btn {
+            width: 24px; height: 24px;
+            border-radius: 6px;
             border: 1px solid var(--border);
+            background: var(--surface3);
             color: var(--text2);
-            font-size: 10px;
+            font-size: 11px;
             cursor: pointer;
             display: flex;
             align-items: center;
             justify-content: center;
             transition: all 0.15s;
         }
-        .pip-close:hover { background: var(--red); color:#fff; border-color:var(--red); }
-        .pip-spinner {
+        .program-panel-btn:hover { background: var(--surface); color: var(--text); border-color: var(--border2); }
+        .program-panel-btn.pin-btn.active { color: var(--accent); border-color: var(--accent); }
+        .program-panel-btn.close-btn:hover { background: var(--red); color:#fff; border-color:var(--red); }
+        .program-panel-spinner {
             position: absolute;
             inset: 0;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
-            background: rgba(0,0,0,0.6);
+            background: rgba(0,0,0,0.5);
         }
-        .pip-spinner .spinner { width:20px; height:20px; }
+        .program-panel-spinner.active { display: flex; }
+        .program-panel-spinner .spinner { width:22px; height:22px; }
 
         @media (max-width: 600px) {
             .header { padding: 12px 16px; }
             .main { padding: 16px 12px 32px; }
             .vereador-grid { grid-template-columns: 1fr; }
+            .program-panel { width: calc(100% - 24px); top: 70px; }
             .stats-bar { gap: 8px; }
             .stats-actions { margin-left: 0; }
             .master-bar { flex-direction: column; align-items: flex-start; gap: 12px; }
@@ -915,6 +953,7 @@
             <span>Sala: <strong>NossaTV</strong></span>
         </div>
         <div class="stats-actions">
+            <button class="btn-action primary" id="btn-programa" title="Ativar preview do programa">📺 Programa</button>
             <button class="btn-action secondary" id="btn-copy-all" title="Copiar todos os 12 links">🔗 Copiar Todos</button>
             <button class="btn-action secondary" id="btn-whatsapp-all" title="Enviar via WhatsApp">💬 WhatsApp em Massa</button>
         </div>
@@ -938,6 +977,28 @@
         </div>
         <div class="master-divider"></div>
         <button class="btn-action secondary" id="btn-mute-all" style="padding:6px 14px;font-size:12px">🔇 Mudo Geral</button>
+    </div>
+
+    <!-- PROGRAMA PANEL -->
+    <div class="program-panel" id="program-panel">
+        <div class="program-panel-header" id="program-header">
+            <span class="program-panel-dot" id="program-dot"></span>
+            <span class="program-panel-label">📺 PROGRAMA</span>
+            <div class="program-panel-actions">
+                <button class="program-panel-btn pin-btn" id="program-pin" title="Fixar posição">📍</button>
+                <button class="program-panel-btn close-btn" id="program-close" title="Fechar">✕</button>
+            </div>
+        </div>
+        <div class="program-panel-video-wrap">
+            <video class="program-panel-video" id="program-video" autoplay playsinline muted></video>
+            <div class="program-panel-placeholder">
+                <div class="ph-icon">📺</div>
+                <div class="ph-text">Clique em "📺 Programa" para ativar</div>
+            </div>
+            <div class="program-panel-spinner" id="program-spinner">
+                <div class="spinner active"></div>
+            </div>
+        </div>
     </div>
 
     <!-- GRID -->
@@ -964,18 +1025,6 @@
     </div>
 
 </main>
-
-<!-- PIP: Preview da Câmera Principal -->
-<div class="pip-container" id="pip-container">
-    <video class="pip-video" id="pip-video" autoplay playsinline muted></video>
-    <div class="pip-header">
-        <span class="pip-label">📺 PROGRAMA</span>
-        <button class="pip-close" id="pip-close">✕</button>
-    </div>
-    <div class="pip-spinner" id="pip-spinner">
-        <div class="spinner active"></div>
-    </div>
-</div>
 
 <!-- MODAL: VEREADOR -->
 <div class="modal-overlay" id="modal-slot">
@@ -1061,6 +1110,10 @@
     var slotVolumes = {}; // { slotId: { input: 1.0, output: 1.0 } }
     var camStream = null;
     var camViewActive = false;
+    var programActive = false;
+    var programPinned = false;
+    var programDragStart = null;
+    var programDragOffset = null;
 
     // ─── INICIALIZA SLOTS ────────────────────────────────────────
     function initSlots() {
@@ -1129,6 +1182,9 @@
 
     // ─── CONNECT VDO ─────────────────────────────────────────────
     function connectVDO() {
+        stopMainCam();
+        var btn = document.getElementById('btn-programa');
+        if (btn) { btn.textContent = '📺 Programa'; btn.className = 'btn-action primary'; }
         setGlobalStatus('Carregando SDK...', 'connecting');
         loadSDK().then(function() {
             setGlobalStatus('Conectando ao servidor...', 'connecting');
@@ -1218,22 +1274,30 @@
         if (!vdo || !vdoReady || destroyed) return;
         if (camViewActive) return;
         camViewActive = true;
-        var pipContainer = document.getElementById('pip-container');
-        var pipSpinner = document.getElementById('pip-spinner');
-        var pipVideo = document.getElementById('pip-video');
-        pipContainer.classList.add('active');
-        pipSpinner.style.display = 'flex';
+        var panel = document.getElementById('program-panel');
+        var spinner = document.getElementById('program-spinner');
+        var video = document.getElementById('program-video');
+        var dot = document.getElementById('program-dot');
+        var ph = panel.querySelector('.program-panel-placeholder');
+        panel.classList.add('active');
+        spinner.classList.add('active');
+        if (ph) ph.style.display = 'none';
         vdo.view('NossaTV_CAM', { audio: false, video: true }).then(function(stream) {
-            pipSpinner.style.display = 'none';
+            spinner.classList.remove('active');
             if (stream && stream.active) {
                 camStream = stream;
-                pipVideo.srcObject = stream;
-                pipVideo.play().catch(function() {});
+                video.srcObject = stream;
+                video.play().catch(function() {});
+                dot.className = 'program-panel-dot online';
+                programActive = true;
             }
         }).catch(function(err) {
             console.warn('[Vereadores] Erro ao ver NossaTV_CAM:', err);
             camViewActive = false;
-            pipContainer.classList.remove('active');
+            programActive = false;
+            panel.classList.remove('active');
+            spinner.classList.remove('active');
+            if (ph) ph.style.display = 'flex';
             camRetryCount++;
             var delay = Math.min(3000 * (1 << Math.min(camRetryCount, 5)), 30000);
             camRetryTimer = setTimeout(function() {
@@ -1242,6 +1306,29 @@
                 viewMainCam();
             }, delay);
         });
+    }
+
+    function stopMainCam() {
+        var panel = document.getElementById('program-panel');
+        var spinner = document.getElementById('program-spinner');
+        var video = document.getElementById('program-video');
+        var dot = document.getElementById('program-dot');
+        var ph = panel.querySelector('.program-panel-placeholder');
+        panel.classList.remove('active');
+        spinner.classList.remove('active');
+        if (ph) ph.style.display = 'flex';
+        video.srcObject = null;
+        dot.className = 'program-panel-dot';
+        if (camStream) {
+            camStream.getTracks().forEach(function(t) { t.stop(); });
+            camStream = null;
+        }
+        if (vdo) {
+            try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
+        }
+        camViewActive = false;
+        programActive = false;
+        if (camRetryTimer) { clearTimeout(camRetryTimer); camRetryTimer = null; }
     }
 
     // ─── SLOT CONNECTED ──────────────────────────────────────────
@@ -1677,19 +1764,62 @@
         if (e.key === 'Escape') closeModal();
     });
 
-    // ─── PIP EVENTS ─────────────────────────────────────────────
-    document.getElementById('pip-close').addEventListener('click', function() {
-        var pipContainer = document.getElementById('pip-container');
-        pipContainer.classList.remove('active');
-        if (camStream) {
-            camStream.getTracks().forEach(function(t) { t.stop(); });
-            camStream = null;
+    // ─── PROGRAMA PANEL EVENTS ──────────────────────────────────
+    document.getElementById('btn-programa').addEventListener('click', function() {
+        if (programActive) {
+            stopMainCam();
+            this.textContent = '📺 Programa';
+            this.className = 'btn-action primary';
+        } else {
+            viewMainCam();
+            this.textContent = '📺 Programa (Ativo)';
+            this.className = 'btn-action primary active';
         }
-        if (vdo) {
-            try { vdo.stopViewing('NossaTV_CAM'); } catch(e) {}
-        }
-        camViewActive = false;
-        if (camRetryTimer) { clearTimeout(camRetryTimer); camRetryTimer = null; }
+    });
+
+    document.getElementById('program-close').addEventListener('click', function(e) {
+        e.stopPropagation();
+        stopMainCam();
+        var btn = document.getElementById('btn-programa');
+        btn.textContent = '📺 Programa';
+        btn.className = 'btn-action primary';
+    });
+
+    // ─── DRAG & DROP ──────────────────────────────────────────
+    var programHeader = document.getElementById('program-header');
+    var programPanel = document.getElementById('program-panel');
+
+    programHeader.addEventListener('mousedown', function(e) {
+        if (e.target.closest('.program-panel-actions')) return;
+        var rect = programPanel.getBoundingClientRect();
+        programDragOffset = {
+            x: e.clientX - rect.left,
+            y: e.clientY - rect.top
+        };
+        programPanel.classList.add('dragging');
+        programPanel.style.transform = 'none';
+        programPanel.style.left = rect.left + 'px';
+        programPanel.style.top = rect.top + 'px';
+        document.body.style.cursor = 'grabbing';
+    });
+
+    document.addEventListener('mousemove', function(e) {
+        if (!programPanel.classList.contains('dragging')) return;
+        programPanel.style.left = (e.clientX - programDragOffset.x) + 'px';
+        programPanel.style.top = (e.clientY - programDragOffset.y) + 'px';
+    });
+
+    document.addEventListener('mouseup', function() {
+        if (!programPanel.classList.contains('dragging')) return;
+        programPanel.classList.remove('dragging');
+        document.body.style.cursor = '';
+    });
+
+    // ─── PIN BUTTON ───────────────────────────────────────────
+    document.getElementById('program-pin').addEventListener('click', function(e) {
+        e.stopPropagation();
+        programPinned = !programPinned;
+        this.classList.toggle('active', programPinned);
     });
 
     // ─── MASTER VOLUME CONTROLS ──────────────────────────────────
@@ -1757,6 +1887,8 @@
         if (vdo) { try { vdo.disconnect(); } catch(e) {} }
         if (masterAudioCtx) { try { masterAudioCtx.close(); } catch(e) {} }
     });
+
+
 
 })();
 </script>
