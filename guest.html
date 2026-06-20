@@ -76,9 +76,8 @@
         'use strict';
 
         // ---- DOM refs ----
-        var params = new URLSearchParams(location.search);
-        var room = params.get('room') || 'nossatv';
-        var slot = params.get('slot');
+        var room = 'NossaTV';
+        var slot = new URLSearchParams(location.search).get('slot');
         if (!slot) {
             document.getElementById('slot-label').textContent = 'Link inválido';
             document.getElementById('btn-toggle').disabled = true;
@@ -379,11 +378,6 @@
                 toggleBtn.textContent = 'Conectando...';
                 infoText.textContent = 'Conectando ao servidor...';
 
-                var turnConf = [];
-                try {
-                    var stored = localStorage.getItem('nossatv_turn');
-                    if (stored) turnConf = JSON.parse(stored);
-                } catch(e) {}
                 vdo = new VDONinjaSDK({
                     iceServers: [
                         { urls: 'stun:stun.l.google.com:19302' },
@@ -391,7 +385,6 @@
                         { urls: 'stun:stun2.l.google.com:19302' },
                         { urls: 'stun:stun3.l.google.com:19302' },
                         { urls: 'stun:stun4.l.google.com:19302' },
-                        ...turnConf,
                     ],
                     iceTransportPolicy: 'all',
                 });

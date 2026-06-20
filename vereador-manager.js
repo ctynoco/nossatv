@@ -1,28 +1,14 @@
 import { generateQRCode } from './qrcode.js';
 
-function _getRoomId() {
-    let room = localStorage.getItem('nossatv_room');
-    if (!room) {
-        room = 'nossatv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-        localStorage.setItem('nossatv_room', room);
-    }
-    return room;
-}
+const ROOM = 'NossaTV';
 
-function _getIceServers() {
-    const stored = localStorage.getItem('nossatv_turn');
-    const custom = stored ? JSON.parse(stored) : [];
-    return [
-        { urls: 'stun:stun.l.google.com:19302' },
-        { urls: 'stun:stun1.l.google.com:19302' },
-        { urls: 'stun:stun2.l.google.com:19302' },
-        { urls: 'stun:stun3.l.google.com:19302' },
-        { urls: 'stun:stun4.l.google.com:19302' },
-        ...custom,
-    ];
-}
-
-export function getVdoRoomId() { return _getRoomId(); }
+const ICE_SERVERS = [
+    { urls: 'stun:stun.l.google.com:19302' },
+    { urls: 'stun:stun1.l.google.com:19302' },
+    { urls: 'stun:stun2.l.google.com:19302' },
+    { urls: 'stun:stun3.l.google.com:19302' },
+    { urls: 'stun:stun4.l.google.com:19302' },
+];
 
 export class VereadorManager {
     constructor(obs) {
@@ -37,8 +23,6 @@ export class VereadorManager {
         this._pendingTimeouts = {};
         this._reconnectTimer = null;
         this._reconnectAttempts = 0;
-        this._maxReconnect = 10;
-        this._room = _getRoomId();
         this._destroyed = false;
         this.init();
     }
@@ -47,7 +31,6 @@ export class VereadorManager {
         for (let i = 1; i <= 12; i++) {
             const label = `VER${String(i).padStart(2, '0')}`;
             const guestUrl = new URL('guest.html', window.location.href);
-            guestUrl.searchParams.set('room', this._room);
             guestUrl.searchParams.set('slot', label);
             this.slots.push({
                 id: i,
@@ -70,7 +53,7 @@ export class VereadorManager {
         }
         try {
             this.vdo = new VDONinjaSDK({
-                iceServers: _getIceServers(),
+                iceServers: ICE_SERVERS,
                 iceTransportPolicy: 'all',
             });
 
@@ -106,7 +89,7 @@ export class VereadorManager {
             });
 
             this.vdo.connect().then(() => {
-                return this.vdo.joinRoom({ room: this._room });
+                return this.vdo.joinRoom({ room: ROOM });
             }).then(() => {
                 this._startViewing();
             }).catch((err) => {
@@ -123,7 +106,7 @@ export class VereadorManager {
 
     _scheduleReconnect() {
         if (this._destroyed) return;
-        if (this._reconnectAttempts >= this._maxReconnect) {
+        if (this._reconnectAttempts >= 10) {
             this.obs?.showNotification('❌ VDO.Ninja: máximo de tentativas excedido. Recarregue a página.');
             return;
         }
@@ -453,7 +436,6 @@ export class VereadorManager {
             s.label = newLabel;
             s.streamID = `slot_${newLabel}`;
             const u = new URL('guest.html', window.location.href);
-            u.searchParams.set('room', this._room);
             u.searchParams.set('slot', newLabel);
             s.link = u.href;
         });
@@ -561,8 +543,51 @@ export class VereadorManager {
     }
 
     getMonitorLink() {
-        const url = new URL('monitor.html', window.location.href);
-        url.searchParams.set('room', this._room);
-        return url.href;
+        return new URL('monitor.html', window.location.href).href;
+    }
+
+    // ─────────────────────────────────────────
+    //  CÂMERA VIRTUAL (VDO.Ninja Direct Link)
+    // ─────────────────────────────────────────
+    async startVirtualCamera(stream) {
+        if (this._virtualCamVdo) {
+            this.stopVirtualCamera();
+        }
+
+        const vdo = new VDONinjaSDK({
+            iceServers: ICE_SERVERS,
+            password: false,
+            salt: 'vdo.ninja',
+            iceTransportPolicy: 'all',
+            debug: false,
+        });
+
+        this._virtualCamVdo = vdo;
+
+        try {
+            await vdo.connect();
+            await vdo.joinRoom({ room: ROOM, password: false });
+            await vdo.publish(stream, {
+                streamID: 'NossaTV_CAM',
+                password: false,
+            });
+
+            const link = `https://vdo.ninja/?view=NossaTV_CAM&room=${ROOM}&solo&password=false`;
+            return link;
+        } catch (e) {
+            this.stopVirtualCamera();
+            throw e;
+        }
+    }
+
+    stopVirtualCamera() {
+        if (!this._virtualCamVdo) return;
+        try { this._virtualCamVdo.stopPublishing(); } catch(e) {}
+        try { this._virtualCamVdo.disconnect(); } catch(e) {}
+        this._virtualCamVdo = null;
+    }
+
+    isVirtualCameraActive() {
+        return !!this._virtualCamVdo;
     }
 }

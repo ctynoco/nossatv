@@ -76,16 +76,7 @@
 (function(){
     'use strict';
 
-    var params = new URLSearchParams(location.search);
-    var room = params.get('room');
-    if (!room) {
-        room = localStorage.getItem('nossatv_room');
-        if (!room) {
-            document.getElementById('status-text').textContent = 'Sala não configurada';
-            document.getElementById('status-dot').className = 'status-dot error';
-            return;
-        }
-    }
+    var room = 'NossaTV';
 
     var STREAM_ID = 'program_MONITOR';
     var vdo = null;
@@ -201,12 +192,6 @@
         spinner.style.display = 'block';
 
         loadSDK().then(function() {
-            var turnConf = [];
-            try {
-                var stored = localStorage.getItem('nossatv_turn');
-                if (stored) turnConf = JSON.parse(stored);
-            } catch(e) {}
-
             vdo = new VDONinjaSDK({
                 iceServers: [
                     { urls: 'stun:stun.l.google.com:19302' },
@@ -214,7 +199,6 @@
                     { urls: 'stun:stun2.l.google.com:19302' },
                     { urls: 'stun:stun3.l.google.com:19302' },
                     { urls: 'stun:stun4.l.google.com:19302' },
-                    ...turnConf,
                 ],
                 iceTransportPolicy: 'all',
             });

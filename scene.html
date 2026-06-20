@@ -64,14 +64,7 @@
     'use strict';
 
     var TOTAL = 12;
-    var room = (function(){
-        var r = localStorage.getItem('nossatv_room');
-        if (!r) {
-            r = 'nossatv_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 6);
-            localStorage.setItem('nossatv_room', r);
-        }
-        return r;
-    })();
+    var room = 'NossaTV';
     var layout = 'auto';
     var vdo = null;
     var connected = false;
@@ -127,7 +120,6 @@
             cell.addEventListener('click', (function(sid){
                 return function(){
                     var url = new URL('guest.html', window.location.href);
-                    url.searchParams.set('room', room);
                     url.searchParams.set('slot', sid);
                     window.open(url.href, '_blank');
                 };
@@ -260,11 +252,6 @@
 
     function connect(){
         setStatus('Conectando...', 'connecting');
-        var turnConf = [];
-        try {
-            var stored = localStorage.getItem('nossatv_turn');
-            if (stored) turnConf = JSON.parse(stored);
-        } catch(e) {}
         vdo = new VDONinjaSDK({
             iceServers: [
                 { urls: 'stun:stun.l.google.com:19302' },
@@ -272,7 +259,6 @@
                 { urls: 'stun:stun2.l.google.com:19302' },
                 { urls: 'stun:stun3.l.google.com:19302' },
                 { urls: 'stun:stun4.l.google.com:19302' },
-                ...turnConf,
             ],
             iceTransportPolicy: 'all',
         });

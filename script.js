@@ -1,5 +1,6 @@
 import { SOURCE_TYPES, SOURCE_FORMS, VIDEO_SOURCE_TYPES, AUDIO_SOURCE_TYPES } from './source-types.js';
 import { VereadorManager } from './vereador-manager.js';
+import { generateQRCode } from './qrcode.js';
 
 function escapeHtml(str) {
     var div = document.createElement('div');
@@ -190,6 +191,28 @@ class OBSClone {
                 e.preventDefault();
                 this.showBackupList();
             }
+        });
+
+        // Virtual camera modal
+        const closeVcam = () => {
+            if (this.vereadorManager?.isVirtualCameraActive()) {
+                this.toggleVirtualCam();
+            } else {
+                document.getElementById('modal-vcam').style.display = 'none';
+            }
+        };
+        document.getElementById('close-vcam-modal')?.addEventListener('click', closeVcam);
+        document.getElementById('close-vcam-btn')?.addEventListener('click', closeVcam);
+        document.getElementById('vcam-stop-btn')?.addEventListener('click', () => this.toggleVirtualCam());
+        document.getElementById('modal-vcam')?.addEventListener('click', (e) => {
+            if (e.target.id === 'modal-vcam') closeVcam();
+        });
+        document.getElementById('vcam-copy-btn')?.addEventListener('click', () => {
+            const inp = document.getElementById('vcam-link-input');
+            if (!inp) return;
+            inp.select();
+            document.execCommand('copy');
+            this.showNotification('🔗 Link copiado!');
         });
     }
 
@@ -2635,7 +2658,6 @@ class OBSClone {
             }
 
             this.startProgramMirror();
-            this._startCanvasRenderLoop();
 
             // Publica programa no VDO.Ninja para retorno dos convidados + monitor
             if (this.vereadorManager?.vdo) {
@@ -3274,8 +3296,6 @@ class OBSClone {
         if (placeholder) placeholder.style.display = 'flex';
         this.stopProgramMirror();
 
-        this._stopCanvasRenderLoop();
-
         // Para publicação do programa no VDO.Ninja + monitor
         if (this.vereadorManager?.vdo) {
             for (const s of this.vereadorManager.slots || []) {
@@ -3289,12 +3309,9 @@ class OBSClone {
 
     _getProgramStream() {
         const programVideo = document.getElementById('program-video');
-        const programCanvas = document.getElementById('program-canvas');
-
         if (programVideo?.srcObject instanceof MediaStream) {
             return programVideo.srcObject;
         }
-
         const activeId = this.activeSource;
         if (activeId && this.mediaStreams[activeId]) {
             const src = this.mediaStreams[activeId];
@@ -3302,14 +3319,6 @@ class OBSClone {
             src.getVideoTracks().forEach(t => tracks.push(t.clone()));
             src.getAudioTracks().forEach(t => tracks.push(t.clone()));
             if (tracks.length > 0) return new MediaStream(tracks);
-        }
-
-        if (programCanvas?.captureStream) {
-            if (programCanvas.width === 0) {
-                programCanvas.width = 1280;
-                programCanvas.height = 720;
-            }
-            return programCanvas.captureStream(30);
         }
         return null;
     }
@@ -3387,23 +3396,6 @@ class OBSClone {
                 } catch (e) {}
             }
         });
-    }
-
-    _startCanvasRenderLoop() {
-        if (this._canvasRenderId) return;
-        const loop = () => {
-            if (!this.isStreaming) { this._canvasRenderId = null; return; }
-            this._renderProgramCanvas();
-            this._canvasRenderId = requestAnimationFrame(loop);
-        };
-        this._canvasRenderId = requestAnimationFrame(loop);
-    }
-
-    _stopCanvasRenderLoop() {
-        if (this._canvasRenderId) {
-            cancelAnimationFrame(this._canvasRenderId);
-            this._canvasRenderId = null;
-        }
     }
 
     // ─────────────────────────────────────────
@@ -3511,13 +3503,68 @@ class OBSClone {
         return null;
     }
 
-    toggleVirtualCam() {
-        this.isVirtualCam = !this.isVirtualCam;
+    async toggleVirtualCam() {
         const btn = document.getElementById('virtual-cam-btn');
         if (!btn) return;
-        btn.classList.toggle('active', this.isVirtualCam);
-        btn.textContent = this.isVirtualCam ? '📷 Cam. Virtual (Ativa)' : '📷 Câmera Virtual';
-        this.showNotification(this.isVirtualCam ? '📷 Câmera virtual iniciada' : '📷 Câmera virtual parada');
+
+        if (this.vereadorManager?.isVirtualCameraActive()) {
+            this.vereadorManager.stopVirtualCamera();
+            this.isVirtualCam = false;
+            btn.classList.remove('active');
+            btn.textContent = '📷 Câmera Virtual';
+            document.getElementById('modal-vcam').style.display = 'none';
+            this.showNotification('📷 Câmera virtual parada');
+            return;
+        }
+
+        btn.textContent = '📷 Iniciando...';
+        btn.disabled = true;
+
+        try {
+            const stream = this._getProgramStream();
+            if (!stream) {
+                this.showNotification('⚠️ Nenhuma fonte de vídeo ativa no programa');
+                btn.textContent = '📷 Câmera Virtual';
+                btn.disabled = false;
+                return;
+            }
+
+            const link = await this.vereadorManager.startVirtualCamera(stream);
+            this.isVirtualCam = true;
+            btn.classList.add('active');
+            btn.textContent = '📷 Cam. Virtual (Ativa)';
+            btn.disabled = false;
+
+            this._showVirtualCamLink(link);
+            this.showNotification('📷 Câmera virtual ativa! Link copiado.');
+        } catch (e) {
+            console.error('[OBS] Erro ao iniciar câmera virtual:', e);
+            this.showNotification('⚠️ Erro: ' + (e.message || 'conexão VDO.Ninja'));
+            btn.textContent = '📷 Câmera Virtual';
+            btn.disabled = false;
+        }
+    }
+
+    _showVirtualCamLink(link) {
+        const modal = document.getElementById('modal-vcam');
+        const input = document.getElementById('vcam-link-input');
+        const qrCanvas = document.getElementById('vcam-qr-canvas');
+        const status = document.getElementById('vcam-status');
+
+        if (!modal || !input) return;
+
+        input.value = link;
+        if (status) {
+            status.innerHTML = '<span class="status-dot status-online"></span> Online — compartilhe o link abaixo';
+        }
+
+        if (qrCanvas) {
+            setTimeout(() => generateQRCode(qrCanvas, link), 50);
+        }
+
+        modal.style.display = 'flex';
+
+        navigator.clipboard.writeText(link).catch(() => {});
     }
 
     toggleStudioMode() {
@@ -3761,14 +3808,6 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
             this._applyPreviewStyles();
         });
 
-        // TURN: clear
-        document.getElementById('clear-turn-btn')?.addEventListener('click', () => {
-            localStorage.removeItem('nossatv_turn');
-            const turnEl = document.getElementById('set-turn-servers');
-            if (turnEl) turnEl.value = '';
-            this.showNotification('🧹 Servidores TURN removidos');
-        });
-
         // Horizontal: logo
         document.getElementById('set-horizontal-logo-file')?.addEventListener('change', (e) => {
             const file = e.target.files[0];
@@ -3992,13 +4031,6 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
         setVal('set-theme', s.general.theme);
         setVal('set-language', s.general.language);
 
-        // Carrega TURN
-        const turnEl = document.getElementById('set-turn-servers');
-        if (turnEl) {
-            const stored = localStorage.getItem('nossatv_turn');
-            turnEl.value = stored ? JSON.stringify(JSON.parse(stored), null, 2) : '';
-        }
-
         setVal('set-vertical-logo-width', s.vertical.logo.width);
         setVal('set-vertical-logo-height', s.vertical.logo.height);
 
@@ -4035,19 +4067,6 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
             ? g('set-theme') : 'dark';
         this.settings.general.language = ['pt-BR', 'en'].includes(g('set-language'))
             ? g('set-language') : 'pt-BR';
-
-        // Salva TURN
-        const turnEl = document.getElementById('set-turn-servers');
-        if (turnEl && turnEl.value.trim()) {
-            try {
-                const parsed = JSON.parse(turnEl.value.trim());
-                if (Array.isArray(parsed)) {
-                    localStorage.setItem('nossatv_turn', JSON.stringify(parsed));
-                }
-            } catch (e) {
-                // JSON inválido — ignora e mantém anterior
-            }
-        }
 
         this.settings.vertical.logo.width = this._validateNumber(g('set-vertical-logo-width'), 16, 300, 60);
         this.settings.vertical.logo.height = this._validateNumber(g('set-vertical-logo-height'), 16, 300, 60);
@@ -4098,8 +4117,7 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
     //  NOTIFICAÇÕES (toast)
     // ─────────────────────────────────────────
     _openMonitorLink() {
-        const link = this.vereadorManager?.getMonitorLink();
-        if (!link) { this.showNotification('⚠️ VDO.Ninja não inicializado'); return; }
+        const link = this.vereadorManager?.getMonitorLink() || new URL('monitor.html', window.location.href).href;
         if (navigator.share) {
             navigator.share({ title: 'NossaTV - Monitor', text: 'Acompanhe a transmissão ao vivo:', url: link })
                 .catch(() => this._copyMonitorLink(link));

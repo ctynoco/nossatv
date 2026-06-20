@@ -2193,6 +2193,59 @@ section h2 {
 }
 .btn-chroma:hover { background: #006600; color: #fff; }
 
+/* Modal Câmera Virtual */
+.modal-vcam { width: 440px; }
+.vcam-status {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 14px;
+    padding: 8px 12px;
+    background: #1a1a1a;
+    border-radius: 6px;
+    font-size: 0.85em;
+}
+.vcam-link-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+}
+.vcam-link-row input {
+    flex: 1;
+    background: #1a1a1a;
+    border: 1px solid #444;
+    border-radius: 4px;
+    color: #fff;
+    padding: 8px 10px;
+    font-size: 0.82em;
+    font-family: monospace;
+}
+.vcam-qr {
+    display: flex;
+    justify-content: center;
+    margin: 14px 0;
+}
+.vcam-qr canvas {
+    width: 180px;
+    height: 180px;
+    border-radius: 8px;
+    border: 1px solid #333;
+}
+.vcam-info {
+    background: #1a1a2e;
+    border-radius: 6px;
+    padding: 10px 14px;
+    margin-top: 6px;
+}
+.vcam-info p {
+    font-size: 0.78em;
+    color: #aaa;
+    margin-bottom: 6px;
+    line-height: 1.5;
+}
+.vcam-info p:last-child { margin-bottom: 0; }
+.vcam-info p strong { color: #ccc; }
+
 /* RESPONSIVO */
 @media (max-width: 1100px) {
     main.three-col { grid-template-columns: 1fr; }
