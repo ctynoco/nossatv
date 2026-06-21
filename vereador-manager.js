@@ -81,6 +81,13 @@ export class VereadorManager {
             this.vdo.addEventListener('connected', () => {
                 this._vdoReady = true;
                 this._reconnectAttempts = 0;
+                // Se o OBS estiver transmitindo, republica o programa
+                if (this.obs?.isStreaming) {
+                    setTimeout(() => {
+                        const stream = this.obs._getProgramStream();
+                        if (stream) this.publishProgram(stream);
+                    }, 500);
+                }
             });
 
             this.vdo.addEventListener('disconnected', () => {
@@ -601,11 +608,19 @@ export class VereadorManager {
     }
 
     async publishProgram(stream) {
-        if (!this.vdo || !this._vdoReady) {
-            console.warn('[Vereador] VDO.Ninja não pronto para publicar');
-            return;
-        }
         if (!stream) return;
+        if (!this.vdo) return;
+        if (!this._vdoReady) {
+            console.log('[Vereador] Aguardando VDO.Ninja ficar pronto para publicar...');
+            for (let tries = 0; tries < 50; tries++) {
+                await new Promise(r => setTimeout(r, 200));
+                if (this._vdoReady) break;
+            }
+            if (!this._vdoReady) {
+                console.warn('[Vereador] VDO.Ninja não ficou pronto — programa não publicado');
+                return;
+            }
+        }
         try {
             await this.vdo.publish(stream, {
                 streamID: 'NossaTV_CAM',
