@@ -2014,26 +2014,38 @@ section h2 {
 
 /* PiP — Vereador sobreposto no Preview/Programa */
 .vereador-pip {
-    position: absolute;
-    bottom: 8px;
-    left: 8px;
-    z-index: 20;
+    position: fixed;
+    top: 100px;
+    right: 30px;
+    z-index: 9999;
     overflow: hidden;
     background: #000;
-    cursor: pointer;
-    width: auto;
-    min-width: 60px;
-    max-height: 80px;
+    border: 1px solid rgba(255,255,255,0.12);
+    border-radius: 10px;
+    box-shadow: 0 8px 40px rgba(0,0,0,0.7);
+    width: 180px;
+    user-select: none;
 }
-.float-screen .vereador-pip {
-    min-width: 40px;
-    max-height: 80px;
-    bottom: 4px;
-    left: 4px;
+.vereador-pip.dragging {
+    transition: none;
+    box-shadow: 0 12px 60px rgba(0,0,0,0.9);
+    opacity: 0.92;
 }
+.vereador-pip-header {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 5px 8px;
+    background: rgba(255,255,255,0.06);
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+    cursor: grab;
+    user-select: none;
+    font-size: 0.75em;
+}
+.vereador-pip-header:active { cursor: grabbing; }
 .vereador-pip-video-wrapper {
-    aspect-ratio: 1 / 1;
     position: relative;
+    aspect-ratio: 16 / 9;
     overflow: hidden;
     background: #000;
 }
@@ -2048,25 +2060,16 @@ section h2 {
     position: absolute;
     right: 0;
     bottom: 0;
-    width: 14px;
-    height: 14px;
+    width: 16px;
+    height: 16px;
     cursor: nwse-resize;
     z-index: 5;
-    background: rgba(255,255,255,0.3);
+    background: rgba(255,255,255,0.25);
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
     transition: background 0.15s;
 }
 .vereador-pip-resize-handle:hover {
     background: rgba(0,102,204,0.7);
-}
-.vereador-pip-info {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 6px;
-    background: rgba(0,0,0,0.75);
-    font-size: 0.7em;
-    font-weight: 600;
 }
 .vereador-pip-name {
     flex: 1;
@@ -2074,6 +2077,7 @@ section h2 {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+    font-weight: 600;
 }
 .vereador-pip-close {
     background: none;
@@ -2081,8 +2085,8 @@ section h2 {
     color: #cc0000;
     cursor: pointer;
     font-size: 0.85em;
-    padding: 1px 4px;
-    border-radius: 2px;
+    padding: 1px 5px;
+    border-radius: 3px;
     line-height: 1;
     transition: background 0.15s;
 }

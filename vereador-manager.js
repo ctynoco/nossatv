@@ -337,38 +337,27 @@ export class VereadorManager {
         const stream = this.connections[slotId];
         if (!stream) return;
 
-        const previewArea = document.getElementById('preview-area');
-        if (!previewArea) return;
-
-        const oldPip = previewArea.querySelector('.vereador-pip');
-        if (oldPip) {
-            const oldVideo = oldPip.querySelector('.vereador-pip-video');
-            if (oldVideo) oldVideo.srcObject = null;
-            oldPip.remove();
-        }
         document.querySelectorAll(`.vereador-pip`).forEach(p => {
-            if (p.dataset.slot !== String(slotId)) {
-                const v = p.querySelector('.vereador-pip-video');
-                if (v) v.srcObject = null;
-                p.remove();
-            }
+            const v = p.querySelector('.vereador-pip-video');
+            if (v) v.srcObject = null;
+            p.remove();
         });
 
         const pip = document.createElement('div');
         pip.className = 'vereador-pip';
         pip.dataset.slot = slotId;
         pip.innerHTML = `
-            <div class="vereador-pip-video-wrapper">
-                <video class="vereador-pip-video" autoplay playsinline></video>
-                <div class="vereador-pip-resize-handle"></div>
-            </div>
-            <div class="vereador-pip-info">
+            <div class="vereador-pip-header">
                 <span class="status-dot status-online"></span>
                 <span class="vereador-pip-name">${slot.label}</span>
                 <button class="vereador-pip-close" title="Remover">✕</button>
             </div>
+            <div class="vereador-pip-video-wrapper">
+                <video class="vereador-pip-video" autoplay playsinline></video>
+            </div>
+            <div class="vereador-pip-resize-handle"></div>
         `;
-        previewArea.appendChild(pip);
+        document.body.appendChild(pip);
 
         const video = pip.querySelector('.vereador-pip-video');
         video.srcObject = stream;
@@ -380,7 +369,8 @@ export class VereadorManager {
         });
 
         this._initPipResize(pip);
-        this.obs?.showNotification(`📹 ${slot.label} no preview`);
+        this._initPipDrag(pip);
+        this.obs?.showNotification(`📹 ${slot.label} flutuante`);
     }
 
     _removePipCompletely(slotId) {
@@ -404,6 +394,7 @@ export class VereadorManager {
             origW = pip.offsetWidth;
             origH = pip.offsetHeight;
             pip.style.maxHeight = 'none';
+            pip.style.aspectRatio = '';
             e.stopPropagation();
             e.preventDefault();
         };
@@ -412,7 +403,7 @@ export class VereadorManager {
             const dx = cx - startX;
             const dy = cy - startY;
             const newW = Math.max(80, origW + dx);
-            const newH = Math.max(45, origH + dy);
+            const newH = Math.max(60, origH + dy);
             pip.style.width = newW + 'px';
             pip.style.height = newH + 'px';
         };
@@ -424,6 +415,46 @@ export class VereadorManager {
         handle.addEventListener('touchstart', onStart, { passive: false });
         document.addEventListener('touchmove', (e) => {
             if (isResizing) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }
+        }, { passive: false });
+        document.addEventListener('touchend', onUp);
+    }
+
+    _initPipDrag(pip) {
+        const header = pip.querySelector('.vereador-pip-header');
+        if (!header) return;
+        let dragOffset = null;
+
+        const onDown = (e) => {
+            if (e.target.closest('.vereador-pip-close')) return;
+            const rect = pip.getBoundingClientRect();
+            dragOffset = {
+                x: (e.clientX ?? e.touches[0].clientX) - rect.left,
+                y: (e.clientY ?? e.touches[0].clientY) - rect.top
+            };
+            pip.style.right = 'auto';
+            pip.style.bottom = 'auto';
+            pip.style.left = rect.left + 'px';
+            pip.style.top = rect.top + 'px';
+            pip.classList.add('dragging');
+            e.preventDefault();
+        };
+        const onMove = (cx, cy) => {
+            if (!dragOffset) return;
+            pip.style.left = (cx - dragOffset.x) + 'px';
+            pip.style.top = (cy - dragOffset.y) + 'px';
+        };
+        const onUp = () => {
+            if (!dragOffset) return;
+            dragOffset = null;
+            pip.classList.remove('dragging');
+        };
+
+        header.addEventListener('mousedown', onDown);
+        document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+        document.addEventListener('mouseup', onUp);
+        header.addEventListener('touchstart', onDown, { passive: false });
+        document.addEventListener('touchmove', (e) => {
+            if (dragOffset) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }
         }, { passive: false });
         document.addEventListener('touchend', onUp);
     }

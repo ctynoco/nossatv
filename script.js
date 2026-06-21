@@ -2514,18 +2514,17 @@ class OBSClone {
 
     _syncProgramPip() {
         try {
-            const previewArea = document.getElementById('preview-area');
             const programArea = document.getElementById('program-area');
-            if (!previewArea || !programArea) return;
-            const pipPreview = previewArea.querySelector('.vereador-pip');
+            if (!programArea) return;
+            const pipFloat = document.body.querySelector('.vereador-pip');
             const pipProgram = programArea.querySelector('.vereador-pip');
-            if (pipPreview && (!pipProgram || pipPreview.dataset.slot !== pipProgram.dataset.slot)) {
+            if (pipFloat && (!pipProgram || pipFloat.dataset.slot !== pipProgram.dataset.slot)) {
                 if (pipProgram) {
                     const v = pipProgram.querySelector('.vereador-pip-video');
                     if (v) { v.pause(); v.srcObject = null; }
                     pipProgram.remove();
                 }
-                const slotId = parseInt(pipPreview.dataset.slot);
+                const slotId = parseInt(pipFloat.dataset.slot);
                 const stream = this.vereadorManager.connections[slotId];
                 const slot = this.vereadorManager.slots.find(s => s.id === slotId);
                 const pip = document.createElement('div');
@@ -2534,17 +2533,10 @@ class OBSClone {
                 pip.innerHTML = `
                     <div class="vereador-pip-video-wrapper">
                         <video class="vereador-pip-video" autoplay playsinline></video>
-                        <div class="vereador-pip-resize-handle"></div>
-                    </div>
-                    <div class="vereador-pip-info">
-                        <span class="status-dot status-online"></span>
-                        <span class="vereador-pip-name">${slot ? slot.label : 'VER' + slotId}</span>
-                        <button class="vereador-pip-close" title="Remover">✕</button>
                     </div>
                 `;
-                pip.style.width = pipPreview.style.width || '';
-                pip.style.height = pipPreview.style.height || '';
-                pip.style.maxHeight = pipPreview.style.maxHeight || '';
+                pip.style.width = pipFloat.style.width || '180px';
+                pip.style.height = pipFloat.style.height || '';
                 programArea.appendChild(pip);
                 const video = pip.querySelector('.vereador-pip-video');
                 if (video && stream) {
@@ -2552,7 +2544,7 @@ class OBSClone {
                     video.play().catch(() => {});
                 }
             }
-            if (!pipPreview && pipProgram) {
+            if (!pipFloat && pipProgram) {
                 const v = pipProgram.querySelector('.vereador-pip-video');
                 if (v) { v.pause(); v.srcObject = null; }
                 pipProgram.remove();
@@ -2749,27 +2741,33 @@ class OBSClone {
             programArea.style.backgroundColor = previewArea.style.backgroundColor;
         }
 
-        // Copia PiP (apenas 1) do preview para o programa
-        const pipPreview = previewArea.querySelector('.vereador-pip');
+        // Copia PiP flutuante (document.body) para o programa
+        const pipFloat = document.body.querySelector('.vereador-pip');
         const pipProgram = programArea.querySelector('.vereador-pip');
         if (pipProgram) {
             const v = pipProgram.querySelector('.vereador-pip-video');
             if (v) v.srcObject = null;
             pipProgram.remove();
         }
-        if (pipPreview) {
-            const clone = pipPreview.cloneNode(true);
-            programArea.appendChild(clone);
-            const video = clone.querySelector('.vereador-pip-video');
-            const origVideo = pipPreview.querySelector('.vereador-pip-video');
-            if (video && origVideo) {
-                video.srcObject = origVideo.srcObject;
+        if (pipFloat) {
+            const slotId = parseInt(pipFloat.dataset.slot);
+            const stream = this.vereadorManager.connections[slotId];
+            const pip = document.createElement('div');
+            pip.className = 'vereador-pip';
+            pip.dataset.slot = slotId;
+            pip.innerHTML = `
+                <div class="vereador-pip-video-wrapper">
+                    <video class="vereador-pip-video" autoplay playsinline></video>
+                </div>
+            `;
+            pip.style.width = pipFloat.style.width || '180px';
+            pip.style.height = pipFloat.style.height || '';
+            programArea.appendChild(pip);
+            const video = pip.querySelector('.vereador-pip-video');
+            if (video && stream) {
+                video.srcObject = stream;
                 video.play().catch(() => {});
             }
-            clone.querySelector('.vereador-pip-close')?.addEventListener('click', (e) => {
-                e.stopPropagation();
-                this._removePipCompletely(parseInt(clone.dataset.slot));
-            });
         }
         // Copia backgroundImage da preview
         if (previewArea.style.backgroundImage) {
@@ -2896,19 +2894,12 @@ class OBSClone {
         if (pipProgram) {
             const slotId = parseInt(pipProgram.dataset.slot);
             const stream = this.vereadorManager.connections[slotId];
-            const slot = this.vereadorManager.slots.find(s => s.id === slotId);
             const pip = document.createElement('div');
             pip.className = 'vereador-pip';
             pip.dataset.slot = slotId;
             pip.innerHTML = `
                 <div class="vereador-pip-video-wrapper">
                     <video class="vereador-pip-video" autoplay playsinline></video>
-                    <div class="vereador-pip-resize-handle"></div>
-                </div>
-                <div class="vereador-pip-info">
-                    <span class="status-dot status-online"></span>
-                    <span class="vereador-pip-name">${slot ? slot.label : 'VER' + slotId}</span>
-                    <button class="vereador-pip-close" title="Remover">✕</button>
                 </div>
             `;
             pip.style.width = pipProgram.style.width || '';
@@ -2919,10 +2910,6 @@ class OBSClone {
                 video.srcObject = stream;
                 video.play().catch(() => {});
             }
-            pip.querySelector('.vereador-pip-close').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.vereadorManager._removePipCompletely(slotId);
-            });
         }
     }
 
@@ -3239,7 +3226,7 @@ class OBSClone {
         if (!previewArea || !programArea) return;
 
         [...previewArea.children].forEach(child => {
-            if (child.classList.contains('screen-placeholder') || child.classList.contains('vereador-pip')) return;
+            if (child.classList.contains('screen-placeholder')) return;
             const clone = child.cloneNode(true);
             programArea.appendChild(clone);
         });
@@ -3251,46 +3238,33 @@ class OBSClone {
         }
         if (placeholder) placeholder.style.display = 'none';
 
-        // Copia PiP (apenas 1) do preview para o programa
-        const pipPreview = previewArea.querySelector('.vereador-pip');
+        // Copia PiP flutuante (document.body) para o programa
+        const pipFloat = document.body.querySelector('.vereador-pip');
         const pipProgram = programArea.querySelector('.vereador-pip');
         if (pipProgram) {
             const v = pipProgram.querySelector('.vereador-pip-video');
             if (v) { v.pause(); v.srcObject = null; }
             pipProgram.remove();
         }
-        if (pipPreview) {
-            const slotId = parseInt(pipPreview.dataset.slot);
+        if (pipFloat) {
+            const slotId = parseInt(pipFloat.dataset.slot);
             const stream = this.vereadorManager.connections[slotId];
-            const slot = this.vereadorManager.slots.find(s => s.id === slotId);
             const pip = document.createElement('div');
             pip.className = 'vereador-pip';
             pip.dataset.slot = slotId;
             pip.innerHTML = `
                 <div class="vereador-pip-video-wrapper">
                     <video class="vereador-pip-video" autoplay playsinline></video>
-                    <div class="vereador-pip-resize-handle"></div>
-                </div>
-                <div class="vereador-pip-info">
-                    <span class="status-dot status-online"></span>
-                    <span class="vereador-pip-name">${slot ? slot.label : 'VER' + slotId}</span>
-                    <button class="vereador-pip-close" title="Remover">✕</button>
                 </div>
             `;
-            // Copia tamanho explicit do preview
-            pip.style.width = pipPreview.style.width || '';
-            pip.style.height = pipPreview.style.height || '';
-            pip.style.maxHeight = pipPreview.style.maxHeight || '';
+            pip.style.width = pipFloat.style.width || '180px';
+            pip.style.height = pipFloat.style.height || '';
             programArea.appendChild(pip);
             const video = pip.querySelector('.vereador-pip-video');
             if (video && stream) {
                 video.srcObject = stream;
                 video.play().catch(() => {});
             }
-            pip.querySelector('.vereador-pip-close').addEventListener('click', (e) => {
-                e.stopPropagation();
-                this.vereadorManager._removePipCompletely(slotId);
-            });
         }
         if (placeholder) placeholder.style.display = 'none';
     }
@@ -3641,7 +3615,6 @@ body{display:flex;align-items:center;justify-content:center}
 .vereador-pip{position:absolute;bottom:8px;left:8px;z-index:20;overflow:hidden;background:#000;width:auto;min-width:60px;max-height:80px}
 .vereador-pip-video-wrapper{aspect-ratio:16/9;position:relative;overflow:hidden;background:#000}
 .vereador-pip-video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain}
-.vereador-pip-info{display:flex;align-items:center;gap:4px;padding:3px 6px;background:rgba(0,0,0,0.75);font-size:0.7em;font-weight:600}
 .vereador-pip-name{flex:1;color:#fff;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .status-dot{display:inline-block;width:5px;height:5px;border-radius:50%;flex-shrink:0}
 .status-online{background:#44cc44}
