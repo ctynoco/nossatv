@@ -2044,6 +2044,16 @@ section h2 {
     font-size: 0.7em;
     font-weight: 600;
     user-select: none;
+    opacity: 0;
+    transition: opacity 0.15s;
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+}
+.vereador-pip:hover .vereador-pip-header {
+    opacity: 1;
 }
 .vereador-pip-video-wrapper {
     position: relative;
@@ -2068,7 +2078,11 @@ section h2 {
     z-index: 5;
     background: rgba(255,255,255,0.3);
     clip-path: polygon(100% 0, 100% 100%, 0 100%);
-    transition: background 0.15s;
+    transition: background 0.15s, opacity 0.15s;
+    opacity: 0;
+}
+.vereador-pip:hover .vereador-pip-resize-handle {
+    opacity: 1;
 }
 .vereador-pip-resize-handle:hover {
     background: rgba(0,102,204,0.7);
