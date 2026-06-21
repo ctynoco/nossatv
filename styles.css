@@ -1672,6 +1672,9 @@ section h2 {
     width: 100%;
     aspect-ratio: 9 / 16;
     background-color: #000;
+    background-image: url('obs2.png');
+    background-size: cover;
+    background-position: center;
     border-radius: 6px;
     overflow: hidden;
     position: relative;

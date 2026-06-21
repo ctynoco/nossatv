@@ -2918,7 +2918,9 @@ class OBSClone {
             floatScreen.style.backgroundSize = 'cover';
             floatScreen.style.backgroundPosition = 'center';
         } else {
-            floatScreen.style.backgroundImage = '';
+            floatScreen.style.backgroundImage = null;
+            floatScreen.style.backgroundSize = 'cover';
+            floatScreen.style.backgroundPosition = 'center';
         }
 
         // Logo
