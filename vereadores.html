@@ -358,6 +358,8 @@
             overflow: hidden;
         }
         .slot-video {
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
             object-fit: contain;
@@ -1536,8 +1538,23 @@
             if (videoEl && videoEl.srcObject !== slot.stream) {
                 videoEl.srcObject = slot.stream;
                 videoEl.play().catch(function() {});
+                autoFitSlotVideo(videoEl);
             }
         });
+    }
+
+    function autoFitSlotVideo(videoEl) {
+        if (!videoEl) return;
+        var area = videoEl.closest('.slot-video-area');
+        if (!area) return;
+        function updateFit() {
+            if (videoEl.videoWidth && videoEl.videoHeight) {
+                area.style.aspectRatio = videoEl.videoWidth / videoEl.videoHeight;
+            }
+        }
+        videoEl.addEventListener('loadedmetadata', updateFit);
+        videoEl.addEventListener('resize', updateFit);
+        if (videoEl.videoWidth) updateFit();
     }
 
     function renderSlotCard(slot) {
