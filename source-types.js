@@ -13,6 +13,7 @@ export const SOURCE_TYPES = {
     videoCaptureDevice: { label: 'Dispositivo Captura Vídeo', icon: '📹' },
     media:              { label: 'Mídia',                   icon: '🎬' },
     vereador:           { label: 'Vereador',                icon: '👤' },
+    vereadores:         { label: 'Vereadores Grid',         icon: '👥' },
 };
 
 export const SOURCE_FORMS = {
@@ -265,6 +266,30 @@ export const SOURCE_FORMS = {
             <div class="form-group">
                 <label>Cor do fundo</label>
                 <input type="color" id="src-vereador-bg" value="#1a1a2e" />
+            </div>
+        </div>`,
+
+    vereadores: () => `
+        <div class="form-group">
+            <label>Nome da fonte</label>
+            <input type="text" id="src-name" value="Todos Vereadores" />
+        </div>
+        <div class="form-row">
+            <div class="form-group">
+                <label>Colunas</label>
+                <select id="src-ver-grid-cols">
+                    <option value="2">2</option>
+                    <option value="3" selected>3</option>
+                    <option value="4">4</option>
+                    <option value="6">6</option>
+                </select>
+            </div>
+            <div class="form-group">
+                <label>Mostrar números</label>
+                <select id="src-ver-show-num">
+                    <option value="true" selected>Sim</option>
+                    <option value="false">Não</option>
+                </select>
             </div>
         </div>`,
 };
