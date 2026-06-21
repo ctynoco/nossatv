@@ -200,16 +200,16 @@
             font-weight: 500;
         }
         #return-placeholder.hide { display: none; }
-        #return-iframe {
+        #return-video {
             position: absolute;
             inset: 0;
             width: 100%;
             height: 100%;
-            border: none;
             display: none;
             background: #000;
+            object-fit: contain;
         }
-        #return-iframe.active { display: block; }
+        #return-video.active { display: block; }
 
         /* landscape: camera left, program right */
         @media (orientation: landscape) {
@@ -620,9 +620,9 @@
             </div>
         </div>
 
-        <!-- return video (bottom half) — iframe com cleanviewer -->
+        <!-- return video (bottom half) — VDO.Ninja via SDK view() -->
         <div id="return-wrap">
-            <iframe id="return-iframe" allow="autoplay; microphone; camera" loading="lazy"></iframe>
+            <video id="return-video" autoplay playsinline muted></video>
             <div id="return-placeholder">
                 <div class="ph-icon">📺</div>
                 <div class="ph-text">Aguardando retorno do programa...</div>
@@ -731,7 +731,6 @@
     // ─── CONFIG ──────────────────────────────────────────────────
     var ROOM = 'NossaTV';
     var RETURN_STREAM_ID = 'NossaTV_CAM';
-    var RETURN_VIEW_URL = 'https://vdo.ninja/?view=NossaTV_CAM&room=NossaTV&password=false&cleanviewer&cleanoutput&solo&noseek&nohangupbutton&hideheader&nocontrols';
     var SDK_URLS = [
         'https://cdn.jsdelivr.net/gh/steveseguin/ninjasdk@v1.3.18/vdoninja-sdk.min.js',
         'https://unpkg.com/@vdoninja/sdk@1.3.18/dist/vdoninja-sdk.min.js',
@@ -780,7 +779,7 @@
     var startBtn      = document.getElementById('start-btn');
     var startInfo     = document.getElementById('start-info');
     var localVideo    = document.getElementById('local-video');
-    var returnIframe  = document.getElementById('return-iframe');
+    var returnVideo  = document.getElementById('return-video');
     var localPh       = document.getElementById('local-placeholder');
     var returnPh      = document.getElementById('return-placeholder');
     var liveBadge     = document.getElementById('live-badge');
@@ -874,10 +873,7 @@
     volOutput.addEventListener('input', function() {
         var pct = parseInt(volOutput.value);
         volOutputPct.textContent = pct + '%';
-        try {
-            returnIframe.contentWindow.postMessage({ volume: pct / 100 }, '*');
-            returnIframe.contentWindow.postMessage({ setAudioVolume: pct }, '*');
-        } catch(e) {}
+        if (returnGainNode) returnGainNode.gain.value = pct / 100;
     });
 
     // ─── AUDIO TOGGLES ────────────────────────────────────────────
@@ -952,9 +948,7 @@
         btnSpeaker.classList.toggle('muted', speakerMuted);
         svgSpeakerOn.style.display = speakerMuted ? 'none' : 'block';
         svgSpeakerMut.style.display = speakerMuted ? 'block' : 'none';
-        try {
-            returnIframe.contentWindow.postMessage({ mute: speakerMuted }, '*');
-        } catch(e) {}
+        if (returnVideo) returnVideo.muted = speakerMuted;
         showToast(speakerMuted ? '🔇 Retorno mutado' : '🔊 Retorno ativado');
         updateTopStats(connected);
     });
@@ -1091,20 +1085,43 @@
         lastBytes = 0;
     }
 
+    var returnStream = null;
+    var returnGainNode = null;
+
     // ─── VIEW RETURN ─────────────────────────────────────────────
     function startViewReturn() {
-        if (!connected) return;
-        returnIframe.classList.add('active');
+        if (!connected || !vdo) return;
+        returnVideo.classList.add('active');
         returnPh.classList.add('hide');
-        returnIframe.addEventListener('load', function syncMute() {
-            returnIframe.removeEventListener('load', syncMute);
-            try {
-                returnIframe.contentWindow.postMessage({ mute: speakerMuted }, '*');
-            } catch(e) {}
+        if (speakerMuted) returnVideo.muted = true;
+        if (returnStream) {
+            if (returnVideo.srcObject !== returnStream) returnVideo.srcObject = returnStream;
+            return;
+        }
+        vdo.view(RETURN_STREAM_ID, { audio: true, video: true }).catch(function(e) {
+            console.warn('[Guest] Erro ao ver retorno:', e);
         });
     }
 
-    // ─── getUserMedia ─────────────────────────────────────────────
+    function startReturnAudio(stream) {
+        if (returnGainNode) {
+            try { returnGainNode.disconnect(); } catch(e) {}
+            returnGainNode = null;
+        }
+        var audioTracks = stream.getAudioTracks();
+        if (audioTracks.length === 0) return;
+        try {
+            var ctx = audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            if (!audioCtx) audioCtx = ctx;
+            var src = ctx.createMediaStreamSource(stream);
+            returnGainNode = ctx.createGain();
+            returnGainNode.gain.value = parseInt(volOutput.value) / 100;
+            returnGainNode.connect(ctx.destination);
+            src.connect(returnGainNode);
+        } catch(e) {
+            console.warn('[Guest] Erro audio retorno:', e);
+        }
+    }
     function getMedia() {
         var isMobile = /Mobi|Android|iPhone|iPad|iPod/i.test(navigator.userAgent);
         var videoC = { width: { ideal: 1280 }, height: { ideal: 720 } };
@@ -1147,6 +1164,14 @@
     // ─── CLEANUP ──────────────────────────────────────────────────
     function cleanup() {
         stopVU(); stopKbps();
+        if (returnGainNode) {
+            try { returnGainNode.disconnect(); } catch(e) {}
+            returnGainNode = null;
+        }
+        if (returnStream) {
+            returnStream.getTracks().forEach(function(t) { t.stop(); });
+            returnStream = null;
+        }
         if (vdo) {
             try { vdo.stopPublishing(); } catch(e) {}
             try { vdo.stopViewing(RETURN_STREAM_ID); } catch(e) {}
@@ -1156,8 +1181,9 @@
         localVideo.classList.remove('show');
         localPh.classList.remove('hide');
         liveBadge.classList.remove('show');
-        returnIframe.src = '';
-        returnIframe.classList.remove('active');
+        returnVideo.srcObject = null;
+        returnVideo.classList.remove('active');
+        returnVideo.muted = false;
         returnPh.classList.remove('hide');
         connected = false;
         micMuted = false;
@@ -1180,9 +1206,6 @@
         startBtn.innerHTML = '<span class="spinner"></span>Carregando SDK...';
         startInfo.textContent = '';
         startInfo.className = '';
-
-        // Pré-carrega o iframe do retorno durante o gesto do usuário (essencial no iOS)
-        returnIframe.src = RETURN_VIEW_URL;
 
         loadSDK()
         .then(function() {
@@ -1209,6 +1232,21 @@
                 liveBadge.classList.remove('show');
                 stopKbps();
                 updateTopStats(false);
+            });
+            vdo.addEventListener('track', function(event) {
+                var streamID = event.detail && event.detail.streamID;
+                var track = event.detail && event.detail.track;
+                if (streamID !== RETURN_STREAM_ID || !track) return;
+                if (!returnStream) {
+                    returnStream = new MediaStream();
+                    returnVideo.srcObject = returnStream;
+                }
+                returnStream.addTrack(track);
+                if (track.kind === 'audio' && returnStream.getAudioTracks().length === 1) {
+                    startReturnAudio(returnStream);
+                }
+                returnVideo.classList.add('active');
+                returnPh.classList.add('hide');
             });
             return vdo.connect();
         })
