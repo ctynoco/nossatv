@@ -1,4 +1,4 @@
-const CACHE = 'nossatv-v5';
+const CACHE = 'nossatv-v6';
 const URLS = [
   'index.html', 'guest.html', 'vereadores.html', 'scene.html', 'monitor.html',
   'styles.css', 'script.js', 'source-types.js', 'whip-client.js',
@@ -14,7 +14,7 @@ self.addEventListener('install', (e) => {
 
 self.addEventListener('activate', (e) => {
   e.waitUntil(
-    caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k))))
+    caches.keys().then((ks) => Promise.all(ks.filter((k) => k !== CACHE).map((k) => caches.delete(k)))).then(() => self.clients.claim())
   );
 });
 
