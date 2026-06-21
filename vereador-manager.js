@@ -361,10 +361,12 @@ export class VereadorManager {
             <div class="vereador-pip-header">
                 <span class="status-dot status-online"></span>
                 <span class="vereador-pip-name">${slot.label}</span>
+                <button class="pip-btn pip-mute" title="Mutar/Ativar áudio">🔊</button>
+                <button class="pip-btn pip-video-toggle" title="Desativar/Ativar vídeo">📹</button>
                 <button class="vereador-pip-close" title="Remover">✕</button>
             </div>
             <div class="vereador-pip-video-wrapper">
-                <video class="vereador-pip-video" autoplay playsinline muted></video>
+                <video class="vereador-pip-video" autoplay playsinline></video>
             </div>
             <div class="vereador-pip-resize-handle"></div>
         `;
@@ -377,6 +379,22 @@ export class VereadorManager {
         pip.querySelector('.vereador-pip-close').addEventListener('click', (e) => {
             e.stopPropagation();
             this._removePipCompletely(slotId);
+        });
+
+        pip.querySelector('.pip-mute').addEventListener('click', (e) => {
+            e.stopPropagation();
+            video.muted = !video.muted;
+            e.currentTarget.textContent = video.muted ? '🔇' : '🔊';
+            e.currentTarget.classList.toggle('muted', video.muted);
+        });
+
+        pip.querySelector('.pip-video-toggle').addEventListener('click', (e) => {
+            e.stopPropagation();
+            const tracks = stream.getVideoTracks();
+            const enabled = tracks.length ? tracks[0].enabled : true;
+            tracks.forEach(t => t.enabled = !enabled);
+            e.currentTarget.textContent = enabled ? '🚫' : '📹';
+            e.currentTarget.classList.toggle('muted', enabled);
         });
 
         this._initPipResize(pip);

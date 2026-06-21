@@ -2891,10 +2891,6 @@ class OBSClone {
             pip.className = 'vereador-pip';
             pip.dataset.slot = slotId;
             pip.innerHTML = `
-                <div class="vereador-pip-header">
-                    <span class="status-dot status-online"></span>
-                    <span class="vereador-pip-name">${slot ? slot.label : 'VER' + slotId}</span>
-                </div>
                 <div class="vereador-pip-video-wrapper">
                     <video class="vereador-pip-video" autoplay playsinline muted></video>
                 </div>

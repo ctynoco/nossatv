@@ -2091,6 +2091,20 @@ section h2 {
 }
 .vereador-pip-close:hover { background: rgba(204,0,0,0.3); }
 
+.pip-btn {
+    background: none;
+    border: none;
+    color: #aaa;
+    cursor: pointer;
+    font-size: 0.7em;
+    padding: 1px 3px;
+    border-radius: 2px;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
+}
+.pip-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+.pip-btn.muted { color: #ff4444; }
+
 /* Modal Vereador */
 .modal-vereador { width: 420px; }
 .vereador-modal-status {
