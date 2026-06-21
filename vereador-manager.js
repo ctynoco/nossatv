@@ -380,6 +380,7 @@ export class VereadorManager {
         });
 
         this._initPipResize(pip);
+        this._initPipDrag(pip);
         this.obs?.showNotification(`📹 ${slot.label} no preview`);
     }
 
@@ -429,7 +430,54 @@ export class VereadorManager {
         document.addEventListener('touchend', onUp);
     }
 
+    _initPipDrag(pip) {
+        const header = pip.querySelector('.vereador-pip-header');
+        if (!header) return;
+        let isDragging = false, startX, startY, origLeft, origTop;
+        const container = pip.parentElement?.closest('.preview-area') || pip.parentElement;
 
+        const onStart = (e) => {
+            if (e.target.closest('.vereador-pip-close') || e.target.closest('.vereador-pip-resize-handle')) return;
+            isDragging = true;
+            const cx = e.clientX ?? e.touches[0].clientX;
+            const cy = e.clientY ?? e.touches[0].clientY;
+            startX = cx; startY = cy;
+            origLeft = pip.offsetLeft;
+            origTop = pip.offsetTop;
+            pip.style.cursor = 'grabbing';
+            e.stopPropagation();
+            e.preventDefault();
+        };
+        const onMove = (cx, cy) => {
+            if (!isDragging) return;
+            let left = origLeft + (cx - startX);
+            let top = origTop + (cy - startY);
+            const cw = container.clientWidth;
+            const ch = container.clientHeight;
+            const pw = pip.offsetWidth;
+            const ph = pip.offsetHeight;
+            left = Math.max(0, Math.min(left, cw - pw));
+            top = Math.max(0, Math.min(top, ch - ph));
+            pip.style.left = left + 'px';
+            pip.style.top = top + 'px';
+            pip.style.right = 'auto';
+            pip.style.bottom = 'auto';
+        };
+        const onUp = () => {
+            if (!isDragging) return;
+            isDragging = false;
+            pip.style.cursor = '';
+        };
+
+        header.addEventListener('mousedown', onStart);
+        document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
+        document.addEventListener('mouseup', onUp);
+        header.addEventListener('touchstart', onStart, { passive: false });
+        document.addEventListener('touchmove', (e) => {
+            if (isDragging) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }
+        }, { passive: false });
+        document.addEventListener('touchend', onUp);
+    }
 
     renameSlot(slotId) {
         const slot = this.slots.find(s => s.id === slotId);
