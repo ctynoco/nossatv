@@ -274,23 +274,14 @@ export const SOURCE_FORMS = {
             <label>Nome da fonte</label>
             <input type="text" id="src-name" value="Todos Vereadores" />
         </div>
-        <div class="form-row">
-            <div class="form-group">
-                <label>Colunas</label>
-                <select id="src-ver-grid-cols">
-                    <option value="2">2</option>
-                    <option value="3" selected>3</option>
-                    <option value="4">4</option>
-                    <option value="6">6</option>
-                </select>
-            </div>
-            <div class="form-group">
-                <label>Mostrar números</label>
-                <select id="src-ver-show-num">
-                    <option value="true" selected>Sim</option>
-                    <option value="false">Não</option>
-                </select>
-            </div>
+        <div class="form-group">
+            <label>Colunas</label>
+            <select id="src-ver-grid-cols">
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
+                <option value="6">6</option>
+            </select>
         </div>`,
 };
 

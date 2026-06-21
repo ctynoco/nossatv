@@ -799,7 +799,6 @@ class OBSClone {
             };
             case 'vereadores': return {
                 cols: parseInt(document.getElementById('src-ver-grid-cols')?.value) || 3,
-                showNum: document.getElementById('src-ver-show-num')?.value !== 'false',
             };
             default:        return {};
         }
@@ -1091,36 +1090,24 @@ class OBSClone {
 
             case 'vereadores': {
                 const cols = parseInt(source.config.cols) || 3;
-                const showNum = source.config.showNum !== false;
                 const grid = document.createElement('div');
                 grid.className = 'ver-grid-source';
                 grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);gap:0;padding:0;`;
-                const vm = this.vereadorManager;
-                for (let i = 1; i <= 12; i++) {
+                for (let i = 0; i < 12; i++) {
                     const cell = document.createElement('div');
                     cell.style.cssText = 'position:relative;overflow:hidden;background:transparent;';
-                    const stream = vm && vm.connections ? vm.connections[i] : null;
                     const video = document.createElement('video');
                     video.autoplay = true;
                     video.playsinline = true;
                     video.muted = true;
                     video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
-                    if (stream) {
-                        video.srcObject = stream;
-                        video.play().catch(() => {});
-                    }
                     cell.appendChild(video);
-                    if (showNum) {
-                        const num = document.createElement('div');
-                        num.textContent = String(i);
-                        num.style.cssText = 'position:absolute;top:4px;left:4px;background:rgba(0,0,0,0.5);color:#fff;font-size:11px;font-weight:700;padding:2px 6px;border-radius:3px;line-height:1;z-index:2;';
-                        cell.appendChild(num);
-                    }
                     grid.appendChild(cell);
                 }
                 previewArea.appendChild(grid);
                 this._verGridSource = grid;
                 this._verGridSourceId = source.id;
+                this._refreshVereadoresRandom(grid);
                 break;
             }
         }
@@ -1134,17 +1121,30 @@ class OBSClone {
     refreshVereadoresSource() {
         const grid = this._verGridSource;
         if (!grid) return;
+        this._refreshVereadoresRandom(grid);
+    }
+
+    _refreshVereadoresRandom(grid) {
         const vm = this.vereadorManager;
+        const connected = [];
         for (let i = 1; i <= 12; i++) {
-            const cell = grid.children[i - 1];
+            const s = vm && vm.connections ? vm.connections[i] : null;
+            if (s && s.active && s.getVideoTracks().length > 0) connected.push(s);
+        }
+        for (let i = connected.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [connected[i], connected[j]] = [connected[j], connected[i]];
+        }
+        for (let i = 0; i < 12; i++) {
+            const cell = grid.children[i];
             if (!cell) continue;
             const video = cell.querySelector('video');
             if (!video) continue;
-            const stream = vm && vm.connections ? vm.connections[i] : null;
+            const stream = connected[i] || null;
             if (stream && video.srcObject !== stream) {
                 video.srcObject = stream;
                 video.play().catch(() => {});
-            } else if (!stream) {
+            } else if (!stream && video.srcObject) {
                 video.srcObject = null;
             }
         }
