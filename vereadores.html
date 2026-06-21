@@ -250,6 +250,31 @@
             background: var(--border);
             flex-shrink: 0;
         }
+        .master-audio-toggles {
+            display: flex;
+            gap: 6px;
+            flex-shrink: 0;
+        }
+        .audio-toggle {
+            font-size: 10px;
+            font-weight: 700;
+            padding: 5px 10px;
+            border-radius: 6px;
+            border: 1px solid var(--border);
+            background: var(--surface2);
+            color: var(--text3);
+            cursor: pointer;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            transition: all 0.15s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .audio-toggle.active {
+            background: rgba(34, 197, 94, 0.2);
+            border-color: rgba(34, 197, 94, 0.4);
+            color: #22c55e;
+        }
+        .audio-toggle:active { opacity: 0.7; }
 
         /* ── GRID DOS VEREADORES ────────────────── */
         .grid-header {
@@ -982,6 +1007,12 @@
         </div>
         <div class="master-divider"></div>
         <button class="btn-action secondary" id="btn-mute-all" style="padding:6px 14px;font-size:12px">🔇 Mudo Geral</button>
+        <div class="master-divider"></div>
+        <div class="master-audio-toggles">
+            <button class="audio-toggle active" id="toggle-echo" title="Cancelamento de eco">🔇 Eco</button>
+            <button class="audio-toggle active" id="toggle-noise" title="Supressão de ruído">🔇 Ruído</button>
+            <button class="audio-toggle active" id="toggle-gain" title="Controle automático de ganho">🔇 Gain</button>
+        </div>
     </div>
 
     <!-- PROGRAMA PANEL -->
@@ -1110,6 +1141,9 @@
     var masterAudioCtx = null;
     var masterDestGain = null; // Web Audio master output
     var slotVolumes = {}; // { slotId: { input: 1.0, output: 1.0 } }
+    var audioEcho = true;
+    var audioNoise = true;
+    var audioGain = true;
     var programActive = false;
     var programPinned = false;
     var programDragOffset = null;
@@ -1796,8 +1830,75 @@
         var pct = parseInt(this.value);
         document.getElementById('master-output-val').textContent = pct + '%';
         applyMasterOutput(pct / 100);
+        try {
+            var iframe = document.getElementById('program-iframe');
+            if (iframe && iframe.contentWindow) {
+                iframe.contentWindow.postMessage({ volume: pct / 100 }, '*');
+                iframe.contentWindow.postMessage({ setAudioVolume: pct }, '*');
+            }
+        } catch(e) {}
     });
     document.getElementById('btn-mute-all').addEventListener('click', toggleMuteAll);
+
+    // ─── AUDIO PROCESSING TOGGLES ─────────────────────────────
+    function restartAudioForSlot(slotId, constraints) {
+        var slot = slots.find(function(s) { return s.id === slotId; });
+        if (!slot || !slot.stream || !vdo) return;
+        var oldTrack = slot.stream.getAudioTracks()[0];
+        if (!oldTrack) return;
+        var wasMicMuted = !oldTrack.enabled;
+        var oldSettings = oldTrack.getSettings();
+        slot.stream.removeTrack(oldTrack);
+        oldTrack.stop();
+        navigator.mediaDevices.getUserMedia({
+            video: false,
+            audio: constraints
+        }).then(function(newStream) {
+            var newTrack = newStream.getAudioTracks()[0];
+            if (!newTrack) return;
+            slot.stream.addTrack(newTrack);
+            if (wasMicMuted) newTrack.enabled = false;
+            cleanupSlotAudio(slotId);
+            setupSlotAudio(slotId, slot.stream);
+            if (vdo && vdo._pc) {
+                var senders = vdo._pc.getSenders ? vdo._pc.getSenders() : [];
+                senders.forEach(function(s) {
+                    if (s.track && s.track.kind === 'audio' && s.track.id === oldTrack.id) {
+                        s.replaceTrack(newTrack).catch(function() {});
+                    }
+                });
+            }
+        }).catch(function(e) {
+            console.warn('[Vereadores] audio restart error:', e);
+        });
+    }
+
+    function restartAllAudio(constraints) {
+        slots.forEach(function(slot) {
+            if (slot.stream && slot.stream.getAudioTracks().length) {
+                restartAudioForSlot(slot.id, constraints);
+            }
+        });
+    }
+
+    document.getElementById('toggle-echo').addEventListener('click', function() {
+        audioEcho = !audioEcho;
+        this.textContent = (audioEcho ? '🔇' : '🔊') + ' Eco';
+        this.classList.toggle('active', audioEcho);
+        restartAllAudio({ echoCancellation: audioEcho, noiseSuppression: audioNoise, autoGainControl: audioGain });
+    });
+    document.getElementById('toggle-noise').addEventListener('click', function() {
+        audioNoise = !audioNoise;
+        this.textContent = (audioNoise ? '🔇' : '🔊') + ' Ruído';
+        this.classList.toggle('active', audioNoise);
+        restartAllAudio({ echoCancellation: audioEcho, noiseSuppression: audioNoise, autoGainControl: audioGain });
+    });
+    document.getElementById('toggle-gain').addEventListener('click', function() {
+        audioGain = !audioGain;
+        this.textContent = (audioGain ? '🔇' : '🔊') + ' Gain';
+        this.classList.toggle('active', audioGain);
+        restartAllAudio({ echoCancellation: audioEcho, noiseSuppression: audioNoise, autoGainControl: audioGain });
+    });
 
     // ─── COPY ALL ────────────────────────────────────────────────
     document.getElementById('btn-copy-all').addEventListener('click', function() {
