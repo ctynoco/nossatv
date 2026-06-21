@@ -1,5 +1,10 @@
-const CACHE = 'nossatv-v2';
-const URLS = ['index.html', 'guest.html', 'scene.html', 'styles.css', 'script.js', 'source-types.js', 'vereador-manager.js', 'manifest.json', 'favicon.svg'];
+const CACHE = 'nossatv-v5';
+const URLS = [
+  'index.html', 'guest.html', 'vereadores.html', 'scene.html', 'monitor.html',
+  'styles.css', 'script.js', 'source-types.js', 'whip-client.js',
+  'stream-manager.js', 'vereador-manager.js', 'qrcode.js',
+  'manifest.json', 'favicon.svg', 'service-worker.js',
+];
 
 self.addEventListener('install', (e) => {
   e.waitUntil(
@@ -20,15 +25,14 @@ self.addEventListener('fetch', (e) => {
 
   e.respondWith(
     caches.match(e.request).then((cached) => {
-      const fetchPromise = fetch(e.request).then((res) => {
-        if (res.ok && url.protocol === 'https:') {
+      if (cached) return cached;
+      return fetch(e.request).then((res) => {
+        if (res.ok) {
           const clone = res.clone();
           caches.open(CACHE).then((c) => c.put(e.request, clone));
         }
         return res;
-      }).catch(() => cached);
-
-      return cached || fetchPromise;
+      }).catch(() => new Response('Offline', { status: 503 }));
     })
   );
 });

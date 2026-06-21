@@ -11,6 +11,8 @@ const files = [
   { name: 'styles.css', minify: 'css' },
   { name: 'script.js', minify: 'module' },
   { name: 'source-types.js', minify: 'module' },
+  { name: 'whip-client.js', minify: 'module' },
+  { name: 'stream-manager.js', minify: 'module' },
   { name: 'vereador-manager.js', minify: 'module' },
   { name: 'qrcode.js', minify: 'module' },
   { name: 'guest.html', minify: 'html' },

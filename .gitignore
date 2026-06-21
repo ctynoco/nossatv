@@ -3,3 +3,6 @@ public/
 *.bak
 .DS_Store
 Thumbs.db
+mediamtx/mediamtx.exe
+mediamtx/*.log
+mediamtx/recordings/

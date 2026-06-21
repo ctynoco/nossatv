@@ -1264,17 +1264,26 @@
                     scheduleReconnect();
                 });
 
-                return vdo.connect();
+                // Timeout de 15s para conexão VDO
+                var connTimeout = setTimeout(function() {
+                    if (vdo) { try { vdo.disconnect(); } catch(e) {} }
+                    setGlobalStatus('Timeout — servidor não respondeu', 'error');
+                    scheduleReconnect();
+                }, 15000);
+
+                return vdo.connect().then(function() {
+                    clearTimeout(connTimeout);
+                    return vdo.joinRoom({ room: ROOM, password: false });
+                }).then(function() {
+                    clearTimeout(connTimeout);
+                    vdoReady = true;
+                    reconnAttempts = 0;
+                    setGlobalStatus('Aguardando vereadores...', 'online');
+                    startViewingAll();
+                });
             } catch(e) {
                 throw e;
             }
-        }).then(function() {
-            return vdo.joinRoom({ room: ROOM, password: false });
-        }).then(function() {
-            vdoReady = true;
-            reconnAttempts = 0;
-            setGlobalStatus('Aguardando vereadores...', 'online');
-            startViewingAll();
         }).catch(function(err) {
             setGlobalStatus('Erro: ' + (err.message || 'falha'), 'error');
             scheduleReconnect();
@@ -1858,7 +1867,6 @@
         var pct = parseInt(this.value);
         document.getElementById('master-output-val').textContent = pct + '%';
         applyMasterOutput(pct / 100);
-    });
     });
     document.getElementById('btn-mute-all').addEventListener('click', toggleMuteAll);
 

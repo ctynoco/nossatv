@@ -1886,7 +1886,6 @@ section h2 {
     align-items: center;
     justify-content: center;
     min-height: 30px;
-    max-height: 80px;
     transition: border-color 0.15s;
     cursor: pointer;
 }
@@ -1895,7 +1894,7 @@ section h2 {
     border-color: #333;
 }
 .vereador-slot.offline:not([data-slot="1"]) {
-    display: none;
+    display: flex;
 }
 .vereador-slot.connected {
     border-color: #0066cc;

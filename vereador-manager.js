@@ -97,11 +97,21 @@ export class VereadorManager {
                 this._scheduleReconnect();
             });
 
+            const connTimeout = setTimeout(() => {
+                if (this.vdo) { try { this.vdo.disconnect(); } catch(e) {} }
+                console.warn('[Vereador] Timeout conexão VDO.Ninja');
+                this.obs?.showNotification('⚠️ Timeout ao conectar VDO.Ninja');
+                this._scheduleReconnect();
+            }, 15000);
+
             this.vdo.connect().then(() => {
+                clearTimeout(connTimeout);
                 return this.vdo.joinRoom({ room: ROOM, password: false });
             }).then(() => {
+                clearTimeout(connTimeout);
                 this._startViewing();
             }).catch((err) => {
+                clearTimeout(connTimeout);
                 console.warn('[Vereador] Erro VDO.Ninja:', err);
                 this.obs?.showNotification('⚠️ Erro ao conectar VDO.Ninja: ' + (err.message || 'desconhecido'));
                 this._scheduleReconnect();
@@ -626,6 +636,11 @@ export class VereadorManager {
                 streamID: 'NossaTV_CAM',
                 password: false,
             });
+            try {
+                await this.vdo.announce({ streamID: 'NossaTV_CAM' });
+            } catch (e) {
+                console.warn('[Vereador] Erro ao anunciar stream:', e);
+            }
             console.log('[Vereador] Programa publicado como NossaTV_CAM');
         } catch (e) {
             console.warn('[Vereador] Erro ao publicar programa:', e);
@@ -633,11 +648,12 @@ export class VereadorManager {
     }
 
     stopProgramPublish() {
-        if (!this.vdo) return;
-        try {
-            this.vdo.stopPublishing();
-        } catch (e) {
-            console.warn('[Vereador] Erro ao parar publicação:', e);
+        if (this.vdo) {
+            try {
+                this.vdo.stopPublishing();
+            } catch (e) {
+                console.warn('[Vereador] Erro ao parar publicação:', e);
+            }
         }
     }
 

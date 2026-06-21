@@ -1,5 +1,6 @@
 import { SOURCE_TYPES, SOURCE_FORMS, VIDEO_SOURCE_TYPES, AUDIO_SOURCE_TYPES } from './source-types.js';
 import { VereadorManager } from './vereador-manager.js';
+import { StreamManager } from './stream-manager.js';
 import { generateQRCode } from './qrcode.js';
 
 function escapeHtml(str) {
@@ -88,6 +89,7 @@ class OBSClone {
         this._enumerateDevices().catch(() => {});
         this.setupSectionDragDrop();
         this.vereadorManager = new VereadorManager(this);
+        this.streamManager = new StreamManager();
         this.setupFloatingWindow();
         this.setupModals();
         this.loadData();
@@ -2735,15 +2737,33 @@ class OBSClone {
 
             this.startProgramMirror();
 
-            // Publica programa no VDO.Ninja para retorno dos convidados + monitor
-            if (this.vereadorManager?.vdo) {
-                setTimeout(() => {
-                    const progStream = this._getProgramStream();
-                    if (progStream) {
-                        this.vereadorManager.publishProgram(progStream);
+            setTimeout(() => {
+                const progStream = this._getProgramStream();
+                if (!progStream) return;
+
+                // VDO.Ninja — retorno para convidados + monitor
+                if (this.vereadorManager?.vdo) {
+                    this.vereadorManager.publishProgram(progStream);
+                }
+
+                // StreamManager — WHIP per-target (Aitum-style)
+                const enabledTargets = this.settings.stream.targets.filter(t => t.enabled);
+                if (enabledTargets.length > 0 && this.settings.whip.endpoint) {
+                    this.streamManager.configure(enabledTargets, this.settings.whip.endpoint, this.settings.output.videoBitrate);
+
+                    const hasVertical = enabledTargets.some(t => t.orientation === 'vertical');
+                    let verticalStream = null;
+
+                    if (hasVertical) {
+                        const programVideo = document.getElementById('program-video');
+                        verticalStream = this.streamManager.startVerticalCanvas(
+                            programVideo, this.settings
+                        );
                     }
-                }, 500);
-            }
+
+                    this.streamManager.startAll(progStream, verticalStream);
+                }
+            }, 500);
 
             this.showNotification('🔴 Transmissão iniciada!');
         } catch (e) {
@@ -3346,7 +3366,10 @@ class OBSClone {
         if (placeholder) placeholder.style.display = 'flex';
         this.stopProgramMirror();
 
-        // Para publicação do programa no VDO.Ninja + monitor
+        // Para WHIP per-target (StreamManager)
+        this.streamManager.stopAll();
+
+        // Para VDO.Ninja
         if (this.vereadorManager?.vdo) {
             this.vereadorManager.stopProgramPublish();
         }
@@ -3760,8 +3783,12 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
         return {
             stream: {
                 targets: [
-                    { id: 1, platform: 'youtube', key: '', orientation: 'horizontal', enabled: true },
+                    { id: 1, platform: 'youtube', key: '', orientation: 'horizontal', enabled: true, bitrate: 0, resolution: '', fps: 0 },
                 ],
+            },
+            whip: {
+                enabled: false,
+                endpoint: '',
             },
             output: { videoBitrate: 3500, audioBitrate: 192, recordQuality: 'medium' },
             video:  { baseRes: '1280x720', outputRes: '1280x720', fps: 30, downscale: 'bicubic' },
@@ -3815,8 +3842,19 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
         document.getElementById('add-stream-target-btn')?.addEventListener('click', () => {
             const targets = this.settings.stream.targets;
             const maxId = targets.reduce((m, t) => Math.max(m, t.id), 0);
-            targets.push({ id: maxId + 1, platform: 'rtmp', key: '', url: '', orientation: 'horizontal', enabled: true });
+            targets.push({ id: maxId + 1, platform: 'rtmp', key: '', url: '', orientation: 'horizontal', enabled: true, bitrate: 0, resolution: '', fps: 0 });
             this._renderStreamTargets();
+        });
+
+        document.getElementById('generate-whip-config')?.addEventListener('click', () => {
+            const targets = this.settings.stream.targets.filter(t => t.enabled);
+            if (targets.length === 0) {
+                this.showNotification('⚠️ Adicione pelo menos um destino RTMP válido');
+                return;
+            }
+            this.streamManager.configure(targets, this.settings.whip.endpoint);
+            this.streamManager.generateMediaMTXConfig();
+            this.showNotification('✅ Config MediaMTX gerada! Salve como mediamtx.yml junto ao binário.');
         });
 
         // Vertical: background image
@@ -3950,6 +3988,30 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
                                 <option value="vertical" ${t.orientation === 'vertical' ? 'selected' : ''}>Vertical (9:16)</option>
                             </select>
                         </div>
+                        <div class="form-group" style="display:flex;gap:6px">
+                            <div style="flex:2">
+                                <label>Bitrate</label>
+                                <input type="number" class="target-bitrate" data-target-id="${t.id}" value="${t.bitrate || ''}" placeholder="Global" min="500" max="50000" step="100" style="width:100%" />
+                            </div>
+                            <div style="flex:2">
+                                <label>Resolução</label>
+                                <select class="target-resolution" data-target-id="${t.id}">
+                                    <option value="" ${!t.resolution ? 'selected' : ''}>Global</option>
+                                    <option value="1920x1080" ${t.resolution === '1920x1080' ? 'selected' : ''}>1920x1080</option>
+                                    <option value="1280x720" ${t.resolution === '1280x720' ? 'selected' : ''}>1280x720</option>
+                                    <option value="854x480" ${t.resolution === '854x480' ? 'selected' : ''}>854x480</option>
+                                </select>
+                            </div>
+                            <div style="flex:1">
+                                <label>FPS</label>
+                                <select class="target-fps" data-target-id="${t.id}">
+                                    <option value="" ${!t.fps ? 'selected' : ''}>Global</option>
+                                    <option value="60" ${t.fps === 60 ? 'selected' : ''}>60</option>
+                                    <option value="30" ${t.fps === 30 ? 'selected' : ''}>30</option>
+                                    <option value="24" ${t.fps === 24 ? 'selected' : ''}>24</option>
+                                </select>
+                            </div>
+                        </div>
                     </div>
                 </div>
             `;
@@ -4011,6 +4073,30 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
                     inp.type = 'password';
                     btn.textContent = '👁';
                 }
+            });
+        });
+
+        list.querySelectorAll('.target-bitrate').forEach(inp => {
+            inp.addEventListener('input', () => {
+                const id = parseInt(inp.dataset.targetId);
+                const t = this.settings.stream.targets.find(x => x.id === id);
+                if (t) t.bitrate = parseInt(inp.value) || 0;
+            });
+        });
+
+        list.querySelectorAll('.target-resolution').forEach(sel => {
+            sel.addEventListener('change', () => {
+                const id = parseInt(sel.dataset.targetId);
+                const t = this.settings.stream.targets.find(x => x.id === id);
+                if (t) t.resolution = sel.value;
+            });
+        });
+
+        list.querySelectorAll('.target-fps').forEach(sel => {
+            sel.addEventListener('change', () => {
+                const id = parseInt(sel.dataset.targetId);
+                const t = this.settings.stream.targets.find(x => x.id === id);
+                if (t) t.fps = parseInt(sel.value) || 0;
             });
         });
 
@@ -4109,6 +4195,11 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
         setVal('set-horizontal-logo-width', s.horizontal.logo.width);
         setVal('set-horizontal-logo-height', s.horizontal.logo.height);
 
+        // WHIP settings
+        const whipToggle = document.getElementById('toggle-whip');
+        if (whipToggle) whipToggle.checked = s.whip.enabled;
+        setVal('set-whip-endpoint', s.whip.endpoint);
+
         document.getElementById('modal-settings').style.display = 'flex';
     }
 
@@ -4137,6 +4228,8 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
         this.settings.audio.globalDevice = g('set-global-audio') || 'default';
         this.settings.general.theme = ['dark', 'light', 'system'].includes(g('set-theme'))
             ? g('set-theme') : 'dark';
+        this.settings.whip.enabled = document.getElementById('toggle-whip')?.checked ?? false;
+        this.settings.whip.endpoint = (document.getElementById('set-whip-endpoint')?.value || '').trim();
         this.settings.general.language = ['pt-BR', 'en'].includes(g('set-language'))
             ? g('set-language') : 'pt-BR';
 
@@ -4310,6 +4403,7 @@ window.addEventListener('beforeunload',function(){clearInterval(t);});
         this._applyFloatingStyles();
         requestAnimationFrame(() => this._resizeScreenContent());
     }
+
 }
 
 // ─────────────────────────────────────────
