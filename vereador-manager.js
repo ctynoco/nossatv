@@ -24,6 +24,8 @@ export class VereadorManager {
         this._reconnectTimer = null;
         this._reconnectAttempts = 0;
         this._destroyed = false;
+        this._currentCycleIndex = 0;
+        this._cycleTimer = null;
         this.init();
     }
 
@@ -158,73 +160,87 @@ export class VereadorManager {
     renderGrid() {
         const grid = document.getElementById('vereador-grid');
         if (!grid) return;
-        const connected = this.slots.filter(s => s.connected).length;
-        grid.className = 'vereador-grid';
-        if (connected === 0) grid.classList.add('cols-4');
-        else if (connected === 1) grid.classList.add('cols-1');
-        else if (connected === 2) grid.classList.add('cols-2');
-        else if (connected <= 4) grid.classList.add('cols-2');
-        else grid.classList.add('cols-4');
-        grid.innerHTML = this.slots.map(s => this.renderSlot(s)).join('');
+        const connected = this.slots.filter(s => s.connected);
+        const count = connected.length;
+
         const ce = document.getElementById('vereador-count');
-        if (ce) ce.textContent = `${connected}/12`;
-        grid.querySelectorAll('.vereador-slot-conectar').forEach(b => {
-            b.addEventListener('click', (e) => { e.stopPropagation(); this.openConnectionModal(parseInt(b.dataset.slot)); });
+        if (ce) ce.textContent = `${count}/12`;
+
+        if (count === 0) {
+            grid.innerHTML = `<div class="vereador-empty"><span class="vereador-empty-text">Nenhum vereador conectado</span></div>`;
+            this._stopCycle();
+            return;
+        }
+
+        if (this._currentCycleIndex >= count) this._currentCycleIndex = 0;
+
+        const slot = connected[this._currentCycleIndex];
+        const stream = this.connections[slot.id];
+        const audioMuted = grid.querySelector(`.vereador-slot-video`)?.muted ?? false;
+
+        grid.innerHTML = `
+            <div class="vereador-slot connected single" data-slot="${slot.id}">
+                <video class="vereador-slot-video" autoplay playsinline ${audioMuted ? 'muted' : ''}></video>
+                <div class="vereador-slot-info">
+                    <span class="status-dot status-online"></span>
+                    <span class="vereador-slot-name">${slot.label}</span>
+                    <button class="vereador-slot-mute" data-slot="${slot.id}" title="Ativar som">🔇</button>
+                </div>
+                ${count > 1 ? `<div class="vereador-nav"><button class="vereador-nav-btn" data-nav="prev" title="Anterior">‹</button><span class="vereador-nav-count">${this._currentCycleIndex + 1}/${count}</span><button class="vereador-nav-btn" data-nav="next" title="Próximo">›</button></div>` : ''}
+            </div>`;
+
+        const video = grid.querySelector('.vereador-slot-video');
+        if (video && stream) {
+            video.srcObject = stream;
+            video.play().catch(e => console.warn('[Vereador] Erro ao reproduzir vídeo:', e));
+        }
+
+        grid.querySelector('.vereador-slot.single')?.addEventListener('click', (e) => {
+            if (e.target.closest('button') || e.target.closest('.vereador-nav')) return;
+            this.addToPreview(slot.id);
         });
-        grid.querySelectorAll('.vereador-slot-copiar').forEach(b => {
-            b.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const slot = this.slots.find(s => s.id === parseInt(b.dataset.slot));
-                if (!slot) return;
-                navigator.clipboard.writeText(slot.link).then(() => {
-                    b.textContent = '✅ Copiado!';
-                    setTimeout(() => { b.textContent = '📋 Link'; }, 1500);
-                }).catch(() => {
-                    const ta = document.createElement('textarea');
-                    ta.value = slot.link;
-                    document.body.appendChild(ta);
-                    ta.select();
-                    document.execCommand('copy');
-                    ta.remove();
-                    b.textContent = '✅ Copiado!';
-                    setTimeout(() => { b.textContent = '📋 Link'; }, 1500);
-                });
-            });
-        });
-        grid.querySelectorAll('.vereador-slot-desconectar').forEach(b => {
-            b.addEventListener('click', (e) => { e.stopPropagation(); this.disconnectSlot(parseInt(b.dataset.slot)); });
-        });
-        grid.querySelectorAll('.vereador-slot-rename').forEach(b => {
-            b.addEventListener('click', (e) => { e.stopPropagation(); this.renameSlot(parseInt(b.dataset.slot)); });
-        });
-        grid.querySelectorAll('.vereador-slot-excluir').forEach(b => {
-            b.addEventListener('click', (e) => { e.stopPropagation(); this.deleteSlot(parseInt(b.dataset.slot)); });
-        });
-        grid.querySelectorAll('.vereador-slot-mute').forEach(b => {
-            b.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = parseInt(b.dataset.slot);
-                const video = grid.querySelector(`.vereador-slot[data-slot="${id}"] video`);
-                if (video) {
-                    video.muted = !video.muted;
-                    b.textContent = video.muted ? '🔇' : '🔊';
-                    b.title = video.muted ? 'Ativar som' : 'Desativar som';
-                }
-            });
-        });
-        grid.querySelectorAll('.vereador-slot.connected').forEach(el => {
-            el.addEventListener('click', (e) => {
-                if (e.target.closest('button')) return;
-                this.addToPreview(parseInt(el.dataset.slot));
-            });
-        });
-        this.slots.filter(s => s.connected).forEach(slot => {
-            const videoEl = grid.querySelector(`.vereador-slot[data-slot="${slot.id}"] video`);
-            if (videoEl && this.connections[slot.id]) {
-                videoEl.srcObject = this.connections[slot.id];
-                videoEl.play().catch(e => console.warn('[Vereador] Erro ao reproduzir vídeo:', e));
+
+        grid.querySelector('.vereador-slot-mute')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const v = grid.querySelector('.vereador-slot-video');
+            if (v) {
+                v.muted = !v.muted;
+                e.currentTarget.textContent = v.muted ? '🔇' : '🔊';
+                e.currentTarget.title = v.muted ? 'Ativar som' : 'Desativar som';
             }
         });
+
+        grid.querySelector('[data-nav="prev"]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._currentCycleIndex = (this._currentCycleIndex - 1 + count) % count;
+            this.renderGrid();
+        });
+        grid.querySelector('[data-nav="next"]')?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            this._currentCycleIndex = (this._currentCycleIndex + 1) % count;
+            this.renderGrid();
+        });
+
+        if (count > 1) this._startCycle();
+        else this._stopCycle();
+    }
+
+    _startCycle() {
+        this._stopCycle();
+        this._cycleTimer = setInterval(() => {
+            const connected = this.slots.filter(s => s.connected);
+            if (connected.length > 1) {
+                this._currentCycleIndex = (this._currentCycleIndex + 1) % connected.length;
+                this.renderGrid();
+            }
+        }, 5000);
+    }
+
+    _stopCycle() {
+        if (this._cycleTimer) {
+            clearInterval(this._cycleTimer);
+            this._cycleTimer = null;
+        }
     }
 
     renderSlot(slot) {
@@ -309,6 +325,7 @@ export class VereadorManager {
 
     destroy() {
         this._destroyed = true;
+        this._stopCycle();
         if (this._reconnectTimer) {
             clearTimeout(this._reconnectTimer);
             this._reconnectTimer = null;
