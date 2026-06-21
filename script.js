@@ -560,13 +560,13 @@ class OBSClone {
             var label = 'VER' + pad(id);
             var cell = document.createElement('div');
             cell.id = 'mvc-' + id;
-            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:none;align-items:center;justify-content:center;border:1px solid #333;aspect-ratio:16/9;';
+            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:none;align-items:center;justify-content:center;border:1px solid #333;';
             var vid = document.createElement('video');
             vid.id = 'mvv-' + id;
             vid.autoplay = true;
             vid.playsInline = true;
             vid.muted = true;
-            vid.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;position:relative;z-index:2;';
+            vid.style.cssText = 'width:100%;height:auto;object-fit:contain;display:block;position:relative;z-index:2;';
             cell.appendChild(vid);
             var dot = document.createElement('div');
             dot.style.cssText = 'position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#4caf50;box-shadow:0 0 4px #4caf50;z-index:3;';
@@ -594,21 +594,17 @@ class OBSClone {
             if (!entry) continue;
             if (stream && stream.active && stream.getVideoTracks().length > 0) {
                 entry.cell.style.display = 'flex';
-                if (entry.vid.srcObject !== stream) entry.vid.srcObject = stream;
+                if (entry.vid.srcObject !== stream) {
+                    entry.vid.srcObject = stream;
+                    entry.vid.style.height = 'auto';
+                }
                 connected.push(i);
             } else {
                 entry.cell.style.display = 'none';
             }
         }
         var n = connected.length;
-        if (n === 0) {
-            container.style.gridTemplateColumns = '1fr';
-            return;
-        }
-        var cols = 1;
-        if (n >= 5) cols = 4;
-        else if (n >= 3) cols = 3;
-        else if (n === 2) cols = 2;
+        var cols = n === 0 ? 1 : (n <= 4 ? n : 4);
         container.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
     }
 
@@ -1091,18 +1087,27 @@ class OBSClone {
             }
 
             case 'vereadores': {
-                const cols = parseInt(source.config.cols) || 3;
+                const vm = this.vereadorManager;
+                const connected = [];
+                if (vm && vm.connections) {
+                    for (let i = 1; i <= 12; i++) {
+                        const s = vm.connections[i];
+                        if (s && s.active && s.getVideoTracks().length > 0) connected.push(i);
+                    }
+                }
+                const n = connected.length;
+                const cols = n === 0 ? 1 : (n <= 4 ? n : 4);
                 const grid = document.createElement('div');
                 grid.className = 'ver-grid-source';
                 grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);gap:0;padding:0;`;
                 for (let i = 0; i < 12; i++) {
                     const cell = document.createElement('div');
-                    cell.style.cssText = 'position:relative;overflow:hidden;background:transparent;';
+                    cell.style.cssText = 'position:relative;overflow:hidden;background:transparent;' + (i < n ? '' : 'display:none;');
                     const video = document.createElement('video');
                     video.autoplay = true;
                     video.playsinline = true;
                     video.muted = true;
-                    video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:cover;';
+                    video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
                     cell.appendChild(video);
                     grid.appendChild(cell);
                 }
