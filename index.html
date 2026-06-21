@@ -127,17 +127,6 @@
                     </div>
                 </section>
 
-                <section class="vereador-section draggable-section" data-section="vereador" draggable="true">
-                    <div class="section-drag-handle" title="Arrastar">⠿</div>
-                    <div class="vereador-section-header">
-                        <h2>👥 Vereadores</h2>
-                        <div class="vereador-section-actions">
-                            <span class="vereador-count" id="vereador-count">0/12</span>
-                            <button id="vereador-links-btn" class="btn-vereador-action" title="Copiar todos os links">🔗</button>
-                        </div>
-                    </div>
-                    <div id="vereador-grid" class="vereador-grid"></div>
-                </section>
             </section>
 
             <!-- COLUNA DIREITA: Áudio Mixer -->
@@ -230,6 +219,16 @@
                             <!-- preenchido dinamicamente -->
                         </div>
                         <button id="add-stream-target-btn" class="btn btn-capture btn-small-full">+ Adicionar Destino</button>
+                        <hr style="border-color:#333;margin:16px 0" />
+                        <div class="form-group" style="margin-bottom:8px">
+                            <label style="display:flex;align-items:center;gap:8px">
+                                <input type="checkbox" id="toggle-whip" style="width:auto" />
+                                <span>Servidor WHIP (MediaMTX)</span>
+                            </label>
+                            <input type="url" id="set-whip-endpoint" placeholder="http://localhost:8889/nossatv/whip" style="width:100%;margin-top:4px" />
+                            <small style="color:#888">Recebe WebRTC via WHIP e retransmite para os destinos RTMP acima.</small>
+                        </div>
+                        <button id="generate-whip-config" class="btn btn-capture btn-small-full" style="margin-top:4px">⚙ Gerar Config MediaMTX</button>
                     </div>
                     <!-- Saída -->
                     <div class="settings-pane" id="pane-output">
