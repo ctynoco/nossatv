@@ -2022,7 +2022,6 @@ section h2 {
     left: 8px;
     z-index: 20;
     overflow: hidden;
-    background: #000;
     border: 1px solid rgba(255,255,255,0.10);
     border-radius: 8px;
     width: auto;
@@ -2059,10 +2058,9 @@ section h2 {
 
 .vereador-pip-close { color: #cc0000; }
 .vereador-pip-video-wrapper {
-    position: relative;
-    aspect-ratio: 16 / 9;
+    position: absolute;
+    inset: 0;
     overflow: hidden;
-    background: #000;
 }
 .vereador-pip-video {
     position: absolute;
