@@ -2035,26 +2035,29 @@ section h2 {
     bottom: 4px;
     left: 4px;
 }
-.vereador-pip-header {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    padding: 3px 6px;
-    background: rgba(0,0,0,0.75);
-    font-size: 0.7em;
-    font-weight: 600;
-    user-select: none;
-    opacity: 0;
-    transition: opacity 0.15s;
+.pip-overlay-controls {
     position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
+    bottom: 2px;
+    right: 2px;
+    display: flex;
+    gap: 1px;
     z-index: 3;
 }
-.vereador-pip:hover .vereador-pip-header {
-    opacity: 1;
+.pip-overlay-btn {
+    background: rgba(0,0,0,0.5);
+    border: none;
+    color: #ccc;
+    cursor: pointer;
+    font-size: 0.55em;
+    padding: 1px 3px;
+    border-radius: 2px;
+    line-height: 1;
+    transition: background 0.15s, color 0.15s;
 }
+.pip-overlay-btn:hover { background: rgba(0,0,0,0.8); color: #fff; }
+.pip-overlay-btn.muted { color: #ff4444; }
+
+.vereador-pip-close { color: #cc0000; }
 .vereador-pip-video-wrapper {
     position: relative;
     aspect-ratio: 16 / 9;
@@ -2098,29 +2101,10 @@ section h2 {
 .vereador-pip-close {
     background: none;
     border: none;
-    color: #cc0000;
     cursor: pointer;
-    font-size: 0.85em;
-    padding: 1px 4px;
-    border-radius: 2px;
     line-height: 1;
-    transition: background 0.15s;
 }
 .vereador-pip-close:hover { background: rgba(204,0,0,0.3); }
-
-.pip-btn {
-    background: none;
-    border: none;
-    color: #aaa;
-    cursor: pointer;
-    font-size: 0.7em;
-    padding: 1px 3px;
-    border-radius: 2px;
-    line-height: 1;
-    transition: background 0.15s, color 0.15s;
-}
-.pip-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
-.pip-btn.muted { color: #ff4444; }
 
 /* Modal Vereador */
 .modal-vereador { width: 420px; }

@@ -358,15 +358,13 @@ export class VereadorManager {
         pip.className = 'vereador-pip';
         pip.dataset.slot = slotId;
         pip.innerHTML = `
-            <div class="vereador-pip-header">
-                <span class="status-dot status-online"></span>
-                <span class="vereador-pip-name">${slot.label}</span>
-                <button class="pip-btn pip-mute" title="Mutar/Ativar áudio">🔊</button>
-                <button class="pip-btn pip-video-toggle" title="Desativar/Ativar vídeo">📹</button>
-                <button class="vereador-pip-close" title="Remover">✕</button>
-            </div>
             <div class="vereador-pip-video-wrapper">
                 <video class="vereador-pip-video" autoplay playsinline></video>
+                <div class="pip-overlay-controls">
+                    <button class="pip-overlay-btn pip-mute" title="Mutar/Ativar áudio">🔊</button>
+                    <button class="pip-overlay-btn pip-video-toggle" title="Desativar/Ativar vídeo">📹</button>
+                    <button class="pip-overlay-btn vereador-pip-close" title="Remover">✕</button>
+                </div>
             </div>
             <div class="vereador-pip-resize-handle"></div>
         `;
@@ -449,13 +447,11 @@ export class VereadorManager {
     }
 
     _initPipDrag(pip) {
-        const header = pip.querySelector('.vereador-pip-header');
-        if (!header) return;
         let isDragging = false, startX, startY, origLeft, origTop;
         const container = pip.parentElement?.closest('.preview-area') || pip.parentElement;
 
         const onStart = (e) => {
-            if (e.target.closest('.vereador-pip-close') || e.target.closest('.vereador-pip-resize-handle')) return;
+            if (e.target.closest('.vereador-pip-close') || e.target.closest('.vereador-pip-resize-handle') || e.target.closest('.pip-overlay-btn')) return;
             isDragging = true;
             const cx = e.clientX ?? e.touches[0].clientX;
             const cy = e.clientY ?? e.touches[0].clientY;
@@ -487,10 +483,10 @@ export class VereadorManager {
             pip.style.cursor = '';
         };
 
-        header.addEventListener('mousedown', onStart);
+        pip.addEventListener('mousedown', onStart);
         document.addEventListener('mousemove', (e) => onMove(e.clientX, e.clientY));
         document.addEventListener('mouseup', onUp);
-        header.addEventListener('touchstart', onStart, { passive: false });
+        pip.addEventListener('touchstart', onStart, { passive: false });
         document.addEventListener('touchmove', (e) => {
             if (isDragging) { e.preventDefault(); onMove(e.touches[0].clientX, e.touches[0].clientY); }
         }, { passive: false });
