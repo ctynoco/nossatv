@@ -2514,17 +2514,18 @@ class OBSClone {
 
     _syncProgramPip() {
         try {
+            const previewArea = document.getElementById('preview-area');
             const programArea = document.getElementById('program-area');
-            if (!programArea) return;
-            const pipFloat = document.body.querySelector('.vereador-pip');
+            if (!previewArea || !programArea) return;
+            const pipPreview = previewArea.querySelector('.vereador-pip');
             const pipProgram = programArea.querySelector('.vereador-pip');
-            if (pipFloat && (!pipProgram || pipFloat.dataset.slot !== pipProgram.dataset.slot)) {
+            if (pipPreview && (!pipProgram || pipPreview.dataset.slot !== pipProgram.dataset.slot)) {
                 if (pipProgram) {
                     const v = pipProgram.querySelector('.vereador-pip-video');
                     if (v) { v.pause(); v.srcObject = null; }
                     pipProgram.remove();
                 }
-                const slotId = parseInt(pipFloat.dataset.slot);
+                const slotId = parseInt(pipPreview.dataset.slot);
                 const stream = this.vereadorManager.connections[slotId];
                 const slot = this.vereadorManager.slots.find(s => s.id === slotId);
                 const pip = document.createElement('div');
@@ -2535,8 +2536,9 @@ class OBSClone {
                         <video class="vereador-pip-video" autoplay playsinline muted></video>
                     </div>
                 `;
-                pip.style.width = pipFloat.style.width || '180px';
-                pip.style.height = pipFloat.style.height || '';
+                pip.style.width = pipPreview.style.width || '';
+                pip.style.height = pipPreview.style.height || '';
+                pip.style.maxHeight = pipPreview.style.maxHeight || '';
                 programArea.appendChild(pip);
                 const video = pip.querySelector('.vereador-pip-video');
                 if (video && stream) {
@@ -2544,7 +2546,7 @@ class OBSClone {
                     video.play().catch(() => {});
                 }
             }
-            if (!pipFloat && pipProgram) {
+            if (!pipPreview && pipProgram) {
                 const v = pipProgram.querySelector('.vereador-pip-video');
                 if (v) { v.pause(); v.srcObject = null; }
                 pipProgram.remove();
@@ -2741,31 +2743,21 @@ class OBSClone {
             programArea.style.backgroundColor = previewArea.style.backgroundColor;
         }
 
-        // Copia PiP flutuante (document.body) para o programa
-        const pipFloat = document.body.querySelector('.vereador-pip');
+        // Copia PiP (apenas 1) do preview para o programa
+        const pipPreview = previewArea.querySelector('.vereador-pip');
         const pipProgram = programArea.querySelector('.vereador-pip');
         if (pipProgram) {
             const v = pipProgram.querySelector('.vereador-pip-video');
             if (v) v.srcObject = null;
             pipProgram.remove();
         }
-        if (pipFloat) {
-            const slotId = parseInt(pipFloat.dataset.slot);
-            const stream = this.vereadorManager.connections[slotId];
-            const pip = document.createElement('div');
-            pip.className = 'vereador-pip';
-            pip.dataset.slot = slotId;
-            pip.innerHTML = `
-                <div class="vereador-pip-video-wrapper">
-                    <video class="vereador-pip-video" autoplay playsinline muted></video>
-                </div>
-            `;
-            pip.style.width = pipFloat.style.width || '180px';
-            pip.style.height = pipFloat.style.height || '';
-            programArea.appendChild(pip);
-            const video = pip.querySelector('.vereador-pip-video');
-            if (video && stream) {
-                video.srcObject = stream;
+        if (pipPreview) {
+            const clone = pipPreview.cloneNode(true);
+            programArea.appendChild(clone);
+            const video = clone.querySelector('.vereador-pip-video');
+            const origVideo = pipPreview.querySelector('.vereador-pip-video');
+            if (video && origVideo) {
+                video.srcObject = origVideo.srcObject;
                 video.play().catch(() => {});
             }
         }
@@ -2894,10 +2886,15 @@ class OBSClone {
         if (pipProgram) {
             const slotId = parseInt(pipProgram.dataset.slot);
             const stream = this.vereadorManager.connections[slotId];
+            const slot = this.vereadorManager.slots.find(s => s.id === slotId);
             const pip = document.createElement('div');
             pip.className = 'vereador-pip';
             pip.dataset.slot = slotId;
             pip.innerHTML = `
+                <div class="vereador-pip-header">
+                    <span class="status-dot status-online"></span>
+                    <span class="vereador-pip-name">${slot ? slot.label : 'VER' + slotId}</span>
+                </div>
                 <div class="vereador-pip-video-wrapper">
                     <video class="vereador-pip-video" autoplay playsinline muted></video>
                 </div>
@@ -3226,7 +3223,7 @@ class OBSClone {
         if (!previewArea || !programArea) return;
 
         [...previewArea.children].forEach(child => {
-            if (child.classList.contains('screen-placeholder')) return;
+            if (child.classList.contains('screen-placeholder') || child.classList.contains('vereador-pip')) return;
             const clone = child.cloneNode(true);
             programArea.appendChild(clone);
         });
@@ -3238,17 +3235,18 @@ class OBSClone {
         }
         if (placeholder) placeholder.style.display = 'none';
 
-        // Copia PiP flutuante (document.body) para o programa
-        const pipFloat = document.body.querySelector('.vereador-pip');
+        // Copia PiP (apenas 1) do preview para o programa
+        const pipPreview = previewArea.querySelector('.vereador-pip');
         const pipProgram = programArea.querySelector('.vereador-pip');
         if (pipProgram) {
             const v = pipProgram.querySelector('.vereador-pip-video');
             if (v) { v.pause(); v.srcObject = null; }
             pipProgram.remove();
         }
-        if (pipFloat) {
-            const slotId = parseInt(pipFloat.dataset.slot);
+        if (pipPreview) {
+            const slotId = parseInt(pipPreview.dataset.slot);
             const stream = this.vereadorManager.connections[slotId];
+            const slot = this.vereadorManager.slots.find(s => s.id === slotId);
             const pip = document.createElement('div');
             pip.className = 'vereador-pip';
             pip.dataset.slot = slotId;
@@ -3257,8 +3255,9 @@ class OBSClone {
                     <video class="vereador-pip-video" autoplay playsinline muted></video>
                 </div>
             `;
-            pip.style.width = pipFloat.style.width || '180px';
-            pip.style.height = pipFloat.style.height || '';
+            pip.style.width = pipPreview.style.width || '';
+            pip.style.height = pipPreview.style.height || '';
+            pip.style.maxHeight = pipPreview.style.maxHeight || '';
             programArea.appendChild(pip);
             const video = pip.querySelector('.vereador-pip-video');
             if (video && stream) {
