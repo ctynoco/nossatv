@@ -353,7 +353,7 @@ export class VereadorManager {
                 <button class="vereador-pip-close" title="Remover">✕</button>
             </div>
             <div class="vereador-pip-video-wrapper">
-                <video class="vereador-pip-video" autoplay playsinline></video>
+                    <video class="vereador-pip-video" autoplay playsinline muted></video>
             </div>
             <div class="vereador-pip-resize-handle"></div>
         `;

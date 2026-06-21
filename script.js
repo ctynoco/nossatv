@@ -2532,7 +2532,7 @@ class OBSClone {
                 pip.dataset.slot = slotId;
                 pip.innerHTML = `
                     <div class="vereador-pip-video-wrapper">
-                        <video class="vereador-pip-video" autoplay playsinline></video>
+                        <video class="vereador-pip-video" autoplay playsinline muted></video>
                     </div>
                 `;
                 pip.style.width = pipFloat.style.width || '180px';
@@ -2757,7 +2757,7 @@ class OBSClone {
             pip.dataset.slot = slotId;
             pip.innerHTML = `
                 <div class="vereador-pip-video-wrapper">
-                    <video class="vereador-pip-video" autoplay playsinline></video>
+                    <video class="vereador-pip-video" autoplay playsinline muted></video>
                 </div>
             `;
             pip.style.width = pipFloat.style.width || '180px';
@@ -2899,7 +2899,7 @@ class OBSClone {
             pip.dataset.slot = slotId;
             pip.innerHTML = `
                 <div class="vereador-pip-video-wrapper">
-                    <video class="vereador-pip-video" autoplay playsinline></video>
+                    <video class="vereador-pip-video" autoplay playsinline muted></video>
                 </div>
             `;
             pip.style.width = pipProgram.style.width || '';
@@ -3254,7 +3254,7 @@ class OBSClone {
             pip.dataset.slot = slotId;
             pip.innerHTML = `
                 <div class="vereador-pip-video-wrapper">
-                    <video class="vereador-pip-video" autoplay playsinline></video>
+                    <video class="vereador-pip-video" autoplay playsinline muted></video>
                 </div>
             `;
             pip.style.width = pipFloat.style.width || '180px';
