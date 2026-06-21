@@ -2270,6 +2270,7 @@ class OBSClone {
                     <span class="source-name" title="${link}">${s.label}</span>
                     <div class="source-actions">
                         <button class="btn-vereador-status ${isOnline}" data-slot="${s.id}" title="${isOnline ? 'Desconectar' : 'Conectar'}">${isOnline ? '🟢' : '⚪'}</button>
+                        <button class="btn-edit-vereador" data-slot="${s.id}" title="Renomear">✏️</button>
                         <button class="btn-copy-link" data-link="${link}" title="Copiar link">📋</button>
                     </div>
                 </div>`;
@@ -2314,6 +2315,13 @@ class OBSClone {
                     btn.textContent = '✅';
                     setTimeout(() => { btn.textContent = '📋'; }, 1500);
                 });
+            });
+        });
+
+        list.querySelectorAll('.btn-edit-vereador').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                mgr.renameSlot(parseInt(btn.dataset.slot));
             });
         });
     }
