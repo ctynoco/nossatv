@@ -717,6 +717,31 @@ section h2 {
 
 .vereador-link-item.online { border-left-color: #44cc44; background-color: #1a2a1a; }
 .vereador-link-item .vereador-link-status { font-size: 0.85em; flex-shrink: 0; }
+.vereador-link-item .source-actions { opacity: 1; }
+
+.btn-vereador-status {
+    background: none;
+    border: none;
+    cursor: pointer;
+    font-size: 0.85em;
+    padding: 2px 5px;
+    border-radius: 3px;
+    transition: transform 0.1s;
+    line-height: 1;
+}
+.btn-vereador-status:hover { transform: scale(1.2); }
+.btn-vereador-status.online { filter: drop-shadow(0 0 4px rgba(34,197,94,0.6)); }
+
+.vereador-list-separator {
+    font-size: 0.72em;
+    font-weight: 700;
+    color: #666;
+    padding: 8px 10px 4px;
+    border-top: 1px solid #333;
+    margin-top: 8px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
 
 /* =============================================
    MIXER DE ÁUDIO

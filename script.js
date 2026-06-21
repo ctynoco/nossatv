@@ -2229,53 +2229,84 @@ class OBSClone {
         if (!list) return;
 
         const addRow = document.querySelector('.add-source-row');
-        if (addRow) addRow.style.display = this._vereadoresActive ? 'none' : '';
-
-        if (this._vereadoresActive) {
-            this._renderVereadorLinksList(list);
-            return;
-        }
+        if (addRow) addRow.style.display = '';
 
         const sources = this.currentSources;
 
         if (sources.length === 0) {
             list.innerHTML = '<p>Nenhuma fonte adicionada</p>';
-            return;
+        } else {
+            list.innerHTML = sources.map(s => {
+                const hasChroma = VIDEO_SOURCE_TYPES.includes(s.type);
+                return `<div class="source-item ${this.activeSource === s.id ? 'active' : ''}" data-id="${s.id}" draggable="true">
+                    <span class="drag-handle">⠿</span>
+                    <span class="source-icon">${s.icon}</span>
+                    <span class="source-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
+                    <div class="source-actions">
+                        <button class="btn-eye" onclick="obsClone.selectSource(${s.id})" title="Ativar">👁</button>
+                        ${hasChroma ? `<button class="btn-chroma" onclick="obsClone.openChromaKey(${s.id})" title="Chroma Key">🎨</button>` : ''}
+                        <button onclick="obsClone.removeSource(${s.id})" title="Remover">🗑</button>
+                    </div>
+                </div>`;
+            }).join('');
+            this._setupDragDrop(list, 'source');
         }
 
-        list.innerHTML = sources.map(s => {
-            const hasChroma = VIDEO_SOURCE_TYPES.includes(s.type);
-            return `<div class="source-item ${this.activeSource === s.id ? 'active' : ''}" data-id="${s.id}" draggable="true">
-                <span class="drag-handle">⠿</span>
-                <span class="source-icon">${s.icon}</span>
-                <span class="source-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
-                <div class="source-actions">
-                    <button class="btn-eye" onclick="obsClone.selectSource(${s.id})" title="Ativar">👁</button>
-                    ${hasChroma ? `<button class="btn-chroma" onclick="obsClone.openChromaKey(${s.id})" title="Chroma Key">🎨</button>` : ''}
-                    <button onclick="obsClone.removeSource(${s.id})" title="Remover">🗑</button>
-                </div>
-            </div>`;
-        }).join('');
-
-        this._setupDragDrop(list, 'source');
+        this._renderVereadorLinksList(list);
     }
 
     _renderVereadorLinksList(list) {
         let mgr = this.vereadorManager;
         if (!mgr || !mgr.slots) mgr = window.obsClone?.vereadorManager;
-        if (!mgr || !mgr.slots) { list.innerHTML = '<p>Nenhum vereador configurado</p>'; return; }
-        list.innerHTML = mgr.slots.map((s) => {
-            const isOnline = s.peerId ? 'online' : '';
-            const link = escapeHtml(s.link);
-            return `<div class="source-item vereador-link-item ${isOnline}" data-slot="${s.id}">
-                <span class="source-icon">👤</span>
-                <span class="source-name" title="${link}">${s.label}</span>
-                <div class="source-actions">
-                    <button class="btn-copy-link" data-link="${link}" title="Copiar link">📋</button>
-                    <span class="vereador-link-status ${isOnline}">${isOnline ? '🟢' : '⚪'}</span>
-                </div>
-            </div>`;
-        }).join('');
+        if (!mgr || !mgr.slots) return;
+        const self = this;
+
+        const html = '<div class="vereador-list-separator">👥 Vereadores</div>' +
+            mgr.slots.map((s) => {
+                const isOnline = s.connected ? 'online' : '';
+                const link = escapeHtml(s.link);
+                return `<div class="source-item vereador-link-item ${isOnline}" data-slot="${s.id}">
+                    <span class="source-icon">👤</span>
+                    <span class="source-name" title="${link}">${s.label}</span>
+                    <div class="source-actions">
+                        <button class="btn-vereador-status ${isOnline}" data-slot="${s.id}" title="${isOnline ? 'Desconectar' : 'Conectar'}">${isOnline ? '🟢' : '⚪'}</button>
+                        <button class="btn-copy-link" data-link="${link}" title="Copiar link">📋</button>
+                    </div>
+                </div>`;
+            }).join('');
+
+        list.insertAdjacentHTML('beforeend', html);
+
+        list.querySelectorAll('.source-item.vereador-link-item').forEach(el => {
+            el.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return;
+                e.stopPropagation();
+                const slotId = parseInt(el.dataset.slot);
+                const slot = mgr.slots.find(s => s.id === slotId);
+                if (!slot) return;
+                if (slot.connected) {
+                    mgr.addToPreview(slotId);
+                } else {
+                    mgr.openConnectionModal(slotId);
+                }
+            });
+        });
+
+        list.querySelectorAll('.btn-vereador-status').forEach(btn => {
+            btn.addEventListener('click', (e) => {
+                e.stopPropagation();
+                const slotId = parseInt(btn.dataset.slot);
+                const slot = mgr.slots.find(s => s.id === slotId);
+                if (!slot) return;
+                if (slot.connected) {
+                    mgr.disconnectSlot(slotId);
+                    mgr._removePipCompletely(slotId);
+                } else {
+                    mgr.openConnectionModal(slotId);
+                }
+            });
+        });
+
         list.querySelectorAll('.btn-copy-link').forEach(btn => {
             btn.addEventListener('click', (e) => {
                 e.stopPropagation();
