@@ -196,7 +196,10 @@ export class VereadorManager {
             });
         });
         grid.querySelectorAll('.vereador-slot.connected').forEach(el => {
-            el.addEventListener('dblclick', () => this.addToPreview(parseInt(el.dataset.slot)));
+            el.addEventListener('click', (e) => {
+                if (e.target.closest('button')) return;
+                this.addToPreview(parseInt(el.dataset.slot));
+            });
         });
         this.slots.filter(s => s.connected).forEach(slot => {
             const videoEl = grid.querySelector(`.vereador-slot[data-slot="${slot.id}"] video`);
