@@ -623,7 +623,13 @@
                 <svg viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
             </button>
 
-            <!-- 2. Microphone Button -->
+            <!-- 2. Speaker Button -->
+            <button class="ctrl-btn" id="btn-speaker" title="Mutar/Ativar retorno">
+                <svg id="svg-speaker-on" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><path d="M19.07 4.93a10 10 0 0 1 0 14.14M15.54 8.46a5 5 0 0 1 0 7.07"></path></svg>
+                <svg id="svg-speaker-muted" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><polygon points="11 5 6 9 2 9 2 15 6 15 11 19 11 5"></polygon><line x1="23" y1="9" x2="17" y2="15"></line><line x1="17" y1="9" x2="23" y2="15"></line></svg>
+            </button>
+
+            <!-- 3. Microphone Button -->
             <button class="ctrl-btn mic-active" id="btn-mic" title="Mutar Microfone">
                 <svg id="svg-mic-on" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"><path d="M12 1a3 3 0 0 0-3 3v8a3 3 0 0 0 6 0V4a3 3 0 0 0-3-3z"></path><path d="M19 10v1a7 7 0 0 1-14 0v-1"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
                 <svg id="svg-mic-muted" viewBox="0 0 24 24" width="18" height="18" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round" style="display: none;"><line x1="1" y1="1" x2="23" y2="23"></line><path d="M9 9v3a3 3 0 0 0 5.12 2.12M15 9.34V4a3 3 0 0 0-5.94-.6"></path><path d="M17 11a7 7 0 0 1-14 0v-1m14 0a6.9 6.9 0 0 1-.5 2.5"></path><line x1="12" y1="19" x2="12" y2="23"></line><line x1="8" y1="23" x2="16" y2="23"></line></svg>
@@ -731,6 +737,7 @@
     
     // Control Buttons
     var btnChat       = document.getElementById('btn-chat');
+    var btnSpeaker    = document.getElementById('btn-speaker');
     var btnMic        = document.getElementById('btn-mic');
     var btnCamera     = document.getElementById('btn-camera');
     var btnFlip       = document.getElementById('btn-flip');
@@ -743,6 +750,8 @@
     var volInputPct   = document.getElementById('vol-input-pct');
 
     // SVGs
+    var svgSpeakerOn  = document.getElementById('svg-speaker-on');
+    var svgSpeakerMut = document.getElementById('svg-speaker-muted');
     var svgMicOn      = document.getElementById('svg-mic-on');
     var svgMicMut     = document.getElementById('svg-mic-muted');
     var svgCamOn      = document.getElementById('svg-cam-on');
@@ -806,6 +815,19 @@
     // ─── CHAT BUTTON ─────────────────────────────────────────────
     btnChat.addEventListener('click', function() {
         showToast('Chat: Sem novas mensagens.');
+    });
+
+    // ─── SPEAKER BUTTON ──────────────────────────────────────────
+    btnSpeaker.addEventListener('click', function() {
+        speakerMuted = !speakerMuted;
+        btnSpeaker.classList.toggle('muted', speakerMuted);
+        svgSpeakerOn.style.display = speakerMuted ? 'none' : 'block';
+        svgSpeakerMut.style.display = speakerMuted ? 'block' : 'none';
+        try {
+            returnIframe.contentWindow.postMessage({ mute: speakerMuted }, '*');
+        } catch(e) {}
+        showToast(speakerMuted ? '🔇 Retorno mutado' : '🔊 Retorno ativado');
+        updateTopStats(connected);
     });
 
     // ─── MICROPHONE BUTTON ────────────────────────────────────────
@@ -946,6 +968,12 @@
         returnIframe.src = RETURN_VIEW_URL;
         returnIframe.classList.add('active');
         returnPh.classList.add('hide');
+        returnIframe.addEventListener('load', function syncMute() {
+            returnIframe.removeEventListener('load', syncMute);
+            try {
+                returnIframe.contentWindow.postMessage({ mute: speakerMuted }, '*');
+            } catch(e) {}
+        });
     }
 
     // ─── getUserMedia ─────────────────────────────────────────────
