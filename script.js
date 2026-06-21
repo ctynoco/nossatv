@@ -551,7 +551,7 @@ class OBSClone {
 
         var container = document.createElement('div');
         container.id = 'multiview-grid';
-        container.style.cssText = 'position:absolute;inset:0;display:grid;gap:3px;padding:3px;align-content:center;';
+        container.style.cssText = 'position:absolute;inset:0;display:grid;gap:3px;padding:3px;';
         previewArea.appendChild(container);
         this._multiViewCells = {};
         var pad = function(n){ return String(n).padStart(2,'0'); };
@@ -560,13 +560,13 @@ class OBSClone {
             var label = 'VER' + pad(id);
             var cell = document.createElement('div');
             cell.id = 'mvc-' + id;
-            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:none;align-items:center;justify-content:center;border:1px solid #333;';
+            cell.style.cssText = 'position:relative;background:#111;border-radius:4px;overflow:hidden;display:none;border:1px solid #333;';
             var vid = document.createElement('video');
             vid.id = 'mvv-' + id;
             vid.autoplay = true;
             vid.playsInline = true;
             vid.muted = true;
-            vid.style.cssText = 'width:100%;height:auto;object-fit:contain;display:block;position:relative;z-index:2;';
+            vid.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;position:relative;z-index:2;';
             cell.appendChild(vid);
             var dot = document.createElement('div');
             dot.style.cssText = 'position:absolute;top:4px;right:4px;width:8px;height:8px;border-radius:50%;background:#4caf50;box-shadow:0 0 4px #4caf50;z-index:3;';
@@ -596,7 +596,6 @@ class OBSClone {
                 entry.cell.style.display = 'flex';
                 if (entry.vid.srcObject !== stream) {
                     entry.vid.srcObject = stream;
-                    entry.vid.style.height = 'auto';
                 }
                 connected.push(i);
             } else {
@@ -604,8 +603,10 @@ class OBSClone {
             }
         }
         var n = connected.length;
-        var cols = n === 0 ? 1 : (n <= 4 ? n : 4);
+        var cols = n === 0 ? 1 : Math.min(n, 4);
+        var rows = n === 0 ? 1 : Math.ceil(n / cols);
         container.style.gridTemplateColumns = 'repeat(' + cols + ', 1fr)';
+        container.style.gridTemplateRows = 'repeat(' + rows + ', 1fr)';
     }
 
     stopMultiView() {
@@ -1096,18 +1097,19 @@ class OBSClone {
                     }
                 }
                 const n = connected.length;
-                const cols = n === 0 ? 1 : (n <= 4 ? n : 4);
+                const cols = n === 0 ? 1 : Math.min(n, 4);
+                const rows = n === 0 ? 1 : Math.ceil(n / cols);
                 const grid = document.createElement('div');
                 grid.className = 'ver-grid-source';
-                grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);gap:0;padding:0;`;
+                grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);gap:2px;padding:2px;`;
                 for (let i = 0; i < 12; i++) {
                     const cell = document.createElement('div');
-                    cell.style.cssText = 'position:relative;overflow:hidden;background:transparent;' + (i < n ? '' : 'display:none;');
+                    cell.style.cssText = 'display:flex;align-items:center;justify-content:center;overflow:hidden;background:#0a0a14;border-radius:2px;' + (i < n ? '' : 'display:none;');
                     const video = document.createElement('video');
                     video.autoplay = true;
                     video.playsinline = true;
                     video.muted = true;
-                    video.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;';
+                    video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
                     cell.appendChild(video);
                     grid.appendChild(cell);
                 }
