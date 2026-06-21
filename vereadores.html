@@ -353,17 +353,16 @@
         .slot-video-area {
             position: relative;
             width: 100%;
-            aspect-ratio: 16/9;
+            min-height: 100px;
             background: #05050a;
             overflow: hidden;
         }
         .slot-video {
-            position: absolute;
-            inset: 0;
-            width: 100%;
-            height: 100%;
-            object-fit: contain;
             display: none;
+            width: 100%;
+            height: auto;
+            object-fit: contain;
+            background: #000;
         }
         .slot-video.active { display: block; }
         .slot-placeholder {
@@ -873,7 +872,8 @@
         .program-panel-dot.online { background: var(--green); box-shadow: var(--glow-green); }
         .program-panel-video-wrap {
             position: relative;
-            aspect-ratio: 16/9;
+            width: 100%;
+            min-height: 100px;
             background: #000;
         }
         .program-panel-placeholder {
@@ -1028,7 +1028,7 @@
             </div>
         </div>
         <div class="program-panel-video-wrap">
-            <video id="program-video" style="width:100%;height:100%;display:none;object-fit:contain;background:#000" autoplay playsinline muted></video>
+            <video id="program-video" style="display:none;width:100%;height:auto;object-fit:contain;background:#000" autoplay playsinline muted></video>
             <div class="program-panel-placeholder" id="program-ph">
                 <div class="ph-icon">📺</div>
                 <div class="ph-text">Preview do Programa</div>
@@ -1538,23 +1538,8 @@
             if (videoEl && videoEl.srcObject !== slot.stream) {
                 videoEl.srcObject = slot.stream;
                 videoEl.play().catch(function() {});
-                autoFitSlotVideo(videoEl);
             }
         });
-    }
-
-    function autoFitSlotVideo(videoEl) {
-        if (!videoEl) return;
-        var area = videoEl.closest('.slot-video-area');
-        if (!area) return;
-        function updateFit() {
-            if (videoEl.videoWidth && videoEl.videoHeight) {
-                area.style.aspectRatio = videoEl.videoWidth / videoEl.videoHeight;
-            }
-        }
-        videoEl.addEventListener('loadedmetadata', updateFit);
-        videoEl.addEventListener('resize', updateFit);
-        if (videoEl.videoWidth) updateFit();
     }
 
     function renderSlotCard(slot) {
