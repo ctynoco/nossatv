@@ -1302,6 +1302,7 @@
         reconnTimer = setTimeout(function() {
             reconnTimer = null;
             if (destroyed) return;
+            viewActive = {};
             if (vdo) { try { vdo.disconnect(); } catch(e) {} vdo = null; }
             vdoReady = false;
             sdkPromise = null;

@@ -137,6 +137,7 @@ export class VereadorManager {
         this._reconnectTimer = setTimeout(() => {
             this._reconnectTimer = null;
             if (this._destroyed) return;
+            this._viewActive = {};
             if (this.vdo) {
                 try { this.vdo.disconnect(); } catch(e) {}
                 this.vdo = null;
