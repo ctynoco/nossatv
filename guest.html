@@ -123,6 +123,9 @@
             justify-content: center;
         }
         #local-video {
+            /* off-screen, usado como source do canvas */
+        }
+        #local-video-canvas {
             position: absolute;
             inset: 0;
             width: 100%;
@@ -975,12 +978,10 @@
         btnCamera.classList.toggle('muted', cameraMuted);
         svgCamOn.style.display = cameraMuted ? 'none' : 'block';
         svgCamMut.style.display = cameraMuted ? 'block' : 'none';
-        localVideo.classList.toggle('show', !cameraMuted);
+        var c = window._localCanvas;
+        if (c) c.style.display = cameraMuted ? 'none' : 'block';
         localPh.classList.toggle('hide', !cameraMuted);
-        if (!cameraMuted) {
-            var hv = window._localVideoEl;
-            if (hv) hv.play().catch(function(){});
-        }
+        if (!cameraMuted) localVideo.play().catch(function(){});
         showToast(cameraMuted ? '📷 Câmera desativada' : '📷 Câmera ativa');
     });
 
@@ -1000,19 +1001,9 @@
             var newTrack = newStream.getVideoTracks()[0];
             localStream.getVideoTracks().forEach(function(t) { localStream.removeTrack(t); });
             localStream.addTrack(newTrack);
-            var hv = window._localVideoEl;
-            if (hv) {
-                hv.srcObject = null;
-                hv.srcObject = localStream;
-                hv.play().catch(function(){});
-            }
-            // Atualiza a stream clonada para publicacao
-            var pub = window._pubStream;
-            if (pub) {
-                pub.getVideoTracks().forEach(function(t) { t.stop(); pub.removeTrack(t); });
-                pub.addTrack(newTrack.clone());
-            }
-            var ctx = window._localCanvasCtx;
+            localVideo.srcObject = null;
+            localVideo.srcObject = localStream;
+            localVideo.play().catch(function(){});
             window._localMirror = facingMode === 'user';
             
             if (vdo && vdo._pc) {
@@ -1193,11 +1184,11 @@
             try { vdo.stopViewing(RETURN_STREAM_ID); } catch(e) {}
         }
         if (localStream) { localStream.getTracks().forEach(function(t) { t.stop(); }); localStream = null; }
-        var hv = window._localVideoEl;
-        if (hv) { hv.srcObject = null; hv.pause(); hv.src = ''; }
-        var pub = window._pubStream;
-        if (pub) { pub.getTracks().forEach(function(t) { t.stop(); }); window._pubStream = null; }
+        localVideo.srcObject = null;
+        localVideo.style.cssText = '';
         if (window._localRaf) { cancelAnimationFrame(window._localRaf); window._localRaf = null; }
+        var c = window._localCanvas;
+        if (c) { c.remove(); window._localCanvas = null; }
         localPh.classList.remove('hide');
         localPh.classList.remove('hide');
         liveBadge.classList.remove('show');
@@ -1234,45 +1225,37 @@
         })
         .then(function(stream) {
             localStream = stream;
-            // Video oculto no DOM para renderizar no canvas
-            var hiddenVideo = document.createElement('video');
-            hiddenVideo.id = 'local-hidden-video';
-            hiddenVideo.setAttribute('playsinline', '');
-            hiddenVideo.setAttribute('webkit-playsinline', '');
-            hiddenVideo.muted = true;
-            hiddenVideo.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0.01;pointer-events:none';
-            hiddenVideo.srcObject = stream;
-            // Publica stream CLONADA para nao conflitar com o video local
-            var pubStream = new MediaStream();
-            stream.getVideoTracks().forEach(function(t) { pubStream.addTrack(t.clone()); });
-            stream.getAudioTracks().forEach(function(t) { pubStream.addTrack(t); });
-            window._pubStream = pubStream;
+            // Video original fica invisivel, canvas renderiza os frames
+            localVideo.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;opacity:0.01';
+            localVideo.muted = true;
+            localVideo.setAttribute('playsinline', '');
+            localVideo.setAttribute('webkit-playsinline', '');
+            localVideo.srcObject = stream;
+            localVideo.play().catch(function(){});
             var canvas = document.createElement('canvas');
-            canvas.id = 'local-video';
+            canvas.id = 'local-video-canvas';
             canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
             var cctx = canvas.getContext('2d');
             window._localMirror = true;
             function renderFrame() {
-                if (hiddenVideo.videoWidth && hiddenVideo.videoHeight) {
-                    canvas.width = hiddenVideo.videoWidth;
-                    canvas.height = hiddenVideo.videoHeight;
+                if (localVideo.videoWidth && localVideo.videoHeight) {
+                    canvas.width = localVideo.videoWidth;
+                    canvas.height = localVideo.videoHeight;
                     if (window._localMirror) {
                         cctx.save();
                         cctx.scale(-1, 1);
-                        cctx.drawImage(hiddenVideo, -canvas.width, 0, canvas.width, canvas.height);
+                        cctx.drawImage(localVideo, -canvas.width, 0, canvas.width, canvas.height);
                         cctx.restore();
                     } else {
-                        cctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
+                        cctx.drawImage(localVideo, 0, 0, canvas.width, canvas.height);
                     }
                 }
                 window._localRaf = requestAnimationFrame(renderFrame);
             }
-            hiddenVideo.addEventListener('playing', renderFrame);
-            hiddenVideo.play().catch(function(){});
-            localVideo.replaceWith(canvas);
-            localVideo = canvas;
-            document.getElementById('local-wrap').appendChild(hiddenVideo);
-            window._localVideoEl = hiddenVideo;
+            localVideo.addEventListener('playing', renderFrame);
+            // Canvas substitui o video na UI
+            localVideo.parentElement.insertBefore(canvas, localVideo.nextSibling);
+            window._localCanvas = canvas;
             window._localCanvasCtx = cctx;
             localPh.classList.add('hide');
             localPh.classList.add('hide');
@@ -1320,7 +1303,7 @@
         })
         .then(function() {
             startBtn.innerHTML = '<span class="spinner"></span>Publicando...';
-            return vdo.publish(window._pubStream || localStream, { streamID: streamID, password: false });
+            return vdo.publish(localStream, { streamID: streamID, password: false });
         })
         .then(function() {
             connected = true;
