@@ -13,8 +13,8 @@ export const SOURCE_TYPES = {
     videoCaptureDevice: { label: 'Dispositivo Captura Vídeo', icon: '📹' },
     media:              { label: 'Mídia',                   icon: '🎬' },
     vereador:           { label: 'Vereador',                icon: '👤' },
-    vereadores:         { label: 'Vereadores Grid',         icon: '👥' },
-    entrevistas:        { label: 'Entrevistas',             icon: '🎙️' },
+    vereadores:         { label: 'VEREADORES GRID',         icon: '👥' },
+    entrevistas:        { label: 'ENTREVISTAS',             icon: '🎙️' },
 };
 
 export const SOURCE_FORMS = {

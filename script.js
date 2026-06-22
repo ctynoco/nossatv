@@ -671,10 +671,10 @@ class OBSClone {
         container.innerHTML = '';
         const layout = source.config.layout || 2;
         if (!source.config.screens || source.config.screens.length !== layout) {
-            const labels = layout === 2 ? ['Convidado', 'Entrevistador']
-                : layout === 3 ? ['Convidado 1', 'Convidado 2', 'Entrevistador']
-                : ['Convidado 1', 'Convidado 2', 'Convidado 3', 'Entrevistador'];
-            source.config.screens = labels.map((label, i) => ({ id: i, label, slotId: null }));
+            const labels = layout === 2 ? ['CONVIDADO', 'ENTREVISTADOR']
+                : layout === 3 ? ['CONVIDADO 1', 'CONVIDADO 2', 'ENTREVISTADOR']
+                : ['CONVIDADO 1', 'CONVIDADO 2', 'CONVIDADO 3', 'ENTREVISTADOR'];
+            source.config.screens = labels.map((label, i) => ({ id: i, label, type: null, config: {}, slotId: null }));
         }
         const cols = Math.min(layout, 2);
         const rows = Math.ceil(layout / cols);
@@ -683,28 +683,7 @@ class OBSClone {
         grid.dataset.sourceId = source.id;
         grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);gap:4px;padding:4px;`;
         source.config.screens.forEach((screen, i) => {
-            const cell = document.createElement('div');
-            cell.className = 'entrevistas-cell';
-            cell.dataset.screenId = i;
-            cell.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:#0a0a14;border-radius:6px;border:1px solid #333;cursor:grab;';
-            const video = document.createElement('video');
-            video.autoplay = true;
-            video.playsinline = true;
-            video.muted = true;
-            video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
-            cell.appendChild(video);
-            const lbl = document.createElement('div');
-            lbl.style.cssText = 'position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;z-index:2;pointer-events:none;';
-            lbl.textContent = screen.label;
-            cell.appendChild(lbl);
-            const slotId = screen.slotId;
-            if (slotId) {
-                const stream = this.vereadorManager?.connections?.[slotId];
-                if (stream && stream.active) {
-                    video.srcObject = stream;
-                    video.play().catch(() => {});
-                }
-            }
+            const cell = this._createEntrevistasCell(screen, i);
             grid.appendChild(cell);
         });
         container.appendChild(grid);
@@ -737,12 +716,12 @@ class OBSClone {
 
         var vereadoresActive = this._vereadoresActive ? 'active' : '';
         var vereadoresHtml = '<div class="scene-item scene-vereadores ' + vereadoresActive + '" data-id="vereadores">' +
-            '<span class="scene-name" title="Vereadores">👥 Vereadores</span>' +
+            '<span class="scene-name" title="VEREADORES">👥 VEREADORES</span>' +
         '</div>';
 
         var entrevistasActive = this._entrevistasActive ? 'active' : '';
         var entrevistasHtml = '<div class="scene-item scene-entrevistas ' + entrevistasActive + '" data-id="entrevistas">' +
-            '<span class="scene-name" title="Entrevistas">🎙️ Entrevistas</span>' +
+            '<span class="scene-name" title="ENTREVISTAS">🎙️ ENTREVISTAS</span>' +
         '</div>';
 
         if (this.scenes.length === 0) {
@@ -1242,13 +1221,15 @@ class OBSClone {
 
             case 'entrevistas': {
                 const layout = source.config.layout || 2;
-                const labels = layout === 2 ? ['Convidado', 'Entrevistador']
-                    : layout === 3 ? ['Convidado 1', 'Convidado 2', 'Entrevistador']
-                    : ['Convidado 1', 'Convidado 2', 'Convidado 3', 'Entrevistador'];
+                const labels = layout === 2 ? ['CONVIDADO', 'ENTREVISTADOR']
+                    : layout === 3 ? ['CONVIDADO 1', 'CONVIDADO 2', 'ENTREVISTADOR']
+                    : ['CONVIDADO 1', 'CONVIDADO 2', 'CONVIDADO 3', 'ENTREVISTADOR'];
                 if (!source.config.screens || source.config.screens.length !== layout) {
                     source.config.screens = labels.map((label, i) => ({
                         id: i,
                         label,
+                        type: null,
+                        config: {},
                         slotId: null,
                     }));
                 }
@@ -1259,28 +1240,7 @@ class OBSClone {
                 grid.dataset.sourceId = source.id;
                 grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);gap:4px;padding:4px;`;
                 source.config.screens.forEach((screen, i) => {
-                    const cell = document.createElement('div');
-                    cell.className = 'entrevistas-cell';
-                    cell.dataset.screenId = i;
-                    cell.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:#0a0a14;border-radius:6px;border:1px solid #333;cursor:grab;';
-                    const video = document.createElement('video');
-                    video.autoplay = true;
-                    video.playsinline = true;
-                    video.muted = true;
-                    video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
-                    cell.appendChild(video);
-                    const lbl = document.createElement('div');
-                    lbl.style.cssText = 'position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;z-index:2;pointer-events:none;';
-                    lbl.textContent = screen.label;
-                    cell.appendChild(lbl);
-                    const slotId = screen.slotId;
-                    if (slotId) {
-                        const stream = this.vereadorManager?.connections?.[slotId];
-                        if (stream && stream.active) {
-                            video.srcObject = stream;
-                            video.play().catch(() => {});
-                        }
-                    }
+                    const cell = this._createEntrevistasCell(screen, i);
                     grid.appendChild(cell);
                 });
                 previewArea.appendChild(grid);
@@ -1326,6 +1286,125 @@ class OBSClone {
                 video.srcObject = null;
             }
         }
+    }
+
+    _createEntrevistasCell(screen, index) {
+        const cell = document.createElement('div');
+        cell.className = 'entrevistas-cell';
+        cell.dataset.screenId = index;
+        cell.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:#0a0a14;border-radius:6px;border:1px solid #333;cursor:grab;';
+
+        if (screen.type === 'vereador') {
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsinline = true;
+            video.muted = true;
+            video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
+            cell.appendChild(video);
+            const slotId = screen.slotId;
+            if (slotId) {
+                const stream = this.vereadorManager?.connections?.[slotId];
+                if (stream && stream.active) {
+                    video.srcObject = stream;
+                    video.play().catch(() => {});
+                }
+            }
+        } else if (screen.type === 'webcam' || screen.type === 'camera') {
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsinline = true;
+            video.muted = true;
+            video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
+            cell.appendChild(video);
+            const deviceId = screen.config?.deviceId;
+            if (deviceId) {
+                this._startEntrevistasCamera(screen, video);
+            } else {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'color:#666;font-size:13px;text-align:center;padding:8px;pointer-events:none;z-index:2;';
+                empty.textContent = screen.label + '\n(sem câmera)';
+                cell.appendChild(empty);
+            }
+        } else if (screen.type === 'image') {
+            const img = document.createElement('img');
+            img.style.cssText = 'max-width:100%;max-height:100%;object-fit:contain;display:block;';
+            if (screen.config?.url) {
+                img.src = screen.config.url;
+            } else {
+                img.style.display = 'none';
+            }
+            cell.appendChild(img);
+            if (!screen.config?.url) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'color:#666;font-size:13px;text-align:center;padding:8px;pointer-events:none;z-index:2;';
+                empty.textContent = screen.label + '\n(sem imagem)';
+                cell.appendChild(empty);
+            }
+        } else if (screen.type === 'video' || screen.type === 'media') {
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsinline = true;
+            video.muted = true;
+            video.controls = false;
+            video.loop = true;
+            video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
+            if (screen.config?.url) {
+                video.src = screen.config.url;
+            }
+            cell.appendChild(video);
+            if (!screen.config?.url) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'color:#666;font-size:13px;text-align:center;padding:8px;pointer-events:none;z-index:2;';
+                empty.textContent = screen.label + '\n(sem arquivo)';
+                cell.appendChild(empty);
+            }
+        } else if (screen.type === 'document') {
+            const iframe = document.createElement('iframe');
+            iframe.style.cssText = 'width:100%;height:100%;border:none;display:block;';
+            if (screen.config?.url) {
+                iframe.src = screen.config.url;
+            }
+            cell.appendChild(iframe);
+            if (!screen.config?.url) {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'color:#666;font-size:13px;text-align:center;padding:8px;pointer-events:none;z-index:2;';
+                empty.textContent = screen.label + '\n(sem documento)';
+                cell.appendChild(empty);
+            }
+        } else {
+            const empty = document.createElement('div');
+            empty.style.cssText = 'color:#666;font-size:13px;text-align:center;padding:8px;pointer-events:none;z-index:2;white-space:pre-line;';
+            empty.textContent = screen.label + '\n(clique 2x para\nconfigurar)';
+            cell.appendChild(empty);
+            cell.style.justifyContent = 'center';
+        }
+
+        const lbl = document.createElement('div');
+        lbl.style.cssText = 'position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;z-index:2;pointer-events:none;';
+        lbl.textContent = screen.type ? screen.label + ' [' + screen.type.toUpperCase() + ']' : screen.label;
+        cell.appendChild(lbl);
+        return cell;
+    }
+
+    _startEntrevistasCamera(screen, videoEl) {
+        const deviceId = screen.config?.deviceId;
+        if (!deviceId) return;
+        const constraints = { video: { deviceId: { exact: deviceId }, width: 1280, height: 720 }, audio: false };
+        navigator.mediaDevices.getUserMedia(constraints).then(stream => {
+            if (videoEl) {
+                videoEl.srcObject = stream;
+                videoEl.play().catch(() => {});
+            }
+            screen._stream = stream;
+        }).catch(() => {
+            navigator.mediaDevices.getUserMedia({ video: { width: 1280, height: 720 }, audio: false }).then(stream => {
+                if (videoEl) {
+                    videoEl.srcObject = stream;
+                    videoEl.play().catch(() => {});
+                }
+                screen._stream = stream;
+            }).catch(() => {});
+        });
     }
 
     _setupEntrevistasDragDrop(grid) {
@@ -1374,84 +1453,221 @@ class OBSClone {
             cell.addEventListener('dragover', onDragOver);
             cell.addEventListener('drop', onDrop);
 
-            // Double-click to assign a source (slot selector)
+            // Double-click to assign a source
             cell.addEventListener('dblclick', (e) => {
                 e.preventDefault();
                 const g = e.currentTarget.closest('.entrevistas-grid');
                 const srcId = parseInt(g ? g.dataset.sourceId : grid.dataset.sourceId);
                 const screenId = parseInt(e.currentTarget.dataset.screenId);
-                this._showEntrevistasSlotPicker(srcId, screenId, grid);
+                this._showEntrevistasSourceEditor(srcId, screenId, grid);
             });
         });
     }
 
-    _showEntrevistasSlotPicker(sourceId, screenId, grid) {
-        const vm = this.vereadorManager;
-        const connectedSlots = [];
-        for (let i = 1; i <= 12; i++) {
-            if (vm && vm.connections && vm.connections[i] && vm.connections[i].active) {
-                connectedSlots.push(i);
-            }
-        }
-        if (connectedSlots.length === 0) {
-            this.showNotification('Nenhum vereador conectado');
-            return;
-        }
-        const menu = document.createElement('div');
-        menu.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:16px;z-index:9999;min-width:220px;';
-        const title = document.createElement('div');
-        title.textContent = 'Selecionar Vereador';
-        title.style.cssText = 'color:#fff;font-weight:700;margin-bottom:12px;font-size:14px;';
-        menu.appendChild(title);
-        const list = document.createElement('div');
-        list.style.cssText = 'display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;';
-        const addBtn = (label, slotId) => {
-            const btn = document.createElement('button');
-            btn.textContent = label;
-            btn.style.cssText = 'background:#2a2a4e;color:#fff;border:1px solid #555;border-radius:4px;padding:6px 12px;cursor:pointer;text-align:left;';
-            btn.addEventListener('click', () => {
-                const source = this._findSource(sourceId);
-                if (!source || !source.config.screens) return;
-                source.config.screens[screenId].slotId = slotId;
-                const video = grid.querySelector(`.entrevistas-cell[data-screen-id="${screenId}"] video`);
-                if (video) {
-                    const stream = this.vereadorManager?.connections?.[slotId];
-                    if (stream && stream.active) {
-                        video.srcObject = stream;
-                        video.play().catch(() => {});
-                    }
-                }
-                this.saveData();
-                menu.remove();
-                overlay.remove();
-            });
-            list.appendChild(btn);
-        };
-        connectedSlots.forEach(slotId => {
-            const name = vm.nomes?.[slotId] || `Vereador ${slotId}`;
-            addBtn(`👤 ${name}`, slotId);
-        });
-        const clearBtn = document.createElement('button');
-        clearBtn.textContent = '✕ Remover tela';
-        clearBtn.style.cssText = 'background:#4a1a1a;color:#fff;border:1px solid #a33;border-radius:4px;padding:6px 12px;cursor:pointer;margin-top:8px;text-align:center;';
-        clearBtn.addEventListener('click', () => {
-            const source = this._findSource(sourceId);
-            if (source && source.config.screens) {
-                source.config.screens[screenId].slotId = null;
-                const video = grid.querySelector(`.entrevistas-cell[data-screen-id="${screenId}"] video`);
-                if (video) video.srcObject = null;
-                this.saveData();
-            }
-            menu.remove();
-            overlay.remove();
-        });
-        list.appendChild(clearBtn);
-        menu.appendChild(list);
+    _showEntrevistasSourceEditor(sourceId, screenId, grid) {
+        const source = this._findSource(sourceId);
+        if (!source || !source.config.screens) return;
+        const screen = source.config.screens[screenId];
+        const self = this;
+
         const overlay = document.createElement('div');
         overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;';
+        const menu = document.createElement('div');
+        menu.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:16px;z-index:9999;min-width:280px;max-width:90vw;max-height:80vh;overflow-y:auto;';
         overlay.addEventListener('click', () => { menu.remove(); overlay.remove(); });
+
+        function renderTypePicker() {
+            menu.innerHTML = '';
+            const title = document.createElement('div');
+            title.textContent = screen.label + ' — escolha o tipo:';
+            title.style.cssText = 'color:#fff;font-weight:700;margin-bottom:12px;font-size:14px;';
+            menu.appendChild(title);
+
+            const types = [
+                { id: 'vereador', label: '👤 VEREADOR', desc: 'Stream de vereador conectado' },
+                { id: 'webcam', label: '📷 WEBCAM', desc: 'Câmera USB/webcam' },
+                { id: 'camera', label: '📱 CÂMERA', desc: 'Câmera do dispositivo' },
+                { id: 'video', label: '🎬 VÍDEO', desc: 'Arquivo de vídeo (URL)' },
+                { id: 'image', label: '🖼️ IMAGEM', desc: 'Arquivo de imagem (URL)' },
+                { id: 'document', label: '📄 DOCUMENTO (PDF)', desc: 'Documento PDF (URL)' },
+                { id: 'media', label: '🎵 MÍDIA', desc: 'Arquivo de mídia (URL)' },
+            ];
+
+            const list = document.createElement('div');
+            list.style.cssText = 'display:flex;flex-direction:column;gap:4px;';
+            types.forEach(t => {
+                const btn = document.createElement('button');
+                btn.innerHTML = t.label + '<br><span style="font-size:11px;color:#999">' + t.desc + '</span>';
+                btn.style.cssText = 'background:#2a2a4e;color:#fff;border:1px solid #555;border-radius:4px;padding:8px 12px;cursor:pointer;text-align:left;line-height:1.4;';
+                btn.addEventListener('click', () => {
+                    screen.type = t.id;
+                    screen.config = {};
+                    screen.slotId = null;
+                    if (screen._stream) {
+                        screen._stream.getTracks().forEach(t => t.stop());
+                        delete screen._stream;
+                    }
+                    if (t.id === 'vereador') renderVereadorPicker();
+                    else renderConfigForm(t.id);
+                });
+                list.appendChild(btn);
+            });
+
+            if (screen.type) {
+                const resetBtn = document.createElement('button');
+                resetBtn.textContent = '✕ REMOVER FONTE';
+                resetBtn.style.cssText = 'background:#4a1a1a;color:#fff;border:1px solid #a33;border-radius:4px;padding:8px 12px;cursor:pointer;margin-top:8px;text-align:center;width:100%;';
+                resetBtn.addEventListener('click', () => {
+                    screen.type = null;
+                    screen.config = {};
+                    screen.slotId = null;
+                    if (screen._stream) {
+                        screen._stream.getTracks().forEach(t => t.stop());
+                        delete screen._stream;
+                    }
+                    self._recreateEntrevistasCell(sourceId, screenId, grid);
+                    self.saveData();
+                    menu.remove();
+                    overlay.remove();
+                });
+                list.appendChild(resetBtn);
+            }
+
+            menu.appendChild(list);
+        }
+
+        function renderVereadorPicker() {
+            menu.innerHTML = '';
+            const vm = self.vereadorManager;
+            const connectedSlots = [];
+            for (let i = 1; i <= 12; i++) {
+                if (vm && vm.connections && vm.connections[i] && vm.connections[i].active) {
+                    connectedSlots.push(i);
+                }
+            }
+            const title = document.createElement('div');
+            title.textContent = 'Selecionar VEREADOR:';
+            title.style.cssText = 'color:#fff;font-weight:700;margin-bottom:12px;font-size:14px;';
+            menu.appendChild(title);
+
+            if (connectedSlots.length === 0) {
+                const msg = document.createElement('div');
+                msg.textContent = 'Nenhum vereador conectado';
+                msg.style.cssText = 'color:#999;padding:8px;';
+                menu.appendChild(msg);
+            } else {
+                const list = document.createElement('div');
+                list.style.cssText = 'display:flex;flex-direction:column;gap:4px;max-height:250px;overflow-y:auto;';
+                connectedSlots.forEach(slotId => {
+                    const name = vm.nomes?.[slotId] || `Vereador ${slotId}`;
+                    const btn = document.createElement('button');
+                    btn.textContent = `👤 ${name}`;
+                    btn.style.cssText = 'background:#2a2a4e;color:#fff;border:1px solid #555;border-radius:4px;padding:6px 12px;cursor:pointer;text-align:left;';
+                    btn.addEventListener('click', () => {
+                        screen.slotId = slotId;
+                        self._recreateEntrevistasCell(sourceId, screenId, grid);
+                        self.saveData();
+                        menu.remove();
+                        overlay.remove();
+                    });
+                    list.appendChild(btn);
+                });
+                menu.appendChild(list);
+            }
+
+            const backBtn = document.createElement('button');
+            backBtn.textContent = '⬅ VOLTAR';
+            backBtn.style.cssText = 'background:#333;color:#fff;border:1px solid #555;border-radius:4px;padding:6px 12px;cursor:pointer;margin-top:8px;width:100%;';
+            backBtn.addEventListener('click', renderTypePicker);
+            menu.appendChild(backBtn);
+        }
+
+        function renderConfigForm(type) {
+            menu.innerHTML = '';
+            const title = document.createElement('div');
+            const typeLabels = { webcam: 'WEBCAM', camera: 'CÂMERA', video: 'VÍDEO', image: 'IMAGEM', document: 'DOCUMENTO (PDF)', media: 'MÍDIA' };
+            title.textContent = screen.label + ' — configurar ' + (typeLabels[type] || type);
+            title.style.cssText = 'color:#fff;font-weight:700;margin-bottom:12px;font-size:14px;';
+            menu.appendChild(title);
+
+            if (type === 'webcam' || type === 'camera') {
+                const label = document.createElement('div');
+                label.textContent = 'Selecione a câmera:';
+                label.style.cssText = 'color:#ccc;margin-bottom:6px;font-size:12px;';
+                menu.appendChild(label);
+                const select = document.createElement('select');
+                select.style.cssText = 'width:100%;padding:6px;border-radius:4px;border:1px solid #555;background:#2a2a4e;color:#fff;margin-bottom:8px;';
+                const placeholder = document.createElement('option');
+                placeholder.value = '';
+                placeholder.textContent = '— selecione —';
+                select.appendChild(placeholder);
+                if (self._devices?.videoinput) {
+                    self._devices.videoinput.forEach(d => {
+                        const opt = document.createElement('option');
+                        opt.value = d.deviceId;
+                        opt.textContent = d.label || `Câmera ${d.deviceId.slice(0, 8)}`;
+                        if (d.deviceId === screen.config?.deviceId) opt.selected = true;
+                        select.appendChild(opt);
+                    });
+                }
+                menu.appendChild(select);
+                const saveBtn = document.createElement('button');
+                saveBtn.textContent = '✅ APLICAR';
+                saveBtn.style.cssText = 'background:#0066cc;color:#fff;border:none;border-radius:4px;padding:8px 16px;cursor:pointer;width:100%;margin-top:4px;';
+                saveBtn.addEventListener('click', () => {
+                    screen.config.deviceId = select.value;
+                    self._recreateEntrevistasCell(sourceId, screenId, grid);
+                    self.saveData();
+                    menu.remove();
+                    overlay.remove();
+                });
+                menu.appendChild(saveBtn);
+            } else {
+                const label = document.createElement('div');
+                label.textContent = 'URL do arquivo:';
+                label.style.cssText = 'color:#ccc;margin-bottom:6px;font-size:12px;';
+                menu.appendChild(label);
+                const input = document.createElement('input');
+                input.type = 'text';
+                input.placeholder = 'https://...';
+                input.value = screen.config?.url || '';
+                input.style.cssText = 'width:100%;padding:6px;border-radius:4px;border:1px solid #555;background:#2a2a4e;color:#fff;margin-bottom:8px;box-sizing:border-box;';
+                menu.appendChild(input);
+                const saveBtn = document.createElement('button');
+                saveBtn.textContent = '✅ APLICAR';
+                saveBtn.style.cssText = 'background:#0066cc;color:#fff;border:none;border-radius:4px;padding:8px 16px;cursor:pointer;width:100%;margin-top:4px;';
+                saveBtn.addEventListener('click', () => {
+                    screen.config.url = input.value.trim() || null;
+                    self._recreateEntrevistasCell(sourceId, screenId, grid);
+                    self.saveData();
+                    menu.remove();
+                    overlay.remove();
+                });
+                menu.appendChild(saveBtn);
+            }
+
+            const backBtn = document.createElement('button');
+            backBtn.textContent = '⬅ VOLTAR';
+            backBtn.style.cssText = 'background:#333;color:#fff;border:1px solid #555;border-radius:4px;padding:6px 12px;cursor:pointer;margin-top:8px;width:100%;';
+            backBtn.addEventListener('click', renderTypePicker);
+            menu.appendChild(backBtn);
+        }
+
         document.body.appendChild(overlay);
         document.body.appendChild(menu);
+        renderTypePicker();
+    }
+
+    _recreateEntrevistasCell(sourceId, screenId, grid) {
+        const source = this._findSource(sourceId);
+        if (!source || !source.config.screens) return;
+        const screen = source.config.screens[screenId];
+        const oldCell = grid.querySelector(`.entrevistas-cell[data-screen-id="${screenId}"]`);
+        const newCell = this._createEntrevistasCell(screen, screenId);
+        if (oldCell && newCell) {
+            grid.replaceChild(newCell, oldCell);
+            this._setupEntrevistasDragDrop(grid);
+        }
     }
 
     _refreshEntrevistas() {
@@ -1463,19 +1679,27 @@ class OBSClone {
             source.config.screens.forEach(screen => {
                 const cell = grid.querySelector(`.entrevistas-cell[data-screen-id="${screen.id}"]`);
                 if (!cell) return;
-                const video = cell.querySelector('video');
-                if (!video) return;
-                const slotId = screen.slotId;
-                if (slotId) {
-                    const stream = this.vereadorManager?.connections?.[slotId];
-                    if (stream && stream.active && video.srcObject !== stream) {
-                        video.srcObject = stream;
-                        video.play().catch(() => {});
-                    } else if (!stream && video.srcObject) {
+                if (screen.type === 'vereador') {
+                    const video = cell.querySelector('video');
+                    if (!video) return;
+                    const slotId = screen.slotId;
+                    if (slotId) {
+                        const stream = this.vereadorManager?.connections?.[slotId];
+                        if (stream && stream.active && video.srcObject !== stream) {
+                            video.srcObject = stream;
+                            video.play().catch(() => {});
+                        } else if (!stream && video.srcObject) {
+                            video.srcObject = null;
+                        }
+                    } else if (video.srcObject) {
                         video.srcObject = null;
                     }
-                } else if (video.srcObject) {
-                    video.srcObject = null;
+                } else if (screen.type === 'webcam' || screen.type === 'camera') {
+                    const video = cell.querySelector('video');
+                    if (!video) return;
+                    if (screen.config?.deviceId && !screen._stream) {
+                        this._startEntrevistasCamera(screen, video);
+                    }
                 }
             });
         });
@@ -2590,7 +2814,7 @@ class OBSClone {
         if (!mgr || !mgr.slots) return;
         const self = this;
 
-        const html = '<div class="vereador-list-separator">👥 Vereadores</div>' +
+        const html = '<div class="vereador-list-separator">👥 VEREADORES</div>' +
             mgr.slots.map((s) => {
                 const isOnline = s.connected ? 'online' : '';
                 const link = escapeHtml(s.link);
