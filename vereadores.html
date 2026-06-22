@@ -1237,8 +1237,14 @@
                         programStream.addTrack(track);
                         var video = document.getElementById('program-video');
                         if (video && programActive) {
-                            video.srcObject = programStream;
+                            if (track.kind === 'video') {
+                                video.srcObject = null;
+                                video.srcObject = programStream;
+                            } else {
+                                video.srcObject = programStream;
+                            }
                             video.style.display = 'block';
+                            video.play().catch(function(){});
                         }
                         return;
                     }
@@ -1342,6 +1348,7 @@
         if (programStream && video) {
             video.srcObject = programStream;
             video.style.display = 'block';
+            video.play().catch(function(){});
             return;
         }
         vdo.view('NossaTV_CAM', { audio: true, video: true }).catch(function(err) {

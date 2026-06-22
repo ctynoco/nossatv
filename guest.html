@@ -1096,6 +1096,7 @@
         if (speakerMuted) returnVideo.muted = true;
         if (returnStream) {
             if (returnVideo.srcObject !== returnStream) returnVideo.srcObject = returnStream;
+            returnVideo.play().catch(function(){});
             return;
         }
         vdo.view(RETURN_STREAM_ID, { audio: true, video: true }).catch(function(e) {
@@ -1242,6 +1243,11 @@
                     returnVideo.srcObject = returnStream;
                 }
                 returnStream.addTrack(track);
+                if (track.kind === 'video') {
+                    returnVideo.srcObject = null;
+                    returnVideo.srcObject = returnStream;
+                    returnVideo.play().catch(function(){});
+                }
                 if (track.kind === 'audio' && returnStream.getAudioTracks().length === 1) {
                     startReturnAudio(returnStream);
                 }
