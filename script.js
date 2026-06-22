@@ -840,11 +840,21 @@ class OBSClone {
 
         switch (source.type) {
             case 'camera': {
-                const camConstraints = { video: { width: { ideal: source.config.width || 1920 }, height: { ideal: source.config.height || 1080 } }, audio: true };
+                let camConstraints = { video: { width: { ideal: source.config.width || 1920 }, height: { ideal: source.config.height || 1080 } }, audio: true };
                 if (source.config.deviceId) {
                     camConstraints.video.deviceId = { exact: source.config.deviceId };
                 }
-                const stream = await navigator.mediaDevices.getUserMedia(camConstraints);
+                let stream;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia(camConstraints);
+                } catch (camErr) {
+                    if (camErr.name === 'OverconstrainedError' && source.config.deviceId) {
+                        delete camConstraints.video.deviceId;
+                        stream = await navigator.mediaDevices.getUserMedia(camConstraints);
+                    } else {
+                        throw camErr;
+                    }
+                }
                 this.mediaStreams[source.id] = stream;
 
                 const video = this.createVideoEl('preview-video', stream, true, false);
@@ -997,7 +1007,7 @@ class OBSClone {
             }
 
             case 'videoCaptureDevice': {
-                const vcdConstraints = {
+                let vcdConstraints = {
                     video: {
                         width: { ideal: source.config.width || 1920 },
                         height: { ideal: source.config.height || 1080 },
@@ -1007,7 +1017,17 @@ class OBSClone {
                 if (source.config.deviceId) {
                     vcdConstraints.video.deviceId = { exact: source.config.deviceId };
                 }
-                const stream = await navigator.mediaDevices.getUserMedia(vcdConstraints);
+                let stream;
+                try {
+                    stream = await navigator.mediaDevices.getUserMedia(vcdConstraints);
+                } catch (vcdErr) {
+                    if (vcdErr.name === 'OverconstrainedError' && source.config.deviceId) {
+                        delete vcdConstraints.video.deviceId;
+                        stream = await navigator.mediaDevices.getUserMedia(vcdConstraints);
+                    } else {
+                        throw vcdErr;
+                    }
+                }
                 this.mediaStreams[source.id] = stream;
                 const video = this.createVideoEl('preview-video', stream, false, true);
                 previewArea.appendChild(video);
@@ -2227,7 +2247,7 @@ class OBSClone {
             await this.activateSource(source);
             this.setActiveSource(id);
         } catch (err) {
-            this.showNotification(`❌ Erro ao ativar fonte: ${err.message}`);
+            this.showNotification(`❌ Erro: ${err.message || err.name || 'Falha ao acessar dispositivo'}`);
         }
     }
 
