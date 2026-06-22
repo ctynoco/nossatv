@@ -1219,10 +1219,17 @@
         })
         .then(function(stream) {
             localStream = stream;
-            localVideo.srcObject = stream;
-            setTimeout(function() {
-                localVideo.play().catch(function(e) { console.warn("Erro ao reproduzir vídeo local:", e); });
-            }, 100);
+            // Substitui o elemento video por um novo (workaround iOS)
+            var newVideo = document.createElement('video');
+            newVideo.id = 'local-video';
+            newVideo.autoplay = true;
+            newVideo.playsinline = true;
+            newVideo.muted = true;
+            newVideo.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;transform:scaleX(-1)';
+            newVideo.srcObject = stream;
+            localVideo.replaceWith(newVideo);
+            localVideo = newVideo;
+            newVideo.play().catch(function(e) { console.warn("Erro ao reproduzir vídeo local:", e); });
             localPh.classList.add('hide');
             startVU(stream);
 
