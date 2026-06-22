@@ -123,13 +123,11 @@
             justify-content: center;
         }
         #local-video {
-            display: block;
+            position: absolute;
+            inset: 0;
             width: 100%;
             height: 100%;
-            object-fit: contain;
-            transform: scaleX(-1);
         }
-        #local-video.show { display: block; }
         #local-placeholder {
             position: absolute;
             inset: 0;
@@ -979,7 +977,10 @@
         svgCamMut.style.display = cameraMuted ? 'block' : 'none';
         localVideo.classList.toggle('show', !cameraMuted);
         localPh.classList.toggle('hide', !cameraMuted);
-        if (!cameraMuted) localVideo.play().catch(function(e) { console.warn("Erro ao reativar vídeo:", e); });
+        if (!cameraMuted) {
+            var hv = window._localVideoEl;
+            if (hv) hv.play().catch(function(){});
+        }
         showToast(cameraMuted ? '📷 Câmera desativada' : '📷 Câmera ativa');
     });
 
@@ -999,10 +1000,14 @@
             var newTrack = newStream.getVideoTracks()[0];
             localStream.getVideoTracks().forEach(function(t) { localStream.removeTrack(t); });
             localStream.addTrack(newTrack);
-            localVideo.srcObject = null;
-            localVideo.srcObject = localStream;
-            localVideo.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
-            localVideo.play().catch(function(e) { console.warn("Erro ao reproduzir após flip:", e); });
+            var hv = window._localVideoEl;
+            if (hv) {
+                hv.srcObject = null;
+                hv.srcObject = localStream;
+                hv.play().catch(function(){});
+            }
+            var ctx = window._localCanvasCtx;
+            window._localMirror = facingMode === 'user';
             
             if (vdo && vdo._pc) {
                 var senders = vdo._pc.getSenders ? vdo._pc.getSenders() : [];
@@ -1182,8 +1187,9 @@
             try { vdo.stopViewing(RETURN_STREAM_ID); } catch(e) {}
         }
         if (localStream) { localStream.getTracks().forEach(function(t) { t.stop(); }); localStream = null; }
-        localVideo.srcObject = null;
-        localVideo.classList.remove('show');
+        var hv = window._localVideoEl;
+        if (hv) { hv.srcObject = null; hv.pause(); hv.src = ''; }
+        localPh.classList.remove('hide');
         localPh.classList.remove('hide');
         liveBadge.classList.remove('show');
         returnVideo.srcObject = null;
@@ -1219,19 +1225,41 @@
         })
         .then(function(stream) {
             localStream = stream;
-            // Substitui o elemento video por um novo (workaround iOS)
-            var newVideo = document.createElement('video');
-            newVideo.id = 'local-video';
-            newVideo.setAttribute('playsinline', '');
-            newVideo.setAttribute('webkit-playsinline', '');
-            newVideo.setAttribute('x5-playsinline', '');
-            newVideo.autoplay = true;
-            newVideo.muted = true;
-            newVideo.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transform:scaleX(-1)';
-            newVideo.srcObject = stream;
-            localVideo.replaceWith(newVideo);
-            localVideo = newVideo;
-            newVideo.play().catch(function(e) { console.warn("Erro ao reproduzir vídeo local:", e); });
+            // Canvas em vez de video (workaround preview preto mobile)
+            var hiddenVideo = document.createElement('video');
+            hiddenVideo.setAttribute('playsinline', '');
+            hiddenVideo.setAttribute('webkit-playsinline', '');
+            hiddenVideo.setAttribute('x5-playsinline', '');
+            hiddenVideo.autoplay = true;
+            hiddenVideo.muted = true;
+            hiddenVideo.srcObject = stream;
+            hiddenVideo.play().catch(function(){});
+            var canvas = document.createElement('canvas');
+            canvas.id = 'local-video';
+            canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+            var cctx = canvas.getContext('2d');
+            window._localMirror = true;
+            function renderFrame() {
+                if (hiddenVideo.videoWidth && hiddenVideo.videoHeight) {
+                    canvas.width = hiddenVideo.videoWidth;
+                    canvas.height = hiddenVideo.videoHeight;
+                    if (window._localMirror) {
+                        cctx.save();
+                        cctx.scale(-1, 1);
+                        cctx.drawImage(hiddenVideo, -canvas.width, 0, canvas.width, canvas.height);
+                        cctx.restore();
+                    } else {
+                        cctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
+                    }
+                }
+                requestAnimationFrame(renderFrame);
+            }
+            hiddenVideo.addEventListener('playing', renderFrame);
+            localVideo.replaceWith(canvas);
+            localVideo = canvas;
+            window._localVideoEl = hiddenVideo;
+            window._localCanvasCtx = cctx;
+            localPh.classList.add('hide');
             localPh.classList.add('hide');
             startVU(stream);
 
