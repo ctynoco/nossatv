@@ -1189,6 +1189,7 @@
         if (localStream) { localStream.getTracks().forEach(function(t) { t.stop(); }); localStream = null; }
         var hv = window._localVideoEl;
         if (hv) { hv.srcObject = null; hv.pause(); hv.src = ''; }
+        if (window._localRaf) { cancelAnimationFrame(window._localRaf); window._localRaf = null; }
         localPh.classList.remove('hide');
         localPh.classList.remove('hide');
         liveBadge.classList.remove('show');
@@ -1252,7 +1253,7 @@
                         cctx.drawImage(hiddenVideo, 0, 0, canvas.width, canvas.height);
                     }
                 }
-                requestAnimationFrame(renderFrame);
+                window._localRaf = requestAnimationFrame(renderFrame);
             }
             hiddenVideo.addEventListener('playing', renderFrame);
             localVideo.replaceWith(canvas);
