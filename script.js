@@ -33,7 +33,9 @@ class OBSClone {
         this._vereadorAudio = {};
         this._audioCtx = null;
         this._vereadoresActive = false;
+        this._entrevistasActive = false;
         this._vereadoresGridInterval = null;
+        this._entrevistasInterval = null;
         this.settings       = this._loadSettings();
         this.isVirtualCam   = false;
         this.isStudioMode   = false;
@@ -482,6 +484,9 @@ class OBSClone {
             this._doMultiViewTransition(id);
             return;
         }
+        if (this._entrevistasActive && id !== 'entrevistas') {
+            this.stopEntrevistas();
+        }
         if (id === this.activeSceneId && this.activeScene) {
             this.renderScenePreview();
             return;
@@ -507,6 +512,7 @@ class OBSClone {
     }
 
     selectVereadoresScene() {
+        if (this._entrevistasActive) this.stopEntrevistas();
         if (!this._vereadoresActive) {
             this._vereadoresActive = true;
             this.activeSceneId = 'vereadores';
@@ -620,6 +626,91 @@ class OBSClone {
         this.renderSources();
     }
 
+    selectEntrevistasScene() {
+        if (this._vereadoresActive) this.stopMultiView();
+        if (!this._entrevistasActive) {
+            this._entrevistasActive = true;
+            this.activeSceneId = 'entrevistas';
+            this.activeSource = null;
+            this.renderScenes();
+            this.renderSources();
+            this.clearPreview();
+            const previewArea = document.getElementById('preview-area');
+            if (previewArea) {
+                const entrevistasSources = [];
+                for (const scene of this.scenes) {
+                    for (const src of scene.sources) {
+                        if (src.type === 'entrevistas') entrevistasSources.push(src);
+                    }
+                }
+                if (entrevistasSources.length > 0) {
+                    const src = entrevistasSources[0];
+                    this.renderEntrevistasFull(previewArea, src);
+                } else {
+                    previewArea.innerHTML = '<div style="padding:20px;color:#999;text-align:center;font-size:14px">Crie uma fonte "Entrevistas" em uma cena para usar este layout</div>';
+                }
+            }
+        }
+        if (this._entrevistasInterval) clearInterval(this._entrevistasInterval);
+        this._entrevistasInterval = setInterval(() => this._refreshEntrevistas(), 2000);
+        this._transitioning = false;
+    }
+
+    stopEntrevistas() {
+        this._entrevistasActive = false;
+        if (this._entrevistasInterval) {
+            clearInterval(this._entrevistasInterval);
+            this._entrevistasInterval = null;
+        }
+        this.clearPreview();
+        this.renderScenes();
+        this.renderSources();
+    }
+
+    renderEntrevistasFull(container, source) {
+        container.innerHTML = '';
+        const layout = source.config.layout || 2;
+        if (!source.config.screens || source.config.screens.length !== layout) {
+            const labels = layout === 2 ? ['Convidado', 'Entrevistador']
+                : layout === 3 ? ['Convidado 1', 'Convidado 2', 'Entrevistador']
+                : ['Convidado 1', 'Convidado 2', 'Convidado 3', 'Entrevistador'];
+            source.config.screens = labels.map((label, i) => ({ id: i, label, slotId: null }));
+        }
+        const cols = Math.min(layout, 2);
+        const rows = Math.ceil(layout / cols);
+        const grid = document.createElement('div');
+        grid.className = 'entrevistas-grid entrevistas-full';
+        grid.dataset.sourceId = source.id;
+        grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);gap:4px;padding:4px;`;
+        source.config.screens.forEach((screen, i) => {
+            const cell = document.createElement('div');
+            cell.className = 'entrevistas-cell';
+            cell.dataset.screenId = i;
+            cell.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:#0a0a14;border-radius:6px;border:1px solid #333;cursor:grab;';
+            const video = document.createElement('video');
+            video.autoplay = true;
+            video.playsinline = true;
+            video.muted = true;
+            video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
+            cell.appendChild(video);
+            const lbl = document.createElement('div');
+            lbl.style.cssText = 'position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;z-index:2;pointer-events:none;';
+            lbl.textContent = screen.label;
+            cell.appendChild(lbl);
+            const slotId = screen.slotId;
+            if (slotId) {
+                const stream = this.vereadorManager?.connections?.[slotId];
+                if (stream && stream.active) {
+                    video.srcObject = stream;
+                    video.play().catch(() => {});
+                }
+            }
+            grid.appendChild(cell);
+        });
+        container.appendChild(grid);
+        this._setupEntrevistasDragDrop(grid);
+    }
+
     applyTransition(prevSceneId) {
         const previewArea = document.getElementById('preview-area');
         if (!previewArea) return;
@@ -649,14 +740,19 @@ class OBSClone {
             '<span class="scene-name" title="Vereadores">👥 Vereadores</span>' +
         '</div>';
 
+        var entrevistasActive = this._entrevistasActive ? 'active' : '';
+        var entrevistasHtml = '<div class="scene-item scene-entrevistas ' + entrevistasActive + '" data-id="entrevistas">' +
+            '<span class="scene-name" title="Entrevistas">🎙️ Entrevistas</span>' +
+        '</div>';
+
         if (this.scenes.length === 0) {
-            list.innerHTML = vereadoresHtml + '<p>Nenhuma cena</p>';
+            list.innerHTML = vereadoresHtml + entrevistasHtml + '<p>Nenhuma cena</p>';
             document.getElementById('remove-scene-btn').disabled = true;
             this._setupSceneListEvents(list);
             return;
         }
 
-        list.innerHTML = vereadoresHtml + this.scenes.map(s => `
+        list.innerHTML = vereadoresHtml + entrevistasHtml + this.scenes.map(s => `
             <div class="scene-item ${this.activeSceneId === s.id ? 'active' : ''}" data-id="${s.id}" draggable="true">
                 <span class="drag-handle">⠿</span>
                 <span class="scene-name" title="${escapeHtml(s.name)}">${escapeHtml(s.name)}</span>
@@ -798,6 +894,10 @@ class OBSClone {
             };
             case 'vereadores': return {
                 cols: parseInt(document.getElementById('src-ver-grid-cols')?.value) || 3,
+            };
+            case 'entrevistas': return {
+                layout: parseInt(document.getElementById('src-entrevistas-layout')?.value) || 2,
+                screens: [], // array of { slotId: null | number, label: string } — preenchido na renderização
             };
             default:        return {};
         }
@@ -1139,6 +1239,55 @@ class OBSClone {
                 this._refreshVereadoresRandom(grid);
                 break;
             }
+
+            case 'entrevistas': {
+                const layout = source.config.layout || 2;
+                const labels = layout === 2 ? ['Convidado', 'Entrevistador']
+                    : layout === 3 ? ['Convidado 1', 'Convidado 2', 'Entrevistador']
+                    : ['Convidado 1', 'Convidado 2', 'Convidado 3', 'Entrevistador'];
+                if (!source.config.screens || source.config.screens.length !== layout) {
+                    source.config.screens = labels.map((label, i) => ({
+                        id: i,
+                        label,
+                        slotId: null,
+                    }));
+                }
+                const cols = Math.min(layout, 2);
+                const rows = Math.ceil(layout / cols);
+                const grid = document.createElement('div');
+                grid.className = 'entrevistas-grid';
+                grid.dataset.sourceId = source.id;
+                grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);gap:4px;padding:4px;`;
+                source.config.screens.forEach((screen, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'entrevistas-cell';
+                    cell.dataset.screenId = i;
+                    cell.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:#0a0a14;border-radius:6px;border:1px solid #333;cursor:grab;';
+                    const video = document.createElement('video');
+                    video.autoplay = true;
+                    video.playsinline = true;
+                    video.muted = true;
+                    video.style.cssText = 'width:100%;height:100%;object-fit:contain;display:block;';
+                    cell.appendChild(video);
+                    const lbl = document.createElement('div');
+                    lbl.style.cssText = 'position:absolute;bottom:4px;left:4px;background:rgba(0,0,0,.7);color:#fff;padding:2px 8px;border-radius:4px;font-size:11px;font-weight:600;z-index:2;pointer-events:none;';
+                    lbl.textContent = screen.label;
+                    cell.appendChild(lbl);
+                    const slotId = screen.slotId;
+                    if (slotId) {
+                        const stream = this.vereadorManager?.connections?.[slotId];
+                        if (stream && stream.active) {
+                            video.srcObject = stream;
+                            video.play().catch(() => {});
+                        }
+                    }
+                    grid.appendChild(cell);
+                });
+                previewArea.appendChild(grid);
+                this._entrevistasSourceId = source.id;
+                this._setupEntrevistasDragDrop(grid);
+                break;
+            }
         }
         // Chroma Key: se ativo na fonte, substitui preview por canvas
         const videoEl = document.getElementById('preview-video');
@@ -1177,6 +1326,159 @@ class OBSClone {
                 video.srcObject = null;
             }
         }
+    }
+
+    _setupEntrevistasDragDrop(grid) {
+        const cells = grid.querySelectorAll('.entrevistas-cell');
+        let dragIndex = null;
+
+        const onDragStart = (e) => {
+            const cell = e.currentTarget;
+            dragIndex = parseInt(cell.dataset.screenId);
+            cell.style.opacity = '0.5';
+            e.dataTransfer.effectAllowed = 'move';
+            e.dataTransfer.setData('text/plain', String(dragIndex));
+        };
+        const onDragEnd = (e) => {
+            e.currentTarget.style.opacity = '';
+        };
+        const onDragOver = (e) => {
+            e.preventDefault();
+            e.dataTransfer.dropEffect = 'move';
+        };
+        const onDrop = (e) => {
+            e.preventDefault();
+            const fromIdx = parseInt(e.dataTransfer.getData('text/plain'));
+            const toCell = e.currentTarget;
+            const toIdx = parseInt(toCell.dataset.screenId);
+            if (isNaN(fromIdx) || isNaN(toIdx) || fromIdx === toIdx) return;
+            const sourceId = parseInt(grid.dataset.sourceId);
+            const source = this._findSource(sourceId);
+            if (!source || !source.config.screens) return;
+            const screens = source.config.screens;
+            [screens[fromIdx], screens[toIdx]] = [screens[toIdx], screens[fromIdx]];
+            for (let i = 0; i < screens.length; i++) screens[i].id = i;
+            if (this._entrevistasActive) {
+                const pa = document.getElementById('preview-area');
+                if (pa) this.renderEntrevistasFull(pa, source);
+            } else {
+                this.renderScenePreview();
+            }
+            this.saveData();
+        };
+
+        cells.forEach(cell => {
+            cell.draggable = true;
+            cell.addEventListener('dragstart', onDragStart);
+            cell.addEventListener('dragend', onDragEnd);
+            cell.addEventListener('dragover', onDragOver);
+            cell.addEventListener('drop', onDrop);
+
+            // Double-click to assign a source (slot selector)
+            cell.addEventListener('dblclick', (e) => {
+                e.preventDefault();
+                const g = e.currentTarget.closest('.entrevistas-grid');
+                const srcId = parseInt(g ? g.dataset.sourceId : grid.dataset.sourceId);
+                const screenId = parseInt(e.currentTarget.dataset.screenId);
+                this._showEntrevistasSlotPicker(srcId, screenId, grid);
+            });
+        });
+    }
+
+    _showEntrevistasSlotPicker(sourceId, screenId, grid) {
+        const vm = this.vereadorManager;
+        const connectedSlots = [];
+        for (let i = 1; i <= 12; i++) {
+            if (vm && vm.connections && vm.connections[i] && vm.connections[i].active) {
+                connectedSlots.push(i);
+            }
+        }
+        if (connectedSlots.length === 0) {
+            this.showNotification('Nenhum vereador conectado');
+            return;
+        }
+        const menu = document.createElement('div');
+        menu.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:#1a1a2e;border:1px solid #444;border-radius:8px;padding:16px;z-index:9999;min-width:220px;';
+        const title = document.createElement('div');
+        title.textContent = 'Selecionar Vereador';
+        title.style.cssText = 'color:#fff;font-weight:700;margin-bottom:12px;font-size:14px;';
+        menu.appendChild(title);
+        const list = document.createElement('div');
+        list.style.cssText = 'display:flex;flex-direction:column;gap:4px;max-height:300px;overflow-y:auto;';
+        const addBtn = (label, slotId) => {
+            const btn = document.createElement('button');
+            btn.textContent = label;
+            btn.style.cssText = 'background:#2a2a4e;color:#fff;border:1px solid #555;border-radius:4px;padding:6px 12px;cursor:pointer;text-align:left;';
+            btn.addEventListener('click', () => {
+                const source = this._findSource(sourceId);
+                if (!source || !source.config.screens) return;
+                source.config.screens[screenId].slotId = slotId;
+                const video = grid.querySelector(`.entrevistas-cell[data-screen-id="${screenId}"] video`);
+                if (video) {
+                    const stream = this.vereadorManager?.connections?.[slotId];
+                    if (stream && stream.active) {
+                        video.srcObject = stream;
+                        video.play().catch(() => {});
+                    }
+                }
+                this.saveData();
+                menu.remove();
+                overlay.remove();
+            });
+            list.appendChild(btn);
+        };
+        connectedSlots.forEach(slotId => {
+            const name = vm.nomes?.[slotId] || `Vereador ${slotId}`;
+            addBtn(`👤 ${name}`, slotId);
+        });
+        const clearBtn = document.createElement('button');
+        clearBtn.textContent = '✕ Remover tela';
+        clearBtn.style.cssText = 'background:#4a1a1a;color:#fff;border:1px solid #a33;border-radius:4px;padding:6px 12px;cursor:pointer;margin-top:8px;text-align:center;';
+        clearBtn.addEventListener('click', () => {
+            const source = this._findSource(sourceId);
+            if (source && source.config.screens) {
+                source.config.screens[screenId].slotId = null;
+                const video = grid.querySelector(`.entrevistas-cell[data-screen-id="${screenId}"] video`);
+                if (video) video.srcObject = null;
+                this.saveData();
+            }
+            menu.remove();
+            overlay.remove();
+        });
+        list.appendChild(clearBtn);
+        menu.appendChild(list);
+        const overlay = document.createElement('div');
+        overlay.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:9998;';
+        overlay.addEventListener('click', () => { menu.remove(); overlay.remove(); });
+        document.body.appendChild(overlay);
+        document.body.appendChild(menu);
+    }
+
+    _refreshEntrevistas() {
+        const grids = document.querySelectorAll('.entrevistas-grid');
+        grids.forEach(grid => {
+            const sourceId = parseInt(grid.dataset.sourceId);
+            const source = this._findSource(sourceId);
+            if (!source || !source.config.screens) return;
+            source.config.screens.forEach(screen => {
+                const cell = grid.querySelector(`.entrevistas-cell[data-screen-id="${screen.id}"]`);
+                if (!cell) return;
+                const video = cell.querySelector('video');
+                if (!video) return;
+                const slotId = screen.slotId;
+                if (slotId) {
+                    const stream = this.vereadorManager?.connections?.[slotId];
+                    if (stream && stream.active && video.srcObject !== stream) {
+                        video.srcObject = stream;
+                        video.play().catch(() => {});
+                    } else if (!stream && video.srcObject) {
+                        video.srcObject = null;
+                    }
+                } else if (video.srcObject) {
+                    video.srcObject = null;
+                }
+            });
+        });
     }
 
     renderScenePreview() {
@@ -2368,6 +2670,8 @@ class OBSClone {
             if (this._dragHappened) { this._dragHappened = false; return; }
             if (sceneItem.dataset.id === 'vereadores') {
                 this.selectVereadoresScene();
+            } else if (sceneItem.dataset.id === 'entrevistas') {
+                this.selectEntrevistasScene();
             } else {
                 this.selectScene(parseInt(sceneItem.dataset.id));
             }

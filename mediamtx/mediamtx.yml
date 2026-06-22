@@ -1,0 +1,27 @@
+# MediaMTX config for NossaTV
+# WHIP input: http://localhost:8889/nossatv/whip
+# RTMP local: rtmp://localhost:1935/nossatv
+# HLS viewer: http://localhost:8888/nossatv
+
+logLevel: info
+
+rtmp: yes
+rtmpAddress: :1935
+
+webrtc: yes
+webrtcAddress: :8889
+webrtcLocalUDPAddress: :8189
+webrtcIPsFromInterfaces: yes
+
+hls: yes
+hlsAddress: :8888
+hlsVariant: lowLatency
+
+rtsp: no
+srt: no
+moq: no
+
+paths:
+  nossatv:
+    source: publisher
+    overridePublisher: yes
