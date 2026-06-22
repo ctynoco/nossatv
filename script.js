@@ -676,14 +676,13 @@ class OBSClone {
                 : ['CONVIDADO 1', 'CONVIDADO 2', 'CONVIDADO 3', 'ENTREVISTADOR'];
             source.config.screens = labels.map((label, i) => ({ id: i, label, type: null, config: {}, slotId: null }));
         }
-        const cols = Math.min(layout, 2);
-        const rows = Math.ceil(layout / cols);
+        const { style: gridStyle } = this._getEntrevistasGridCSS(layout);
         const grid = document.createElement('div');
         grid.className = 'entrevistas-grid entrevistas-full';
         grid.dataset.sourceId = source.id;
-        grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);gap:4px;padding:4px;`;
+        grid.style.cssText = gridStyle;
         source.config.screens.forEach((screen, i) => {
-            const cell = this._createEntrevistasCell(screen, i);
+            const cell = this._createEntrevistasCell(screen, i, layout);
             grid.appendChild(cell);
         });
         container.appendChild(grid);
@@ -1233,14 +1232,13 @@ class OBSClone {
                         slotId: null,
                     }));
                 }
-                const cols = Math.min(layout, 2);
-                const rows = Math.ceil(layout / cols);
+                const { style: gridStyle } = this._getEntrevistasGridCSS(layout);
                 const grid = document.createElement('div');
                 grid.className = 'entrevistas-grid';
                 grid.dataset.sourceId = source.id;
-                grid.style.cssText = `position:absolute;inset:0;width:100%;height:100%;display:grid;grid-template-columns:repeat(${cols},1fr);grid-template-rows:repeat(${rows},1fr);gap:4px;padding:4px;`;
+                grid.style.cssText = gridStyle;
                 source.config.screens.forEach((screen, i) => {
-                    const cell = this._createEntrevistasCell(screen, i);
+                    const cell = this._createEntrevistasCell(screen, i, layout);
                     grid.appendChild(cell);
                 });
                 previewArea.appendChild(grid);
@@ -1288,11 +1286,32 @@ class OBSClone {
         }
     }
 
-    _createEntrevistasCell(screen, index) {
+    _getEntrevistasGridCSS(layout) {
+        const base = 'position:absolute;inset:0;width:100%;height:100%;display:grid;gap:4px;padding:4px;';
+        if (layout === 3) {
+            return { style: base + 'grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;', cols: 2, rows: 2 };
+        }
+        if (layout === 2) {
+            return { style: base + 'grid-template-columns:1fr 1fr;grid-template-rows:1fr;', cols: 2, rows: 1 };
+        }
+        return { style: base + 'grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;', cols: 2, rows: 2 };
+    }
+
+    _createEntrevistasCell(screen, index, layout) {
         const cell = document.createElement('div');
         cell.className = 'entrevistas-cell';
         cell.dataset.screenId = index;
-        cell.style.cssText = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;background:#0a0a14;border-radius:6px;border:1px solid #333;cursor:grab;';
+        const isConvidado = layout === 3 && index < 2;
+        const isEntrevistador = layout === 3 && index === 2;
+        let cellCSS = 'position:relative;display:flex;flex-direction:column;align-items:center;justify-content:center;overflow:hidden;border-radius:6px;border:1px solid #333;cursor:grab;';
+        if (isConvidado) {
+            cellCSS += 'background:transparent;aspect-ratio:1/1;';
+        } else if (isEntrevistador) {
+            cellCSS += 'background:#0a0a14;grid-column:2;grid-row:span 2;';
+        } else {
+            cellCSS += 'background:#0a0a14;';
+        }
+        cell.style.cssText = cellCSS;
 
         if (screen.type === 'vereador') {
             const video = document.createElement('video');
@@ -1371,6 +1390,13 @@ class OBSClone {
                 empty.textContent = screen.label + '\n(sem documento)';
                 cell.appendChild(empty);
             }
+        } else if (screen.type === 'color') {
+            const div = document.createElement('div');
+            div.style.cssText = 'width:100%;height:100%;display:block;';
+            if (screen.config?.color) {
+                div.style.background = screen.config.color;
+            }
+            cell.appendChild(div);
         } else {
             const empty = document.createElement('div');
             empty.style.cssText = 'color:#666;font-size:13px;text-align:center;padding:8px;pointer-events:none;z-index:2;white-space:pre-line;';
@@ -1491,6 +1517,7 @@ class OBSClone {
                 { id: 'image', label: '🖼️ IMAGEM', desc: 'Arquivo de imagem (URL)' },
                 { id: 'document', label: '📄 DOCUMENTO (PDF)', desc: 'Documento PDF (URL)' },
                 { id: 'media', label: '🎵 MÍDIA', desc: 'Arquivo de mídia (URL)' },
+                { id: 'color', label: '🎨 COR', desc: 'Cor sólida' },
             ];
 
             const list = document.createElement('div');
@@ -1622,6 +1649,27 @@ class OBSClone {
                     overlay.remove();
                 });
                 menu.appendChild(saveBtn);
+            } else if (type === 'color') {
+                const label = document.createElement('div');
+                label.textContent = 'Escolha a cor:';
+                label.style.cssText = 'color:#ccc;margin-bottom:6px;font-size:12px;';
+                menu.appendChild(label);
+                const picker = document.createElement('input');
+                picker.type = 'color';
+                picker.value = screen.config?.color || '#0066cc';
+                picker.style.cssText = 'width:100%;height:48px;border:1px solid #555;border-radius:4px;background:#2a2a4e;cursor:pointer;margin-bottom:8px;';
+                menu.appendChild(picker);
+                const saveBtn = document.createElement('button');
+                saveBtn.textContent = '✅ APLICAR';
+                saveBtn.style.cssText = 'background:#0066cc;color:#fff;border:none;border-radius:4px;padding:8px 16px;cursor:pointer;width:100%;margin-top:4px;';
+                saveBtn.addEventListener('click', () => {
+                    screen.config.color = picker.value;
+                    self._recreateEntrevistasCell(sourceId, screenId, grid);
+                    self.saveData();
+                    menu.remove();
+                    overlay.remove();
+                });
+                menu.appendChild(saveBtn);
             } else {
                 const label = document.createElement('div');
                 label.textContent = 'URL do arquivo:';
@@ -1662,8 +1710,9 @@ class OBSClone {
         const source = this._findSource(sourceId);
         if (!source || !source.config.screens) return;
         const screen = source.config.screens[screenId];
+        const layout = source.config.layout || 2;
         const oldCell = grid.querySelector(`.entrevistas-cell[data-screen-id="${screenId}"]`);
-        const newCell = this._createEntrevistasCell(screen, screenId);
+        const newCell = this._createEntrevistasCell(screen, screenId, layout);
         if (oldCell && newCell) {
             grid.replaceChild(newCell, oldCell);
             this._setupEntrevistasDragDrop(grid);
