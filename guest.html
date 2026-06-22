@@ -1222,10 +1222,12 @@
             // Substitui o elemento video por um novo (workaround iOS)
             var newVideo = document.createElement('video');
             newVideo.id = 'local-video';
+            newVideo.setAttribute('playsinline', '');
+            newVideo.setAttribute('webkit-playsinline', '');
+            newVideo.setAttribute('x5-playsinline', '');
             newVideo.autoplay = true;
-            newVideo.playsinline = true;
             newVideo.muted = true;
-            newVideo.style.cssText = 'display:block;width:100%;height:100%;object-fit:contain;transform:scaleX(-1)';
+            newVideo.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transform:scaleX(-1)';
             newVideo.srcObject = stream;
             localVideo.replaceWith(newVideo);
             localVideo = newVideo;
