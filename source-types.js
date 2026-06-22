@@ -288,17 +288,16 @@ export const SOURCE_FORMS = {
     entrevistas: () => `
         <div class="form-group">
             <label>Nome da fonte</label>
-            <input type="text" id="src-name" value="Entrevistas" />
+            <input type="text" id="src-name" value="ENTREVISTAS" />
         </div>
         <div class="form-group">
-            <label>Layout</label>
+            <label>Telas</label>
             <select id="src-entrevistas-layout">
-                <option value="2">2 Telas (1 Convidado + 1 Entrevistador)</option>
-                <option value="3">3 Telas (2 Convidados + 1 Entrevistador)</option>
-                <option value="4">4 Telas (3 Convidados + 1 Entrevistador)</option>
+                <option value="2">2</option>
+                <option value="3" selected>3</option>
+                <option value="4">4</option>
             </select>
-        </div>
-        <p style="color:#aaa;font-size:0.82em">Após criar, arraste fontes da lista para cada tela ou rearranje as telas com drag & drop.</p>`,
+        </div>`,
 };
 
 export const VIDEO_SOURCE_TYPES = ['camera', 'screen', 'window', 'videoCaptureDevice', 'media', 'gameCapture', 'entrevistas'];
