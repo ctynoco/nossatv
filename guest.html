@@ -1226,15 +1226,15 @@
         .then(function(stream) {
             localStream = stream;
             // Video original fica invisivel, canvas renderiza os frames
-            localVideo.style.cssText = 'position:absolute;left:-9999px;width:1px;height:1px;opacity:0.01';
             localVideo.muted = true;
             localVideo.setAttribute('playsinline', '');
             localVideo.setAttribute('webkit-playsinline', '');
+            localVideo.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain;transform:scaleX(-1)';
             localVideo.srcObject = stream;
             localVideo.play().catch(function(){});
             var canvas = document.createElement('canvas');
             canvas.id = 'local-video-canvas';
-            canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
+            canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:5';
             var cctx = canvas.getContext('2d');
             window._localMirror = true;
             function renderFrame() {
@@ -1253,7 +1253,6 @@
                 window._localRaf = requestAnimationFrame(renderFrame);
             }
             localVideo.addEventListener('playing', renderFrame);
-            // Canvas substitui o video na UI
             localVideo.parentElement.insertBefore(canvas, localVideo.nextSibling);
             window._localCanvas = canvas;
             window._localCanvasCtx = cctx;
