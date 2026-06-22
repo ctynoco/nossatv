@@ -1006,6 +1006,12 @@
                 hv.srcObject = localStream;
                 hv.play().catch(function(){});
             }
+            // Atualiza a stream clonada para publicacao
+            var pub = window._pubStream;
+            if (pub) {
+                pub.getVideoTracks().forEach(function(t) { t.stop(); pub.removeTrack(t); });
+                pub.addTrack(newTrack.clone());
+            }
             var ctx = window._localCanvasCtx;
             window._localMirror = facingMode === 'user';
             
@@ -1189,6 +1195,8 @@
         if (localStream) { localStream.getTracks().forEach(function(t) { t.stop(); }); localStream = null; }
         var hv = window._localVideoEl;
         if (hv) { hv.srcObject = null; hv.pause(); hv.src = ''; }
+        var pub = window._pubStream;
+        if (pub) { pub.getTracks().forEach(function(t) { t.stop(); }); window._pubStream = null; }
         if (window._localRaf) { cancelAnimationFrame(window._localRaf); window._localRaf = null; }
         localPh.classList.remove('hide');
         localPh.classList.remove('hide');
@@ -1226,15 +1234,19 @@
         })
         .then(function(stream) {
             localStream = stream;
-            // Canvas em vez de video (workaround preview preto mobile)
+            // Video oculto no DOM para renderizar no canvas
             var hiddenVideo = document.createElement('video');
+            hiddenVideo.id = 'local-hidden-video';
             hiddenVideo.setAttribute('playsinline', '');
             hiddenVideo.setAttribute('webkit-playsinline', '');
-            hiddenVideo.setAttribute('x5-playsinline', '');
-            hiddenVideo.autoplay = true;
             hiddenVideo.muted = true;
+            hiddenVideo.style.cssText = 'position:absolute;width:1px;height:1px;opacity:0.01;pointer-events:none';
             hiddenVideo.srcObject = stream;
-            hiddenVideo.play().catch(function(){});
+            // Publica stream CLONADA para nao conflitar com o video local
+            var pubStream = new MediaStream();
+            stream.getVideoTracks().forEach(function(t) { pubStream.addTrack(t.clone()); });
+            stream.getAudioTracks().forEach(function(t) { pubStream.addTrack(t); });
+            window._pubStream = pubStream;
             var canvas = document.createElement('canvas');
             canvas.id = 'local-video';
             canvas.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;';
@@ -1256,8 +1268,10 @@
                 window._localRaf = requestAnimationFrame(renderFrame);
             }
             hiddenVideo.addEventListener('playing', renderFrame);
+            hiddenVideo.play().catch(function(){});
             localVideo.replaceWith(canvas);
             localVideo = canvas;
+            document.getElementById('local-wrap').appendChild(hiddenVideo);
             window._localVideoEl = hiddenVideo;
             window._localCanvasCtx = cctx;
             localPh.classList.add('hide');
@@ -1306,7 +1320,7 @@
         })
         .then(function() {
             startBtn.innerHTML = '<span class="spinner"></span>Publicando...';
-            return vdo.publish(localStream, { streamID: streamID, password: false });
+            return vdo.publish(window._pubStream || localStream, { streamID: streamID, password: false });
         })
         .then(function() {
             connected = true;
