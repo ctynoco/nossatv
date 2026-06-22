@@ -123,11 +123,13 @@
             justify-content: center;
         }
         #local-video {
+            display: block;
             width: 100%;
             height: 100%;
             object-fit: contain;
             transform: scaleX(-1);
         }
+        #local-video.show { display: block; }
         #local-placeholder {
             position: absolute;
             inset: 0;
@@ -977,6 +979,7 @@
         svgCamMut.style.display = cameraMuted ? 'block' : 'none';
         localVideo.classList.toggle('show', !cameraMuted);
         localPh.classList.toggle('hide', !cameraMuted);
+        if (!cameraMuted) localVideo.play().catch(function(e) { console.warn("Erro ao reativar vídeo:", e); });
         showToast(cameraMuted ? '📷 Câmera desativada' : '📷 Câmera ativa');
     });
 
@@ -999,6 +1002,7 @@
             localVideo.srcObject = null;
             localVideo.srcObject = localStream;
             localVideo.style.transform = facingMode === 'user' ? 'scaleX(-1)' : 'scaleX(1)';
+            localVideo.play().catch(function(e) { console.warn("Erro ao reproduzir após flip:", e); });
             
             if (vdo && vdo._pc) {
                 var senders = vdo._pc.getSenders ? vdo._pc.getSenders() : [];
@@ -1216,7 +1220,9 @@
         .then(function(stream) {
             localStream = stream;
             localVideo.srcObject = stream;
-            localVideo.play().catch(function(e) { console.warn("Erro ao reproduzir vídeo local:", e); });
+            setTimeout(function() {
+                localVideo.play().catch(function(e) { console.warn("Erro ao reproduzir vídeo local:", e); });
+            }, 100);
             localPh.classList.add('hide');
             startVU(stream);
 
